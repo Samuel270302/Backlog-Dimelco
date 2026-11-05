@@ -163,6 +163,19 @@ select pruebas.igual((select folio from backlogs where id = '20000000-0000-0000-
 select cambiar_estado_backlog('20000000-0000-0000-0000-000000000004', 'Rechazado', '{"motivo":"Duplicado de BL-HEM-000003"}');
 select pruebas.igual((select semanas from v_semanas_backlog where especialidad = 'Mecánico'), 0.50::numeric, 'rechazado sale del backlog');
 
+-- Fotos (011): el capturador sube a su unidad pero no borra; el admin borra.
+select set_config('request.jwt.claims', '{"sub":"00000000-0000-0000-0000-00000000000c"}', false);
+insert into backlog_fotos (id, backlog_id, ruta) values
+  ('40000000-0000-0000-0000-000000000001', '20000000-0000-0000-0000-000000000002', 'x/20000000-0000-0000-0000-000000000002/a.jpg');
+delete from backlog_fotos where id = '40000000-0000-0000-0000-000000000001';
+select pruebas.igual((select count(*)::int from backlog_fotos), 1, 'capturador no borra fotos');
+select set_config('request.jwt.claims', '{"sub":"00000000-0000-0000-0000-00000000000d"}', false);
+select pruebas.espera_error($$insert into backlog_fotos (backlog_id, ruta) values
+  ('20000000-0000-0000-0000-000000000002', 'x/otra.jpg')$$, 'row-level security');
+select set_config('request.jwt.claims', '{"sub":"00000000-0000-0000-0000-00000000000a"}', false);
+delete from backlog_fotos where id = '40000000-0000-0000-0000-000000000001';
+select pruebas.igual((select count(*)::int from backlog_fotos), 0, 'admin borra fotos');
+
 -- Formato del backlog (008): ítem correlativo, identificación del repuesto, horómetro y tipo de pedido.
 select pruebas.igual((select string_agg(item::text, ',' order by item) from backlog_repuestos
   where backlog_id = '20000000-0000-0000-0000-000000000001'), '1,2', 'ítems correlativos');

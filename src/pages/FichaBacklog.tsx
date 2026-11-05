@@ -4,6 +4,8 @@ import { useAuth } from "../auth";
 import { useEspecialidades, usePerfiles } from "../lib/queries";
 import { useUnidades } from "../lib/unidad";
 import { imprimirFormato } from "../lib/formato";
+import { useFotosBacklog } from "../lib/fotos";
+import Fotos, { useSubirFotos } from "../components/ficha/Fotos";
 import { ESTADOS_FINALES, useBacklog, useEventosBacklog, useHhBacklog, useRepuestosBacklog } from "../lib/backlog";
 import { useCambioEstado, useTransicionesPermitidas } from "../components/CambioEstado";
 import { EtiquetaEstado, EtiquetaPrioridad } from "../components/Etiquetas";
@@ -29,8 +31,10 @@ export default function FichaBacklog() {
   const { data: eventos } = useEventosBacklog(id);
   const { data: especialidades } = useEspecialidades();
   const { data: perfiles } = usePerfiles();
+  const { data: fotos } = useFotosBacklog(id);
   const { data: unidades } = useUnidades();
   const [imprimiendo, setImprimiendo] = useState(false);
+  const subidaFotos = useSubirFotos({ id, unidad_id: b?.unidad_id ?? "" });
   const [pestania, setPestania] = useState<Pestania>("datos");
 
   if (isLoading) return <div className="nota">Cargando…</div>;
@@ -58,6 +62,7 @@ export default function FichaBacklog() {
       const ruta = await imprimirFormato({
         b,
         repuestos: repuestos ?? [],
+        fotos: fotos ?? [],
         hh: hh ?? [],
         especialidades: especialidades ?? [],
         eventos: eventos ?? [],
@@ -81,7 +86,7 @@ export default function FichaBacklog() {
         ? "Repuestos"
         : `Repuestos (${b.repuestos_total}${b.repuestos_pendientes ? `, ${b.repuestos_pendientes} sin recibir` : ""})`,
     ],
-    ["fotos", "Fotos"],
+    ["fotos", `Fotos (${fotos?.length ?? 0})`],
     ["bitacora", `Bitácora (${eventos?.length ?? 0})`],
   ];
 
@@ -151,12 +156,17 @@ export default function FichaBacklog() {
           />
         </div>
       )}
-      {pestania === "repuestos" && <TablaRepuestos backlogId={b.id} filas={repuestos ?? []} editable={detalleEditable} />}
-      {pestania === "fotos" && (
-        <div className="bloque-ficha">
-          <p className="nota">Las fotos se agregan cuando esté lista la versión web, con la cámara del celular.</p>
-        </div>
+      {pestania === "repuestos" && (
+        <TablaRepuestos
+          backlogId={b.id}
+          filas={repuestos ?? []}
+          editable={detalleEditable}
+          fotosPorItem={new Map((repuestos ?? []).map((r) => [r.id, (fotos ?? []).filter((f) => f.repuesto_id === r.id).length]))}
+          onFotos={(repuestoId, archivos) => subidaFotos.subir(archivos, repuestoId)}
+          subiendo={subidaFotos.subiendo}
+        />
       )}
+      {pestania === "fotos" && <Fotos b={b} fotos={fotos ?? []} repuestos={repuestos ?? []} editable={detalleEditable} />}
       {pestania === "bitacora" && <Bitacora backlogId={b.id} eventos={eventos ?? []} puedeComentar={puedeCapturar} />}
 
       {cambio.dialogo}

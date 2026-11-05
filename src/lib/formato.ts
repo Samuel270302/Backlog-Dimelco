@@ -4,6 +4,7 @@
 import logoDimelco from "../assets/logo-dimelco.png";
 import { fFecha, fNum } from "./fmt";
 import type { BacklogEvento, BacklogFila, BacklogHh, BacklogRepuesto, Catalogo, Perfil } from "./types";
+import type { FotoConUrl } from "./fotos";
 
 const FILAS_MINIMAS_REPUESTOS = 8;
 
@@ -37,9 +38,11 @@ export interface DatosFormato {
   eventos: BacklogEvento[];
   perfiles: Perfil[];
   unidad: string;
+  fotos?: FotoConUrl[];
 }
 
-export function armarFormato(d: DatosFormato, logo: string): string {
+// imagenes: id de foto -> data URL ya incrustable.
+export function armarFormato(d: DatosFormato, logo: string, imagenes: Map<string, string> = new Map()): string {
   const { b } = d;
   const nombre = (id: string | null) => d.perfiles.find((p) => p.user_id === id)?.nombre ?? "";
   const aprobacion = d.eventos.find((e) => e.tipo === "estado" && e.estado_nuevo === "En planificación");
@@ -92,6 +95,11 @@ export function armarFormato(d: DatosFormato, logo: string): string {
   .firma .linea { border-top: 1px solid #1c1c1c; padding-top: 4px; font-weight: 600; }
   .firma .quien { min-height: 14px; margin-bottom: 2px; }
   .pie { margin-top: 14px; color: #777; font-size: 9px; text-align: right; }
+  .hoja2 { page-break-before: always; padding-top: 6px; }
+  .imagenes { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 8px; }
+  .imagen { border: 1px solid #555; page-break-inside: avoid; }
+  .imagen .datos { background: #e9e9e9; padding: 4px 6px; font-size: 10.5px; }
+  .imagen img { display: block; width: 100%; max-height: 300px; object-fit: contain; background: #fff; }
   @media print { @page { size: A4 portrait; margin: 10mm; } .hoja { padding: 0; } }
 </style></head><body><div class="hoja">
 <table class="enc"><tr>
@@ -137,7 +145,37 @@ export function armarFormato(d: DatosFormato, logo: string): string {
   <div class="firma"><div class="quien">${aprobacion ? `${esc(nombre(aprobacion.usuario))} · ${fFecha(aprobacion.creado_en.slice(0, 10))}` : ""}</div><div class="linea">Revisado y aprobado por</div></div>
 </div>
 <div class="pie">Control de Backlog · Dimelco · ${esc(b.folio)}</div>
+${hojaImagenes(d, logo, imagenes)}
 </div></body></html>`;
+}
+
+// Hoja 2 del formato: primero las fotos de repuestos por ítem, luego las generales.
+function hojaImagenes(d: DatosFormato, logo: string, imagenes: Map<string, string>): string {
+  const fotos = (d.fotos ?? []).filter((f) => imagenes.get(f.id));
+  if (!fotos.length) return "";
+  const rep = new Map(d.repuestos.map((r) => [r.id, r]));
+  const ordenadas = [...fotos].sort((a, b) => {
+    const ia = a.repuesto_id ? rep.get(a.repuesto_id)?.item ?? 999 : 999;
+    const ib = b.repuesto_id ? rep.get(b.repuesto_id)?.item ?? 999 : 999;
+    return ia - ib || a.creado_en.localeCompare(b.creado_en);
+  });
+  const tarjetas = ordenadas
+    .map((f) => {
+      const r = f.repuesto_id ? rep.get(f.repuesto_id) : undefined;
+      const datos = r
+        ? `<b>Ítem ${r.item}</b> · N° de parte ${esc(r.numero_parte ?? r.cod_sap ?? "")} · ${esc(r.descripcion)}`
+        : "<b>Foto general del trabajo</b>";
+      return `<div class="imagen"><div class="datos">${datos}</div><img src="${imagenes.get(f.id)}" alt=""></div>`;
+    })
+    .join("");
+  return `<div class="hoja2">
+<table class="enc"><tr>
+  <td class="logo">${logo ? `<img src="${logo}" alt="Dimelco">` : "Dimelco"}</td>
+  <td class="titulo">IMÁGENES</td>
+  <td class="datos"><span class="et">N°</span><b>${esc(d.b.folio)}</b><br><span class="et">Código interno</span>${esc(d.b.cod_interno)}</td>
+</tr></table>
+<div class="imagenes">${tarjetas}</div>
+</div>`;
 }
 
 interface AppInfo {
@@ -145,7 +183,13 @@ interface AppInfo {
 }
 
 export async function imprimirFormato(d: DatosFormato): Promise<string | null> {
-  const html = armarFormato(d, await comoDataUrl(logoDimelco));
+  const imagenes = new Map<string, string>();
+  for (const f of d.fotos ?? []) {
+    if (!f.url) continue;
+    const dataUrl = await comoDataUrl(f.url);
+    if (dataUrl) imagenes.set(f.id, dataUrl);
+  }
+  const html = armarFormato(d, await comoDataUrl(logoDimelco), imagenes);
   const nombreArchivo = `${d.b.folio} ${d.b.cod_interno} ${d.b.descripcion}`.replace(/[\\/:*?"<>|]+/g, " ").slice(0, 120) + ".pdf";
   const escritorio = (window as unknown as { appInfo?: AppInfo }).appInfo;
   if (escritorio?.guardarPdf) return escritorio.guardarPdf(html, nombreArchivo, true);

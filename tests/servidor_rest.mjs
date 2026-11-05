@@ -63,8 +63,97 @@ function orden(params) {
   );
 }
 
+// supabase-js sube un Blob como multipart/form-data: se toma la parte que trae Content-Type.
+function extraerArchivo(crudo, tipo) {
+  const limite = /boundary=(.+)$/.exec(tipo)?.[1];
+  if (!limite) return { bytes: crudo, tipo: tipo || "application/octet-stream" };
+  const sep = Buffer.from(`--${limite}`);
+  let i = crudo.indexOf(sep);
+  while (i !== -1) {
+    const j = crudo.indexOf(sep, i + sep.length);
+    if (j === -1) break;
+    const parte = crudo.subarray(i + sep.length + 2, j - 2);
+    const fin = parte.indexOf("\r\n\r\n");
+    const cab = parte.subarray(0, fin).toString("utf8");
+    const t = /Content-Type:\s*([^\r\n]+)/i.exec(cab)?.[1];
+    if (t) return { bytes: parte.subarray(fin + 4), tipo: t.trim() };
+    i = j;
+  }
+  return { bytes: crudo, tipo: "application/octet-stream" };
+}
+
 export async function iniciarServidorRest({ conexion, puerto }) {
   const pool = new pg.Pool(conexion);
+  const archivos = new Map(); // "<bucket>/<ruta>" -> { bytes, tipo }
+
+  // Ejecuta sql con el rol authenticated y el usuario del token, como PostgREST.
+  async function comoUsuario(req, sql, valores) {
+    const cliente = await pool.connect();
+    try {
+      await cliente.query("begin");
+      await cliente.query("set local role authenticated");
+      await cliente.query("select set_config('request.jwt.claims', $1, true)", [JSON.stringify(usuarioDe(req) ?? {})]);
+      const r = await cliente.query(sql, valores);
+      await cliente.query("commit");
+      return r.rows;
+    } catch (e) {
+      await cliente.query("rollback").catch(() => {});
+      throw e;
+    } finally {
+      cliente.release();
+    }
+  }
+
+  // Storage mínimo: subir, firmar, descargar firmado y borrar. Las filas van a
+  // storage.objects con el usuario de la sesión: deciden las políticas de 007.
+  async function almacenamiento(req, res, url, cors) {
+    const json = (estado, cuerpo) => {
+      res.writeHead(estado, { ...cors, "content-type": "application/json" });
+      res.end(JSON.stringify(cuerpo));
+    };
+    const partes = [];
+    for await (const t of req) partes.push(t);
+    const crudo = Buffer.concat(partes);
+    const ruta = decodeURIComponent(url.pathname.slice("/storage/v1/".length));
+    try {
+      if (req.method === "POST" && ruta.startsWith("object/sign/")) {
+        const bucket = ruta.slice("object/sign/".length);
+        const { paths } = JSON.parse(crudo.toString("utf8"));
+        const visibles = await comoUsuario(req, "select name from storage.objects where bucket_id = $1 and name = any($2::text[])", [bucket, paths]);
+        const ok = new Set(visibles.map((v) => v.name));
+        return json(200, paths.map((p) => ({
+          path: p,
+          signedURL: ok.has(p) ? `/object/sign/${bucket}/${p}?token=prueba` : null,
+          error: ok.has(p) ? null : "Sin permiso",
+        })));
+      }
+      if (req.method === "GET" && ruta.startsWith("object/sign/")) {
+        const clave = ruta.slice("object/sign/".length);
+        const a = archivos.get(clave);
+        if (!a) return json(404, { message: "No existe" });
+        res.writeHead(200, { ...cors, "content-type": a.tipo });
+        return res.end(a.bytes);
+      }
+      if (req.method === "POST" && ruta.startsWith("object/")) {
+        const clave = ruta.slice("object/".length);
+        const [bucket, ...resto] = clave.split("/");
+        const nombre = resto.join("/");
+        await comoUsuario(req, "insert into storage.objects (bucket_id, name) values ($1, $2)", [bucket, nombre]);
+        archivos.set(clave, extraerArchivo(crudo, req.headers["content-type"] ?? ""));
+        return json(200, { Key: clave, Id: nombre });
+      }
+      if (req.method === "DELETE" && ruta.startsWith("object/")) {
+        const bucket = ruta.slice("object/".length);
+        const { prefixes } = JSON.parse(crudo.toString("utf8"));
+        const borrados = await comoUsuario(req, "delete from storage.objects where bucket_id = $1 and name = any($2::text[]) returning name", [bucket, prefixes]);
+        for (const b of borrados) archivos.delete(`${bucket}/${b.name}`);
+        return json(200, borrados.map((b) => ({ name: b.name })));
+      }
+      return json(404, { message: "Ruta de storage no soportada" });
+    } catch (e) {
+      return json(400, { statusCode: "403", error: "Unauthorized", message: e.message });
+    }
+  }
   const servidor = createServer(async (req, res) => {
     const cors = {
       "access-control-allow-origin": "*",
@@ -78,6 +167,7 @@ export async function iniciarServidorRest({ conexion, puerto }) {
       res.writeHead(200, { ...cors, "content-type": "application/json" });
       return res.end("{}");
     }
+    if (url.pathname.startsWith("/storage/v1/")) return almacenamiento(req, res, url, cors);
     if (!url.pathname.startsWith("/rest/v1/")) return res.writeHead(404, cors).end();
 
     let cuerpo = "";

@@ -4,6 +4,7 @@ import { supabase } from "../../lib/supabase";
 import { useAvisos } from "../Avisos";
 import { fFecha, fNum } from "../../lib/fmt";
 import type { BacklogRepuesto, EstadoRepuesto } from "../../lib/types";
+import { BotonFotos } from "./Fotos";
 
 const ESTADOS_REP: EstadoRepuesto[] = ["Por pedir", "Pedido", "Recibido"];
 const NUEVO = {
@@ -24,10 +25,16 @@ export default function TablaRepuestos({
   backlogId,
   filas,
   editable,
+  fotosPorItem,
+  onFotos,
+  subiendo,
 }: {
   backlogId: string;
   filas: BacklogRepuesto[];
   editable: boolean;
+  fotosPorItem?: Map<string, number>;
+  onFotos?: (repuestoId: string, archivos: File[]) => void;
+  subiendo?: boolean;
 }) {
   const qc = useQueryClient();
   const { avisar } = useAvisos();
@@ -116,6 +123,7 @@ export default function TablaRepuestos({
               <th>Fecha estimada</th>
               <th>Estado</th>
               <th>Recibido</th>
+              <th>Fotos</th>
               {editable && <th />}
             </tr>
           </thead>
@@ -159,6 +167,18 @@ export default function TablaRepuestos({
                   )}
                 </td>
                 <td>{fFecha(f.fecha_recibido)}</td>
+                <td className="celda-fotos">
+                  <span className="nota">{fotosPorItem?.get(f.id) ?? 0}</span>
+                  {editable && onFotos && (
+                    <BotonFotos
+                      plano
+                      texto="+ Foto"
+                      etiqueta={`Fotos ítem ${f.item}`}
+                      ocupado={subiendo}
+                      onArchivos={(a) => onFotos(f.id, a)}
+                    />
+                  )}
+                </td>
                 {editable && (
                   <td>
                     <button className="boton-plano" onClick={() => accion.mutate({ tipo: "quitar", id: f.id })}>
@@ -182,6 +202,7 @@ export default function TablaRepuestos({
                 <td><input type="date" value={nuevo.fecha_estimada} onChange={n("fecha_estimada")} aria-label="Fecha estimada nueva" /></td>
                 <td>Por pedir</td>
                 <td />
+                <td />
                 <td>
                   <button disabled={!valido || accion.isPending} onClick={() => accion.mutate({ tipo: "agregar" })}>
                     Agregar
@@ -191,7 +212,7 @@ export default function TablaRepuestos({
             )}
             {!editable && filas.length === 0 && (
               <tr>
-                <td colSpan={12} className="nota">Sin repuestos.</td>
+                <td colSpan={13} className="nota">Sin repuestos.</td>
               </tr>
             )}
           </tbody>

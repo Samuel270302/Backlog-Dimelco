@@ -4,6 +4,7 @@ import type { Transicion } from "../lib/backlog";
 import type { BacklogEvento, BacklogFila, BacklogHh, BacklogRepuesto, Catalogo } from "../lib/types";
 import { EtiquetaPrioridad } from "./Etiquetas";
 import BarraAvance, { subestadoPlaneado } from "./BarraAvance";
+import { useFotosBacklog } from "../lib/fotos";
 
 // Tarjeta del Kanban. Cerrada: lo necesario para decidir. Abierta (clic): el detalle del
 // formato (equipo, componente, repuestos, especialidades con HH, justificación) y las
@@ -161,6 +162,7 @@ export default function TarjetaBacklog({
             </>
           )}
 
+          <MiniaturasTarjeta id={b.id} />
           <div className="tk-acciones">
             {acciones.map((t) => (
               <button
@@ -178,5 +180,20 @@ export default function TarjetaBacklog({
         </div>
       )}
     </article>
+  );
+}
+
+// Hasta 3 miniaturas; se piden solo cuando la tarjeta está desplegada.
+function MiniaturasTarjeta({ id }: { id: string }) {
+  const { data: fotos } = useFotosBacklog(id);
+  const con = (fotos ?? []).filter((f) => f.url);
+  if (!con.length) return null;
+  return (
+    <div className="tk-fotos">
+      {con.slice(0, 3).map((f) => (
+        <img key={f.id} src={f.url!} alt="Foto del backlog" loading="lazy" />
+      ))}
+      {con.length > 3 && <span className="nota">+{con.length - 3}</span>}
+    </div>
   );
 }

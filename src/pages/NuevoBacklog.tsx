@@ -8,6 +8,8 @@ import { useAuth } from "../auth";
 import { useAvisos } from "../components/Avisos";
 import { marcarPendientes } from "../lib/pendientes";
 import { hoyISO } from "../lib/fmt";
+import { subirFotos } from "../lib/fotos";
+import { BotonFotos } from "../components/ficha/Fotos";
 import { ORIGENES, PRIORIDADES, TIPOS_PEDIDO, type Origen, type Prioridad, type TipoPedido } from "../lib/types";
 
 // Registro con el orden del formato "Mantenimiento correctivo programado":
@@ -76,8 +78,9 @@ export default function NuevoBacklog() {
   const [buscar, setBuscar] = useState("");
   const [repuestos, setRepuestos] = useState<FilaRepuesto[]>([]);
   const [hh, setHh] = useState<FilaHh[]>([]);
+  const [fotos, setFotos] = useState<File[]>([]);
 
-  const sucio = JSON.stringify(f) !== JSON.stringify(vacio) || repuestos.length > 0 || hh.length > 0;
+  const sucio = JSON.stringify(f) !== JSON.stringify(vacio) || repuestos.length > 0 || hh.length > 0 || fotos.length > 0;
   useEffect(() => {
     marcarPendientes(sucio ? 1 : 0);
     return () => marcarPendientes(0);
@@ -129,10 +132,10 @@ export default function NuevoBacklog() {
           horometro: numeroONull(f.horometro),
           justificacion: f.justificacion.trim() || null,
         })
-        .select("id, folio")
+        .select("id, folio, unidad_id")
         .single();
       if (error) throw error;
-      const creado = data as { id: string; folio: string };
+      const creado = data as { id: string; folio: string; unidad_id: string };
       const fallas: string[] = [];
       if (repuestosCargados.length) {
         const { error: e } = await supabase()
@@ -165,6 +168,10 @@ export default function NuevoBacklog() {
             }))
           );
         if (e) fallas.push(`HH (${e.message})`);
+      }
+      if (fotos.length) {
+        const r = await subirFotos(creado, fotos);
+        if (r.errores.length) fallas.push(`fotos (${r.errores.join("; ")})`);
       }
       return { ...creado, fallas };
     },
@@ -415,6 +422,28 @@ export default function NuevoBacklog() {
       </section>
 
       <section className="panel-formulario">
+        <div className="barra-acciones" style={{ marginBottom: 8 }}>
+          <h2 className="titulo-seccion">Fotos</h2>
+          <div className="espacio" />
+          <BotonFotos texto="Agregar fotos" etiqueta="Archivos de fotos" onArchivos={(a) => setFotos((x) => [...x, ...a])} />
+        </div>
+        {fotos.length === 0 ? (
+          <p className="nota">Opcional. Las fotos de un repuesto en particular se agregan después en la ficha, pestaña Repuestos.</p>
+        ) : (
+          <ul className="lista-archivos">
+            {fotos.map((a, i) => (
+              <li key={`${a.name}-${i}`}>
+                {a.name} <span className="nota">{Math.round(a.size / 1024)} KB</span>
+                <button className="boton-plano boton-quitar" aria-label={`Quitar foto ${a.name}`} onClick={() => setFotos((x) => x.filter((_, j) => j !== i))}>
+                  ×
+                </button>
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
+
+      <section className="panel-formulario">
         <h2 className="titulo-seccion">Justificación</h2>
         <label className="campo">
           <span className="oculto-visual">Justificación</span>
@@ -437,6 +466,7 @@ export default function NuevoBacklog() {
             setF(vacio);
             setRepuestos([]);
             setHh([]);
+            setFotos([]);
             setBuscar("");
           }}
         >

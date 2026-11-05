@@ -1,9 +1,11 @@
 -- Datos para la prueba de extremo a extremo (base local, después de las migraciones).
 insert into auth.users (id, email, raw_user_meta_data) values
   ('00000000-0000-0000-0000-00000000000a', 'admin@prueba', '{"nombre":"Ana Admin"}'),
-  ('00000000-0000-0000-0000-00000000000c', 'cap@prueba', '{"nombre":"Carlos Capturador"}');
+  ('00000000-0000-0000-0000-00000000000c', 'cap@prueba', '{"nombre":"Carlos Capturador"}'),
+  ('00000000-0000-0000-0000-00000000000d', 'cap.vtn@prueba', '{"nombre":"Vera Veta Nueva"}');
 update perfiles set rol = 'admin', activo = true where correo = 'admin@prueba';
 update perfiles set activo = true, unidad_id = (select id from unidades where sigla = 'HEM') where correo = 'cap@prueba';
+update perfiles set activo = true, unidad_id = (select id from unidades where sigla = 'VTN') where correo = 'cap.vtn@prueba';
 
 insert into equipos (unidad_id, cod_interno, cod_sap, modelo, flota, marca)
 select u.id, v.cod, v.sap, v.modelo, v.flota, 'Epiroc'

@@ -903,3 +903,19 @@ fieldset.sin-borde:disabled input, fieldset.sin-borde:disabled select, fieldset.
   white-space: nowrap;
 }
 .gs-tt-titulo { font-weight: 600; margin-bottom: 2px; }
+
+/* ===== Fotos (fase 7) ===== */
+.rejilla-fotos { display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: 10px; margin: 6px 0 12px; }
+.foto { margin: 0; border: 1px solid var(--borde); border-radius: 8px; overflow: hidden; background: var(--panel-2); }
+.foto-miniatura { display: block; width: 100%; padding: 0; background: #e9e9e6; border-radius: 0; }
+.foto-miniatura:hover { filter: none; opacity: 0.92; }
+.foto-miniatura img { display: block; width: 100%; height: 130px; object-fit: cover; }
+.foto figcaption { font-size: 11.5px; color: var(--texto-suave); padding: 5px 7px; display: flex; gap: 6px; align-items: center; justify-content: space-between; flex-wrap: wrap; }
+dialog.dialogo-foto { max-width: 92vw; padding: 10px; cursor: zoom-out; }
+dialog.dialogo-foto img { display: block; max-width: 88vw; max-height: 80vh; }
+.celda-fotos { white-space: nowrap; }
+.celda-fotos .boton-plano { padding: 3px 8px; font-size: 12px; margin-left: 6px; }
+.lista-archivos { list-style: none; margin: 0; padding: 0; }
+.lista-archivos li { display: flex; gap: 8px; align-items: center; padding: 3px 0; font-size: 13px; }
+.tk-fotos { display: flex; gap: 6px; margin-top: 8px; align-items: center; }
+.tk-fotos img { width: 72px; height: 54px; object-fit: cover; border-radius: 4px; border: 1px solid var(--borde); }

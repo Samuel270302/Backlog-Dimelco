@@ -41,6 +41,7 @@ const rest = await iniciarServidorRest({
 const USUARIOS = {
   admin: { id: "00000000-0000-0000-0000-00000000000a", email: "admin@prueba" },
   cap: { id: "00000000-0000-0000-0000-00000000000c", email: "cap@prueba" },
+  capVtn: { id: "00000000-0000-0000-0000-00000000000d", email: "cap.vtn@prueba" },
 };
 
 function token(u) {
@@ -48,6 +49,38 @@ function token(u) {
   const exp = Math.floor(Date.now() / 1000) + 86400;
   return `${b64({ alg: "HS256", typ: "JWT" })}.${b64({ sub: u.id, role: "authenticated", email: u.email, exp })}.prueba`;
 }
+
+// PNG de un color (sin librerías): sirve como foto de prueba.
+import { deflateSync } from "node:zlib";
+function png(ancho, alto, [r, g, b]) {
+  const crcTabla = Array.from({ length: 256 }, (_, n) => {
+    let c = n;
+    for (let k = 0; k < 8; k++) c = c & 1 ? 0xedb88320 ^ (c >>> 1) : c >>> 1;
+    return c >>> 0;
+  });
+  const crc = (buf) => {
+    let c = 0xffffffff;
+    for (const x of buf) c = crcTabla[(c ^ x) & 0xff] ^ (c >>> 8);
+    return (c ^ 0xffffffff) >>> 0;
+  };
+  const trozo = (tipo, datos) => {
+    const t = Buffer.from(tipo);
+    const largo = Buffer.alloc(4);
+    largo.writeUInt32BE(datos.length);
+    const c = Buffer.alloc(4);
+    c.writeUInt32BE(crc(Buffer.concat([t, datos])));
+    return Buffer.concat([largo, t, datos, c]);
+  };
+  const ihdr = Buffer.alloc(13);
+  ihdr.writeUInt32BE(ancho, 0);
+  ihdr.writeUInt32BE(alto, 4);
+  ihdr[8] = 8;
+  ihdr[9] = 2;
+  const fila = Buffer.concat([Buffer.from([0]), Buffer.alloc(ancho * 3).map((_, i) => [r, g, b][i % 3])]);
+  const crudo = Buffer.concat(Array.from({ length: alto }, () => fila));
+  return Buffer.concat([Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]), trozo("IHDR", ihdr), trozo("IDAT", deflateSync(crudo)), trozo("IEND", Buffer.alloc(0))]);
+}
+const FOTO = (nombre, color) => ({ name: nombre, mimeType: "image/png", buffer: png(320, 240, color) });
 
 const navegador = await chromium.launch();
 const errores = [];
@@ -144,6 +177,8 @@ try {
   await cap.locator(".fila-hh").getByLabel("Personas").fill("2");
   await cap.locator(".fila-hh").getByLabel("Horas").fill("4");
   await cap.getByPlaceholder("Por qué hay que hacer el trabajo").fill("Fugas de aceite en el block de implementos; riesgo de daño a bombas.");
+  await cap.getByLabel("Archivos de fotos").setInputFiles([FOTO("fuga-block.png", [180, 40, 40]), FOTO("vista-general.png", [40, 90, 160])]);
+  await cap.locator(".lista-archivos li").nth(1).waitFor();
   await cap.setViewportSize({ width: 1366, height: 1500 });
   await cap.screenshot({ path: join(SALIDA, "nuevo-backlog.png") });
   await cap.setViewportSize({ width: 1366, height: 860 });
@@ -162,6 +197,33 @@ try {
   await cap.getByText("8", { exact: true }).first().waitFor();
   ok("4 repuestos y 8 HH grabados junto con el backlog; el capturador no ve botones de estado");
 
+  // Fotos: 2 del registro (generales) y 1 del ítem 1 desde la tabla de repuestos.
+  await cap.getByRole("tab", { name: /^Repuestos/ }).click();
+  await cap.getByLabel("Fotos ítem 1").setInputFiles([FOTO("kit-cierres.png", [40, 140, 60])]);
+  await aviso(cap, "1 foto(s) agregada(s)");
+  await cap.getByRole("tab", { name: "Fotos (3)" }).click();
+  const grupoItem1 = cap.locator(".grupo-fotos", { hasText: "Ítem 1 · 6060003007" });
+  await grupoItem1.locator("img").waitFor();
+  if ((await cap.locator(".grupo-fotos", { hasText: "Fotos generales" }).locator("img").count()) !== 2) throw new Error("Faltan las 2 fotos generales");
+  await cap.waitForFunction(() => [...document.querySelectorAll(".rejilla-fotos img")].every((i) => i.complete && i.naturalWidth > 0));
+  if (await cap.getByRole("button", { name: "Borrar" }).count()) throw new Error("El capturador ve Borrar foto");
+  await cap.screenshot({ path: join(SALIDA, "fotos.png") });
+  ok("3 fotos (2 generales y 1 del ítem 1) se ven en la ficha; el capturador no puede borrar");
+
+  // Un capturador de Veta Nueva no puede subir a un backlog de HEMCO (política de Storage).
+  const unidadHem = (await (await fetch(`http://localhost:${PUERTO_REST}/rest/v1/v_backlog?select=unidad_id&id=eq.${id}`, {
+    headers: { authorization: `Bearer ${token(USUARIOS.admin)}` },
+  })).json())[0].unidad_id;
+  const intruso = await fetch(`http://localhost:${PUERTO_REST}/storage/v1/object/backlog-fotos/${unidadHem}/${id}/intruso.jpg`, {
+    method: "POST",
+    headers: { authorization: `Bearer ${token(USUARIOS.capVtn)}`, "content-type": "image/jpeg" },
+    body: png(10, 10, [0, 0, 0]),
+  });
+  const motivoIntruso = (await intruso.json()).message ?? "";
+  if (intruso.status === 200 || !motivoIntruso.includes("row-level security"))
+    throw new Error(`Storage debía rechazar por política la foto de otra unidad: ${intruso.status} ${motivoIntruso}`);
+  ok("Storage rechaza la foto de un capturador de otra unidad");
+
   // Formato imprimible: en el navegador se abre en una ventana nueva.
   const [ventana] = await Promise.all([cap.context().waitForEvent("page"), cap.getByRole("button", { name: "Imprimir formato" }).click()]);
   await ventana.waitForLoadState();
@@ -175,6 +237,10 @@ try {
   if (!htmlFormato.includes("Reempaque de block de implementos")) throw new Error("Falta la descripción del trabajo");
   await ventana.setViewportSize({ width: 900, height: 1270 });
   await ventana.screenshot({ path: join(SALIDA, "formato.png"), fullPage: true });
+  if (!htmlFormato.includes("IMÁGENES") || !htmlFormato.includes("<b>Ítem 1</b> · N° de parte 6060003007"))
+    throw new Error("El formato no trae la hoja 2 con la foto del ítem 1");
+  if ((htmlFormato.match(/data:image\/jpeg/g) ?? []).length !== 3) throw new Error("El formato no incrusta las 3 fotos");
+  await ventana.locator(".hoja2").screenshot({ path: join(SALIDA, "formato-imagenes.png") });
   await ventana.close();
   ok("el formato impreso tiene los 4 repuestos, el logo Dimelco y nada del cliente");
 
@@ -186,6 +252,12 @@ try {
   await esperarEstado(adm, "En planificación");
   await adm.locator(".etiqueta-prioridad", { hasText: "P2" }).waitFor();
   ok("admin aprueba con prioridad P2");
+  await adm.getByRole("tab", { name: "Fotos (3)" }).click();
+  await adm.locator(".grupo-fotos", { hasText: "Fotos generales" }).getByRole("button", { name: "Borrar" }).first().click();
+  await adm.getByRole("dialog").getByRole("button", { name: "Borrar", exact: true }).click();
+  await aviso(adm, "Foto borrada");
+  await adm.getByRole("tab", { name: "Fotos (2)" }).waitFor();
+  ok("el admin borra una foto y quedan 2");
   await adm.getByRole("tab", { name: /^Repuestos/ }).click();
   await adm.getByLabel("Código nuevo").fill("100234");
   await adm.getByLabel("Descripción nueva").fill("Aceite hidráulico ISO 68");
