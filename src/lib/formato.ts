@@ -15,7 +15,7 @@ const esc = (v: unknown) =>
     .replaceAll('"', "&quot;");
 
 // El PDF se arma en una ventana sin acceso a los archivos de la app: el logo va incrustado.
-async function comoDataUrl(url: string): Promise<string> {
+export async function comoDataUrl(url: string): Promise<string> {
   try {
     const blob = await (await fetch(url)).blob();
     return await new Promise((ok, mal) => {

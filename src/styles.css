@@ -857,3 +857,49 @@ fieldset.sin-borde:disabled input, fieldset.sin-borde:disabled select, fieldset.
 .ficha-cabecera .barra-avance { max-width: 560px; }
 .tk-subestado { font-size: 11.5px; font-weight: 600; color: #1f4e79; }
 .columna-nota { font-weight: 400; font-size: 11px; }
+
+/* ===== Indicadores (fase 6) ===== */
+.tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 10px; margin-bottom: 14px; }
+.tile { background: var(--panel); border: 1px solid var(--borde); border-radius: 10px; padding: 12px 14px; }
+.tile.alerta { border-left: 4px solid var(--rojo-letra); }
+.tile-valor { font-size: 26px; font-weight: 700; color: var(--oscuro-2); line-height: 1.1; }
+.tile-etiqueta { font-weight: 600; margin-top: 2px; }
+.tile-nota { font-size: 12px; color: var(--texto-suave); margin-top: 2px; }
+.rejilla-indicadores { display: grid; grid-template-columns: 1.3fr 1fr; gap: 14px; }
+@media (max-width: 1100px) { .rejilla-indicadores { grid-template-columns: 1fr; } }
+.barras-h { display: flex; flex-direction: column; gap: 8px; margin: 8px 0; }
+.bh-fila { display: grid; grid-template-columns: 120px 1fr 110px; gap: 8px; align-items: center; font-size: 13px; }
+.bh-etiqueta { color: var(--texto); }
+.bh-pista { position: relative; height: 14px; border-bottom: 1px solid var(--borde); }
+.bh-barra { position: absolute; left: 0; top: 1px; height: 12px; border-radius: 0 4px 4px 0; }
+.bh-referencia { position: absolute; top: -3px; bottom: -3px; border-left: 2px dashed var(--texto-suave); }
+.bh-valor { font-weight: 600; font-size: 12.5px; }
+.bh-leyenda-ref { font-size: 11.5px; color: var(--texto-suave); display: flex; align-items: center; gap: 6px; }
+.bh-muestra-ref { display: inline-block; width: 0; height: 12px; border-left: 2px dashed var(--texto-suave); }
+.ver-tabla { margin-top: 8px; font-size: 12.5px; }
+.ver-tabla summary { cursor: pointer; color: var(--texto-suave); }
+.ver-tabla table, .tabla-chica { margin-top: 6px; font-size: 12.5px; }
+.grafica-semanal { margin: 10px 0 4px; }
+.grafica-semanal figcaption { display: flex; gap: 16px; align-items: center; font-size: 13px; margin-bottom: 4px; }
+.gs-titulo { font-weight: 600; }
+.gs-leyenda { display: flex; gap: 12px; color: var(--texto-suave); font-size: 12px; }
+.gs-leyenda i, .gs-tooltip i { display: inline-block; width: 10px; height: 10px; border-radius: 2px; vertical-align: -1px; margin-right: 3px; }
+.gs-lienzo { position: relative; }
+.gs-lienzo svg { width: 100%; height: auto; display: block; }
+.gs-grilla { stroke: #e6e6e3; stroke-width: 1; }
+.gs-eje { font-size: 11px; fill: var(--texto-suave); }
+.gs-foco { fill: rgba(0, 0, 0, 0.04); }
+.gs-tooltip {
+  position: absolute;
+  top: 4px;
+  transform: translateX(-50%);
+  background: var(--panel);
+  border: 1px solid var(--borde);
+  border-radius: 6px;
+  padding: 6px 9px;
+  font-size: 12px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
+  pointer-events: none;
+  white-space: nowrap;
+}
+.gs-tt-titulo { font-weight: 600; margin-bottom: 2px; }

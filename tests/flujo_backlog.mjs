@@ -295,6 +295,50 @@ try {
   if (await cap.locator('.pagina-calendario [draggable="true"]').count()) throw new Error("El capturador puede arrastrar en el calendario");
   ok("el capturador ve el calendario pero no puede arrastrar");
 
+  // 3d. Indicadores (todas las unidades). Cálculo a mano en este punto del recorrido:
+  //   Mecánico 12 + 6 + 8 + 8 = 34 HH / 40 = 0,85 · Hidráulico 6 / 10 = 0,6 · Eléctrico 2 / 20 = 0,1
+  //   Total 42 / 70 = 0,6 semanas · 6 abiertos · 1 vencido · programadas 16 / 42 = 38 %
+  await adm.goto(base + "#/indicadores");
+  await adm.reload();
+  await adm.getByRole("heading", { name: "Indicadores" }).waitFor();
+  const tile = (etiqueta) => adm.locator(".tile", { has: adm.locator(".tile-etiqueta", { hasText: etiqueta }) }).locator(".tile-valor");
+  const esperado = { "Backlogs abiertos": "6", "Semanas de backlog": "0.6", Vencidos: "1", "HH pendientes ya programadas": "38 %" };
+  for (const [et, v] of Object.entries(esperado)) {
+    const real = await tile(et).textContent();
+    if (real !== v) throw new Error(`Indicador «${et}»: esperado ${v}, obtenido ${real}`);
+  }
+  const barra = (esp) => adm.locator(".bh-fila", { hasText: esp }).first().locator(".bh-valor").textContent();
+  for (const [esp, v] of [["Mecánico", "0.85"], ["Hidráulico", "0.6"], ["Eléctrico", "0.1"]]) {
+    if ((await barra(esp)) !== v) throw new Error(`Semanas ${esp}: esperado ${v}, obtenido ${await barra(esp)}`);
+  }
+  if ((await adm.locator(".bh-fila", { hasText: "0-15 días" }).locator(".bh-valor").textContent()) !== "5 · 36 HH")
+    throw new Error("Antigüedad 0-15 días no da 5 backlogs y 36 HH");
+  await adm.screenshot({ path: join(SALIDA, "indicadores.png"), fullPage: true });
+  ok("indicadores: 0,85 semanas Mecánico, 0,6 total, 6 abiertos, 1 vencido, 38 % programado");
+
+  const [rep] = await Promise.all([adm.context().waitForEvent("page"), adm.getByRole("button", { name: "Reporte semanal PDF" }).click()]);
+  await rep.waitForLoadState();
+  const htmlRep = await rep.content();
+  for (const t of ["Reporte semanal de backlog", "Vencidos (1)", "BL-HEM-000001", "Programados para los próximos 7 días (2)", folio, "data:image/png"]) {
+    if (!htmlRep.includes(t)) throw new Error(`El reporte no tiene «${t}»`);
+  }
+  await rep.setViewportSize({ width: 1270, height: 900 });
+  await rep.screenshot({ path: join(SALIDA, "reporte-semanal.png"), fullPage: true });
+  await rep.close();
+  ok("reporte semanal con indicadores, vencidos y programados de los próximos 7 días");
+
+  const [descarga] = await Promise.all([adm.waitForEvent("download"), adm.getByRole("button", { name: "Exportar abiertos a Excel" }).click()]);
+  const rutaXlsx = join(SALIDA, "backlog-abierto.xlsx");
+  await descarga.saveAs(rutaXlsx);
+  const ExcelJS = require("exceljs");
+  const libro = new ExcelJS.Workbook();
+  await libro.xlsx.readFile(rutaXlsx);
+  const hojaAb = libro.getWorksheet("Backlogs abiertos");
+  if (hojaAb.rowCount !== 7) throw new Error(`El Excel debía tener 6 abiertos, tiene ${hojaAb.rowCount - 1}`);
+  const mec = libro.getWorksheet("Semanas de backlog").getRows(2, 10).find((r) => r.getCell(1).value === "Mecánico");
+  if (Math.abs(mec.getCell(4).value - 0.85) > 1e-9) throw new Error("Excel: semanas de Mecánico distinto de 0,85");
+  ok("Excel con 6 backlogs abiertos y hoja de semanas de backlog");
+
   // Vista por equipo: el capturador ve PS011 en la flota Scoop con su backlog abierto, y no ve Veta Nueva.
   await cap.goto(base + "#/flota");
   const ps011 = cap.getByRole("article", { name: "PS011" });

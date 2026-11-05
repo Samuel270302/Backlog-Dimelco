@@ -18,6 +18,7 @@ import PorEquipo from "./pages/PorEquipo";
 import FichaEquipo from "./pages/FichaEquipo";
 import Calendario from "./pages/Calendario";
 import Capacidad from "./pages/Capacidad";
+import Indicadores from "./pages/Indicadores";
 
 function Interior() {
   const { session, perfil, cargando, esAdmin, puedeCapturar } = useAuth();
@@ -61,7 +62,7 @@ function ConRealtime({ esAdmin, puedeCapturar }: { esAdmin: boolean; puedeCaptur
         <Route path="/kanban" element={<Kanban />} />
         <Route path="/calendario" element={<Calendario />} />
         <Route path="/equipo/:id" element={<FichaEquipo />} />
-        <Route path="/indicadores" element={<EnConstruccion titulo="Indicadores" fase={6} />} />
+        <Route path="/indicadores" element={<Indicadores />} />
         {esAdmin && <Route path="/equipos" element={<EnConstruccion titulo="Equipos" fase={2} />} />}
         {esAdmin && <Route path="/catalogos" element={<EnConstruccion titulo="Sistemas y especialidades" fase={2} />} />}
         {esAdmin && <Route path="/capacidad" element={<Capacidad />} />}
