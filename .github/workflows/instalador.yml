@@ -1,0 +1,42 @@
+name: Instalador de Windows
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    # La guía, las herramientas y las pruebas no cambian el instalador.
+    paths-ignore: ['docs/**', 'tools/**', 'tests/**', 'supabase/**', '**.md', '.github/workflows/instalador.yml', '.github/workflows/mantenimiento.yml', '.github/workflows/pruebas.yml']
+
+permissions:
+  contents: write
+
+jobs:
+  construir:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm install --no-audit --no-fund
+      - run: npm run dist
+      - name: Leer versión
+        id: ver
+        shell: bash
+        run: echo "v=$(node -p "require('./package.json').version")" >> "$GITHUB_OUTPUT"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: instalador-windows
+          path: |
+            release/*.exe
+            release/latest.yml
+      - name: Publicar release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v${{ steps.ver.outputs.v }}
+          name: Control de Backlog - Dimelco v${{ steps.ver.outputs.v }}
+          # latest.yml y el .blockmap los lee la actualización automática de la app.
+          files: |
+            release/*.exe
+            release/*.exe.blockmap
+            release/latest.yml

@@ -1,0 +1,13 @@
+node_modules/
+dist/
+release/
+*.local
+.env
+.env.*
+__pycache__/
+tests/fixtures/
+capturas/
+DATOS_CONEXION.txt
+SECRETO_GITHUB.txt
+dist-electron/
+*.tsbuildinfo

@@ -1,0 +1,63 @@
+{
+  "name": "backlog-hemco",
+  "productName": "Control de Backlog - Dimelco",
+  "version": "0.1.0",
+  "description": "Gestión de backlog de mantenimiento con horas hombre por especialidad",
+  "private": true,
+  "main": "dist-electron/main.js",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc -b && vite build && esbuild electron/main.ts electron/preload.ts --bundle --platform=node --external:electron --outdir=dist-electron",
+    "app": "npm run build && electron .",
+    "dist": "npm run build && electron-builder --win nsis --publish never",
+    "prueba:electron": "npm run build && xvfb-run -a node tests/electron.mjs",
+    "build:web": "tsc -b && vite build --mode web"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.49.4",
+    "@tanstack/react-query": "^5.66.0",
+    "@tanstack/react-table": "^8.21.2",
+    "electron-updater": "^6.3.9",
+    "exceljs": "^4.4.0",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "react-router-dom": "^6.28.0"
+  },
+  "devDependencies": {
+    "@types/react": "^18.3.12",
+    "@types/react-dom": "^18.3.1",
+    "@vitejs/plugin-react": "^4.3.4",
+    "electron": "^33.2.1",
+    "electron-builder": "^25.1.8",
+    "esbuild": "^0.24.2",
+    "typescript": "^5.7.2",
+    "vite": "^6.0.7"
+  },
+  "build": {
+    "appId": "com.hemco.backlog",
+    "files": [
+      "dist/**",
+      "dist-electron/**"
+    ],
+    "directories": {
+      "output": "release",
+      "buildResources": "build"
+    },
+    "win": {
+      "target": "nsis",
+      "icon": "build/icon.ico"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "artifactName": "Control-de-Backlog-Dimelco-Setup-${version}.${ext}"
+    },
+    "publish": [
+      {
+        "provider": "github",
+        "owner": "Samuel270302",
+        "repo": "Backlog-Hemco"
+      }
+    ]
+  }
+}

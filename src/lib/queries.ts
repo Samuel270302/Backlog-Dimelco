@@ -1,0 +1,82 @@
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useCallback, useEffect } from "react";
+import { supabase } from "./supabase";
+import { reportarCanal } from "./conexion";
+import { useUnidad } from "./unidad";
+import type { BacklogFila, Catalogo, Equipo, Perfil } from "./types";
+
+export async function todo<T>(tabla: string, orden?: string): Promise<T[]> {
+  let q = supabase().from(tabla).select("*");
+  if (orden) q = q.order(orden);
+  const { data, error } = await q;
+  if (error) throw error;
+  return data as T[];
+}
+
+// Filtro por unidad: capturador e invitado ya reciben solo su unidad desde la base;
+// el admin elige una unidad en el menú y aquí se filtra lo ya descargado.
+export function usePorUnidad<T extends { unidad_id?: string | null }>() {
+  const { unidadId } = useUnidad();
+  return useCallback((filas: T[]) => (unidadId ? filas.filter((f) => f.unidad_id === unidadId) : filas), [unidadId]);
+}
+
+export const usePerfiles = () =>
+  useQuery({ queryKey: ["perfiles"], queryFn: () => todo<Perfil>("perfiles", "nombre") });
+
+export const useEquipos = () =>
+  useQuery({
+    queryKey: ["equipos"],
+    queryFn: () => todo<Equipo>("equipos", "cod_interno"),
+    select: usePorUnidad<Equipo>(),
+  });
+
+export const useSistemas = () =>
+  useQuery({ queryKey: ["sistemas"], queryFn: () => todo<Catalogo>("sistemas", "orden") });
+
+export const useEspecialidades = () =>
+  useQuery({ queryKey: ["especialidades"], queryFn: () => todo<Catalogo>("especialidades", "orden") });
+
+export const useBacklogs = () =>
+  useQuery({
+    queryKey: ["v_backlog"],
+    queryFn: () => todo<BacklogFila>("v_backlog", "fecha_deteccion"),
+    select: usePorUnidad<BacklogFila>(),
+  });
+
+// Tablas cuyo cambio recarga las consultas abiertas (tiempo real de Supabase).
+const TABLAS = [
+  "backlogs",
+  "backlog_hh",
+  "backlog_repuestos",
+  "backlog_eventos",
+  "backlog_fotos",
+  "equipos",
+  "sistemas",
+  "especialidades",
+  "capacidad_taller",
+  "parametros",
+  "perfiles",
+];
+const ESPERA_RECARGA_MS = 1500;
+
+export function useTiempoReal() {
+  const qc = useQueryClient();
+  useEffect(() => {
+    let temporizador: ReturnType<typeof setTimeout> | null = null;
+    const canal = supabase()
+      .channel("cambios-db")
+      .on("postgres_changes", { event: "*", schema: "public" }, (payload) => {
+        if (!TABLAS.includes(payload.table)) return;
+        if (temporizador) clearTimeout(temporizador);
+        temporizador = setTimeout(() => {
+          temporizador = null;
+          qc.invalidateQueries();
+        }, ESPERA_RECARGA_MS);
+      })
+      .subscribe((estado) => reportarCanal(estado));
+    return () => {
+      if (temporizador) clearTimeout(temporizador);
+      void supabase().removeChannel(canal);
+    };
+  }, [qc]);
+}
