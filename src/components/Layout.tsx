@@ -138,6 +138,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
           titulo="Hay cambios sin grabar"
           texto="Hay datos escritos que todavía no se grabaron. Si sales de la pantalla se pierden."
           confirmar="Salir sin grabar"
+          cancelar="Seguir editando"
           onRespuesta={(si) => {
             const a = destino;
             setDestino(null);

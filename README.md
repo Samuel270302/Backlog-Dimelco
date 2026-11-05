@@ -31,6 +31,7 @@ Electron + React + TypeScript para escritorio Windows, y el mismo código como s
     npm run build:web      compila el sitio web (usa .env.web)
     npm run dist           instalador de Windows
     tools/prueba_local.sh  aplica las migraciones en un PostgreSQL temporal y prueba el flujo por rol
+    tests/e2e.sh           prueba en navegador (Playwright) contra la base local, con dos usuarios
 
 ## Puesta en marcha
 

@@ -4,11 +4,13 @@ export default function DialogoConfirmar({
   titulo,
   texto,
   confirmar,
+  cancelar = "Cancelar",
   onRespuesta,
 }: {
   titulo: string;
   texto: string;
   confirmar: string;
+  cancelar?: string;
   onRespuesta: (si: boolean) => void;
 }) {
   const ref = useRef<HTMLDialogElement>(null);
@@ -29,7 +31,7 @@ export default function DialogoConfirmar({
       <div className="barra-acciones" style={{ marginBottom: 0 }}>
         <div className="espacio" />
         <button className="boton-plano" autoFocus onClick={() => onRespuesta(false)}>
-          Seguir capturando
+          {cancelar}
         </button>
         <button onClick={() => onRespuesta(true)}>{confirmar}</button>
       </div>

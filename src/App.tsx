@@ -11,6 +11,8 @@ import Setup from "./pages/Setup";
 import Login from "./pages/Login";
 import Usuarios from "./pages/Usuarios";
 import EnConstruccion from "./pages/EnConstruccion";
+import NuevoBacklog from "./pages/NuevoBacklog";
+import FichaBacklog from "./pages/FichaBacklog";
 
 function Interior() {
   const { session, perfil, cargando, esAdmin, puedeCapturar } = useAuth();
@@ -47,9 +49,9 @@ function ConRealtime({ esAdmin, puedeCapturar }: { esAdmin: boolean; puedeCaptur
     <Layout>
       <Routes>
         <Route path="/" element={<Navigate to="/backlog" replace />} />
-        {puedeCapturar && <Route path="/nuevo" element={<EnConstruccion titulo="Nuevo backlog" fase={3} />} />}
+        {puedeCapturar && <Route path="/nuevo" element={<NuevoBacklog />} />}
         <Route path="/backlog" element={<EnConstruccion titulo="Tablero de backlog" fase={4} />} />
-        <Route path="/backlog/:id" element={<EnConstruccion titulo="Ficha del backlog" fase={3} />} />
+        <Route path="/backlog/:id" element={<FichaBacklog />} />
         <Route path="/kanban" element={<EnConstruccion titulo="Kanban" fase={4} />} />
         <Route path="/programa" element={<EnConstruccion titulo="Programación semanal" fase={5} />} />
         <Route path="/equipo/:id" element={<EnConstruccion titulo="Ficha de equipo" fase={4} />} />

@@ -1,22 +1,29 @@
 import { useEffect, useRef, useState } from "react";
 
-// Electron no implementa window.prompt(); el motivo de una anulación se pide con
-// este diálogo propio. pedirMotivo() se resuelve con el texto, o con null si se cancela.
+// Electron no implementa window.prompt(); un texto corto (motivo, comentario) se pide
+// con este diálogo propio. pedirMotivo() se resuelve con el texto, o con null si se cancela.
+interface Opciones {
+  etiqueta?: string;
+  boton?: string;
+  ejemplo?: string;
+}
 export function useDialogoMotivo() {
   const [pendiente, setPendiente] = useState<{
     titulo: string;
     detalle: string;
+    opciones: Opciones;
     resolver: (v: string | null) => void;
   } | null>(null);
 
-  function pedirMotivo(titulo: string, detalle = ""): Promise<string | null> {
-    return new Promise((resolver) => setPendiente({ titulo, detalle, resolver }));
+  function pedirMotivo(titulo: string, detalle = "", opciones: Opciones = {}): Promise<string | null> {
+    return new Promise((resolver) => setPendiente({ titulo, detalle, opciones, resolver }));
   }
 
   const dialogo = pendiente ? (
     <DialogoMotivo
       titulo={pendiente.titulo}
       detalle={pendiente.detalle}
+      {...pendiente.opciones}
       onCerrar={(v) => {
         pendiente.resolver(v);
         setPendiente(null);
@@ -30,8 +37,11 @@ export function useDialogoMotivo() {
 function DialogoMotivo({
   titulo,
   detalle,
+  etiqueta = "Motivo",
+  boton = "Aceptar",
+  ejemplo = "",
   onCerrar,
-}: {
+}: Opciones & {
   titulo: string;
   detalle: string;
   onCerrar: (motivo: string | null) => void;
@@ -57,13 +67,13 @@ function DialogoMotivo({
       <h1 style={{ fontSize: 16 }}>{titulo}</h1>
       {detalle && <p className="nota" style={{ marginTop: 0 }}>{detalle}</p>}
       <label className="campo">
-        <span>Motivo de la anulación</span>
+        <span>{etiqueta}</span>
         <textarea
           rows={3}
           autoFocus
           value={motivo}
           onChange={(e) => setMotivo(e.target.value)}
-          placeholder="Ej.: lectura cargada como acumulado en vez de contador"
+          placeholder={ejemplo}
         />
       </label>
       <div className="barra-acciones" style={{ marginBottom: 0 }}>
@@ -72,7 +82,7 @@ function DialogoMotivo({
           Cancelar
         </button>
         <button disabled={!valido} onClick={() => onCerrar(motivo.trim())}>
-          Anular registro
+          {boton}
         </button>
       </div>
     </dialog>

@@ -523,3 +523,85 @@ dialog.dialogo-ancho { width: min(1100px, 94vw); }
 .selector-unidad span { display: block; font-size: 11px; color: #9f9f9f; margin-bottom: 4px; letter-spacing: 0.03em; }
 .selector-unidad select { width: 100%; background: #2f2f2f; color: #f2f2f2; border: 1px solid #4a4a4a; border-radius: 6px; padding: 6px 8px; font-size: 13px; }
 .unidad-fija { padding: 12px 16px; border-bottom: 1px solid #3a3a3a; color: var(--ambar); font-weight: 600; font-size: 13px; }
+
+/* ===== Backlog: etiquetas de estado y prioridad ===== */
+.etiqueta-estado, .etiqueta-prioridad {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 10px;
+  font-size: 12px;
+  font-weight: 600;
+  vertical-align: middle;
+  white-space: nowrap;
+}
+.est-identificado { background: #e8e8e6; color: #3a3a3a; }
+.est-en-planificacion { background: #dde8f6; color: #1f4e79; }
+.est-esperando-repuestos { background: var(--amarillo-fondo); color: var(--amarillo-letra); }
+.est-listo-para-programar { background: #e4dcf2; color: #4b2c7f; }
+.est-programado { background: #bdd7ee; color: #1f3d5c; }
+.est-ejecutado { background: var(--verde-fondo); color: var(--verde-letra); }
+.est-cerrado { background: #375623; color: #ffffff; }
+.est-rechazado, .est-anulado { background: var(--gris-fondo); color: var(--gris-letra); text-decoration: line-through; }
+.pri-p1 { background: var(--rojo-letra); color: #ffffff; }
+.pri-p2 { background: var(--rojo-fondo); color: var(--rojo-letra); }
+.pri-p3 { background: var(--amarillo-fondo); color: var(--amarillo-letra); }
+.pri-p4 { background: var(--gris-fondo); color: var(--gris-letra); }
+
+/* ===== Formularios de backlog ===== */
+.pagina-formulario { max-width: 860px; }
+.oculto-visual { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+select[size] { padding: 4px; }
+.campo-check { display: flex; align-items: center; gap: 8px; margin-bottom: 12px; font-size: 13px; cursor: pointer; }
+.campo-check input { width: auto; }
+.fila-hh { align-items: flex-end; margin-bottom: 8px; }
+.fila-hh .hh-total { min-width: 70px; padding-bottom: 9px; font-weight: 600; }
+.fila-hh .boton-plano { margin-bottom: 2px; }
+.boton-peligro { background: var(--rojo-letra); color: #ffffff; }
+.boton-peligro-plano { color: var(--rojo-letra); border-color: var(--rojo-fondo); }
+fieldset.sin-borde { border: none; margin: 0; padding: 0; min-width: 0; }
+fieldset.sin-borde:disabled input, fieldset.sin-borde:disabled select, fieldset.sin-borde:disabled textarea {
+  background: var(--panel-2);
+  color: var(--texto);
+}
+
+/* ===== Ficha del backlog ===== */
+.ficha-cabecera { display: flex; gap: 16px; align-items: flex-start; justify-content: space-between; margin-bottom: 14px; flex-wrap: wrap; }
+.ficha-cabecera > div:first-child { flex: 1; min-width: 260px; }
+.ficha-folio { font-size: 13px; color: var(--texto-suave); font-weight: 600; margin-bottom: 4px; display: flex; gap: 6px; align-items: center; }
+.ficha-acciones { display: flex; gap: 8px; flex-wrap: wrap; justify-content: flex-end; }
+.bloque-ficha {
+  background: var(--panel);
+  border: 1px solid var(--borde);
+  border-radius: 10px;
+  padding: 14px 16px;
+  margin-bottom: 14px;
+}
+.bloque-ficha h2 { font-size: 15px; margin: 0 0 8px; }
+.datos-fijos { display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: 10px 18px; margin: 0 0 16px; }
+.datos-fijos dt { font-size: 12px; color: var(--texto-suave); }
+.datos-fijos dd { margin: 2px 0 0; font-weight: 600; }
+.texto-vencido { color: var(--rojo-letra); }
+.tabla-edicion tfoot td { font-weight: 600; border-top: 2px solid var(--borde); }
+.tabla-edicion .fila-nueva td { background: var(--ambar-suave); }
+.tabla-edicion tr.fila-recibida td { color: var(--verde-letra); }
+.tabla-edicion td.num input { width: 80px; text-align: right; }
+
+.bitacora { list-style: none; margin: 0 0 12px; padding: 0; border-left: 2px solid var(--borde); }
+.evento { padding: 6px 0 10px 14px; position: relative; }
+.evento::before {
+  content: "";
+  position: absolute;
+  left: -6px;
+  top: 10px;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--borde);
+}
+.evento.evento-estado::before { background: var(--ambar); }
+.evento.evento-reprogramacion::before { background: var(--aviso); }
+.evento-cabecera { display: flex; gap: 12px; font-size: 12px; color: var(--texto-suave); }
+.evento-cambio { font-weight: 600; margin-top: 2px; }
+.evento-texto { margin-top: 2px; white-space: pre-wrap; }
+.comentar { display: flex; gap: 8px; align-items: flex-end; }
+.comentar textarea { flex: 1; }
