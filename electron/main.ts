@@ -9,7 +9,7 @@ app.setPath("userData", path.join(app.getPath("appData"), "Backlog HEMCO"));
 
 // El renderer no puede abrir ventanas nuevas (ver setWindowOpenHandler); los
 // reportes se convierten a PDF aquí, en una ventana oculta sin JavaScript.
-ipcMain.handle("guardar-pdf", async (evento, html: string, nombre: string) => {
+ipcMain.handle("guardar-pdf", async (evento, html: string, nombre: string, vertical?: boolean) => {
   const padre = BrowserWindow.fromWebContents(evento.sender) ?? undefined;
   const opciones = {
     title: "Guardar reporte",
@@ -24,7 +24,7 @@ ipcMain.handle("guardar-pdf", async (evento, html: string, nombre: string) => {
   try {
     await oculta.loadURL("data:text/html;charset=utf-8," + encodeURIComponent(html));
     const pdf = await oculta.webContents.printToPDF({
-      landscape: true,
+      landscape: !vertical,
       pageSize: "A4",
       printBackground: true,
       margins: { top: 0.4, bottom: 0.4, left: 0.4, right: 0.4 },

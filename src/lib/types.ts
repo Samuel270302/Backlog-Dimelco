@@ -22,6 +22,7 @@ export interface Equipo {
   cod_sap: string | null;
   modelo: string;
   flota: string | null;
+  marca: string | null;
   activo: boolean;
 }
 
@@ -63,6 +64,9 @@ export const ESTADOS_ABIERTOS: Estado[] = [
 export const PRIORIDADES = ["P1", "P2", "P3", "P4"] as const;
 export type Prioridad = (typeof PRIORIDADES)[number];
 
+export const TIPOS_PEDIDO = ["Normal", "Urgente"] as const;
+export type TipoPedido = (typeof TIPOS_PEDIDO)[number];
+
 export const ORIGENES = ["Inspección", "PM", "Operador", "Falla", "Análisis de aceite", "Otro"] as const;
 export type Origen = (typeof ORIGENES)[number];
 
@@ -73,6 +77,10 @@ export interface Backlog {
   equipo_id: string;
   sistema_id: string;
   descripcion: string;
+  justificacion: string | null;
+  componente: string | null;
+  horometro: number | null;
+  tipo_pedido: TipoPedido;
   origen: Origen;
   prioridad: Prioridad;
   estado: Estado;
@@ -96,6 +104,8 @@ export interface Backlog {
 export interface BacklogFila extends Backlog {
   cod_interno: string;
   modelo: string;
+  marca: string | null;
+  flota: string | null;
   sistema: string;
   antiguedad_dias: number;
   dias_para_limite: number | null;
@@ -121,9 +131,14 @@ export type EstadoRepuesto = "Por pedir" | "Pedido" | "Recibido";
 export interface BacklogRepuesto {
   id: string;
   backlog_id: string;
-  cod_sap: string;
+  item: number;
+  numero_parte: string | null;
+  cod_sap: string | null;
   descripcion: string | null;
   cantidad: number;
+  stock: number | null;
+  componente: string | null;
+  observaciones: string | null;
   um: string;
   solicitud_sap: string | null;
   estado: EstadoRepuesto;
@@ -145,6 +160,7 @@ export interface BacklogEvento {
 export interface BacklogFoto {
   id: string;
   backlog_id: string;
+  repuesto_id: string | null;
   ruta: string;
   creado_por: string | null;
   creado_en: string;

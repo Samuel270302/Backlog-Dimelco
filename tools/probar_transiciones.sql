@@ -147,6 +147,21 @@ select pruebas.igual((select folio from backlogs where id = '20000000-0000-0000-
 select cambiar_estado_backlog('20000000-0000-0000-0000-000000000004', 'Rechazado', '{"motivo":"Duplicado de BL-HEM-000003"}');
 select pruebas.igual((select semanas from v_semanas_backlog where especialidad = 'Mecánico'), 0.50::numeric, 'rechazado sale del backlog');
 
+-- Formato del backlog (008): ítem correlativo, identificación del repuesto, horómetro y tipo de pedido.
+select pruebas.igual((select string_agg(item::text, ',' order by item) from backlog_repuestos
+  where backlog_id = '20000000-0000-0000-0000-000000000001'), '1,2', 'ítems correlativos');
+insert into backlog_repuestos (backlog_id, numero_parte, descripcion, cantidad, stock, componente)
+values ('20000000-0000-0000-0000-000000000002', '6060003007', 'Juego de cierres EOD', 2, 0, 'Block de implementos');
+select pruebas.igual((select item from backlog_repuestos where numero_parte = '6060003007'), 1, 'ítem 1 en otro backlog');
+select pruebas.espera_error($$insert into backlog_repuestos (backlog_id, descripcion, cantidad)
+  values ('20000000-0000-0000-0000-000000000002', 'Sin número de parte ni código', 1)$$, 'backlog_repuestos_identificacion');
+select pruebas.espera_error($$update backlogs set horometro = -5 where id = '20000000-0000-0000-0000-000000000002'$$, 'backlogs_horometro_check');
+select pruebas.espera_error($$update backlogs set tipo_pedido = 'Inmediato' where id = '20000000-0000-0000-0000-000000000002'$$, 'backlogs_tipo_pedido_check');
+update backlogs set tipo_pedido = 'Urgente', horometro = 12450.5, componente = 'Block de implementos',
+  justificacion = 'Fugas de aceite en block' where id = '20000000-0000-0000-0000-000000000002';
+select pruebas.igual((select tipo_pedido || ' ' || horometro || ' ' || componente from v_backlog
+  where id = '20000000-0000-0000-0000-000000000002'), 'Urgente 12450.5 Block de implementos', 'campos del formato en v_backlog');
+
 reset role;
 \o
 select 'Bitácora del BL-HEM-000001:' as titulo;

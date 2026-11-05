@@ -2,7 +2,9 @@ import { useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "../auth";
-import { useEspecialidades } from "../lib/queries";
+import { useEspecialidades, usePerfiles } from "../lib/queries";
+import { useUnidades } from "../lib/unidad";
+import { imprimirFormato } from "../lib/formato";
 import {
   ESTADOS_FINALES,
   cambiarEstado,
@@ -34,6 +36,9 @@ export default function FichaBacklog() {
   const { data: repuestos } = useRepuestosBacklog(id);
   const { data: eventos } = useEventosBacklog(id);
   const { data: especialidades } = useEspecialidades();
+  const { data: perfiles } = usePerfiles();
+  const { data: unidades } = useUnidades();
+  const [imprimiendo, setImprimiendo] = useState(false);
   const [pestania, setPestania] = useState<Pestania>("datos");
   const [transicion, setTransicion] = useState<Transicion | null>(null);
   const [ocupado, setOcupado] = useState(false);
@@ -71,6 +76,27 @@ export default function FichaBacklog() {
     }
   }
 
+  async function imprimir() {
+    if (!b) return;
+    setImprimiendo(true);
+    try {
+      const ruta = await imprimirFormato({
+        b,
+        repuestos: repuestos ?? [],
+        hh: hh ?? [],
+        especialidades: especialidades ?? [],
+        eventos: eventos ?? [],
+        perfiles: perfiles ?? [],
+        unidad: unidades?.find((u) => u.id === b.unidad_id)?.nombre ?? "",
+      });
+      if (ruta) avisar(`Formato guardado en ${ruta}`);
+    } catch (e) {
+      avisar(`No se pudo generar el formato: ${(e as Error).message}`, "error");
+    } finally {
+      setImprimiendo(false);
+    }
+  }
+
   const pestanias: [Pestania, string][] = [
     ["datos", "Datos"],
     ["hh", `HH (${fNum(b.hh_estimadas)} est. / ${fNum(b.hh_reales)} real)`],
@@ -90,13 +116,18 @@ export default function FichaBacklog() {
         <div>
           <div className="ficha-folio">
             {b.folio} <EtiquetaEstado estado={b.estado} /> <EtiquetaPrioridad prioridad={b.prioridad} />
+            {b.tipo_pedido === "Urgente" && <span className="etiqueta-urgente">Urgente</span>}
           </div>
           <h1>
             {b.cod_interno} · {b.sistema}
+            {b.componente ? ` · ${b.componente}` : ""}
           </h1>
           <p className="subtitulo">{b.descripcion}</p>
         </div>
         <div className="ficha-acciones">
+          <button className="boton-plano" disabled={imprimiendo} onClick={imprimir}>
+            {imprimiendo ? "Generando…" : "Imprimir formato"}
+          </button>
           {acciones.map((t) => (
             <button
               key={t.destino}

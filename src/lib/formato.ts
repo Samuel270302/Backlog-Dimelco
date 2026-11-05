@@ -1,0 +1,158 @@
+// Formato imprimible "Mantenimiento correctivo programado" de un backlog, con la
+// disposición del formato en papel: encabezado, equipo, repuestos, HH, justificación
+// y firmas. Lleva el logo Dimelco; nada del cliente.
+import logoDimelco from "../assets/logo-dimelco.png";
+import { fFecha, fNum } from "./fmt";
+import type { BacklogEvento, BacklogFila, BacklogHh, BacklogRepuesto, Catalogo, Perfil } from "./types";
+
+const FILAS_MINIMAS_REPUESTOS = 8;
+
+const esc = (v: unknown) =>
+  String(v ?? "")
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;");
+
+// El PDF se arma en una ventana sin acceso a los archivos de la app: el logo va incrustado.
+async function comoDataUrl(url: string): Promise<string> {
+  try {
+    const blob = await (await fetch(url)).blob();
+    return await new Promise((ok, mal) => {
+      const r = new FileReader();
+      r.onload = () => ok(String(r.result));
+      r.onerror = mal;
+      r.readAsDataURL(blob);
+    });
+  } catch {
+    return "";
+  }
+}
+
+export interface DatosFormato {
+  b: BacklogFila;
+  repuestos: BacklogRepuesto[];
+  hh: BacklogHh[];
+  especialidades: Catalogo[];
+  eventos: BacklogEvento[];
+  perfiles: Perfil[];
+  unidad: string;
+}
+
+export function armarFormato(d: DatosFormato, logo: string): string {
+  const { b } = d;
+  const nombre = (id: string | null) => d.perfiles.find((p) => p.user_id === id)?.nombre ?? "";
+  const aprobacion = d.eventos.find((e) => e.tipo === "estado" && e.estado_nuevo === "En planificación");
+  const marca = (si: boolean) => (si ? "&#9746;" : "&#9744;");
+
+  const repuestos = [...d.repuestos].sort((a, b2) => a.item - b2.item);
+  const filasRep = repuestos.map(
+    (r) => `<tr>
+      <td class="n">${r.item}</td><td>${esc(r.numero_parte)}</td><td>${esc(r.cod_sap)}</td>
+      <td class="n">${fNum(r.cantidad, 2)}</td><td class="n">${fNum(r.stock, 2)}</td>
+      <td>${esc(r.descripcion)}</td><td>${esc(r.componente)}</td><td>${esc(r.observaciones)}</td></tr>`
+  );
+  for (let i = repuestos.length; i < FILAS_MINIMAS_REPUESTOS; i++) {
+    filasRep.push(`<tr class="vacia"><td class="n">${i + 1}</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr>`);
+  }
+
+  const estimadas = d.hh.filter((h) => h.tipo === "estimada");
+  const nombreEsp = (id: string) => d.especialidades.find((e) => e.id === id)?.nombre ?? "";
+  const totalHh = estimadas.reduce((s, h) => s + Number(h.hh), 0);
+  const filasHh = estimadas.length
+    ? estimadas
+        .map((h) => `<tr><td>${esc(nombreEsp(h.especialidad_id))}</td><td class="n">${fNum(h.personas)}</td><td class="n">${fNum(h.horas)}</td><td class="n">${fNum(h.hh)}</td></tr>`)
+        .join("") + `<tr class="total"><td colspan="3">Total</td><td class="n">${fNum(totalHh)}</td></tr>`
+    : `<tr><td colspan="4" class="gris">Sin HH estimadas</td></tr>`;
+
+  return `<!doctype html><html lang="es"><head><meta charset="utf-8">
+<title>${esc(b.folio)} ${esc(b.descripcion)}</title>
+<style>
+  * { box-sizing: border-box; }
+  body { font-family: "Segoe UI", Arial, sans-serif; font-size: 11px; color: #1c1c1c; margin: 0; }
+  .hoja { padding: 14px 18px; }
+  table { border-collapse: collapse; width: 100%; }
+  td, th { border: 1px solid #555; padding: 4px 6px; vertical-align: top; text-align: left; }
+  th { background: #e9e9e9; font-weight: 600; }
+  .n { text-align: right; }
+  .enc td { vertical-align: middle; }
+  .enc .logo { width: 150px; text-align: center; }
+  .enc .logo img { max-width: 130px; max-height: 52px; }
+  .enc .titulo { font-size: 16px; font-weight: 700; text-align: center; letter-spacing: 0.5px; }
+  .enc .datos { width: 190px; font-size: 11px; }
+  .et { color: #555; font-size: 10px; display: block; }
+  .bloque { margin-top: 8px; }
+  .seccion { background: #252525; color: #f5b301; font-weight: 700; padding: 4px 6px; margin-top: 8px; }
+  .vacia td { height: 20px; }
+  .total td { font-weight: 700; background: #f4f4f4; }
+  .gris { color: #777; }
+  .texto { min-height: 60px; white-space: pre-wrap; }
+  .firmas { display: flex; gap: 40px; margin-top: 46px; }
+  .firma { flex: 1; text-align: center; }
+  .firma .linea { border-top: 1px solid #1c1c1c; padding-top: 4px; font-weight: 600; }
+  .firma .quien { min-height: 14px; margin-bottom: 2px; }
+  .pie { margin-top: 14px; color: #777; font-size: 9px; text-align: right; }
+  @media print { @page { size: A4 portrait; margin: 10mm; } .hoja { padding: 0; } }
+</style></head><body><div class="hoja">
+<table class="enc"><tr>
+  <td class="logo">${logo ? `<img src="${logo}" alt="Dimelco">` : "Dimelco"}</td>
+  <td class="titulo">MANTENIMIENTO CORRECTIVO PROGRAMADO</td>
+  <td class="datos"><span class="et">N°</span><b>${esc(b.folio)}</b><br><span class="et">Fecha</span>${fFecha(b.fecha_deteccion)}<br><span class="et">Unidad</span>${esc(d.unidad)}</td>
+</tr></table>
+
+<table class="bloque"><tr>
+  <td style="width:40%"><span class="et">Solicitado por</span>${esc(b.reportado_por)}</td>
+  <td><span class="et">Tipo de pedido</span>${marca(b.tipo_pedido === "Normal")} Normal &nbsp;&nbsp; ${marca(b.tipo_pedido === "Urgente")} Urgente</td>
+  <td><span class="et">Prioridad</span>${esc(b.prioridad)}</td>
+  <td><span class="et">Estado</span>${esc(b.estado)}</td>
+</tr><tr>
+  <td><span class="et">Equipo</span>${esc(b.flota)}</td>
+  <td><span class="et">Marca</span>${esc(b.marca)}</td>
+  <td><span class="et">Modelo</span>${esc(b.modelo)}</td>
+  <td><span class="et">Código interno</span><b>${esc(b.cod_interno)}</b></td>
+</tr><tr>
+  <td colspan="4"><span class="et">Descripción del trabajo</span><b>${esc(b.descripcion)}</b></td>
+</tr><tr>
+  <td><span class="et">Componente</span>${esc(b.componente)}</td>
+  <td><span class="et">Sistema</span>${esc(b.sistema)}</td>
+  <td><span class="et">Horómetro</span>${b.horometro === null ? "" : `${fNum(b.horometro)} h`}</td>
+  <td><span class="et">Aviso / OT SAP</span>${esc([b.aviso_sap, b.ot_sap].filter(Boolean).join(" / "))}</td>
+</tr></table>
+
+<div class="seccion">Repuestos</div>
+<table><thead><tr>
+  <th class="n" style="width:34px">Ítem</th><th>Número de parte</th><th>Código</th><th class="n">Cant/Req</th><th class="n">Stock</th>
+  <th>Descripción del repuesto</th><th>Componente/Sistema</th><th>Observaciones</th>
+</tr></thead><tbody>${filasRep.join("")}</tbody></table>
+
+<div class="seccion">Especialidades y horas hombre</div>
+<table><thead><tr><th>Especialidad</th><th class="n">Personas</th><th class="n">Horas</th><th class="n">HH</th></tr></thead>
+<tbody>${filasHh}</tbody></table>
+
+<div class="seccion">Justificación</div>
+<table><tr><td class="texto">${esc(b.justificacion)}</td></tr></table>
+
+<div class="firmas">
+  <div class="firma"><div class="quien">${esc(b.reportado_por)}</div><div class="linea">Solicitado por</div></div>
+  <div class="firma"><div class="quien">${aprobacion ? `${esc(nombre(aprobacion.usuario))} · ${fFecha(aprobacion.creado_en.slice(0, 10))}` : ""}</div><div class="linea">Revisado y aprobado por</div></div>
+</div>
+<div class="pie">Control de Backlog · Dimelco · ${esc(b.folio)}</div>
+</div></body></html>`;
+}
+
+interface AppInfo {
+  guardarPdf?: (html: string, nombre: string, vertical?: boolean) => Promise<string | null>;
+}
+
+export async function imprimirFormato(d: DatosFormato): Promise<string | null> {
+  const html = armarFormato(d, await comoDataUrl(logoDimelco));
+  const nombreArchivo = `${d.b.folio} ${d.b.cod_interno} ${d.b.descripcion}`.replace(/[\\/:*?"<>|]+/g, " ").slice(0, 120) + ".pdf";
+  const escritorio = (window as unknown as { appInfo?: AppInfo }).appInfo;
+  if (escritorio?.guardarPdf) return escritorio.guardarPdf(html, nombreArchivo, true);
+  // Navegador: ventana nueva con el diálogo de impresión ("Guardar como PDF").
+  const v = window.open("", "_blank");
+  if (!v) return null;
+  v.document.write(html.replace("</body>", "<script>window.onload = () => setTimeout(() => window.print(), 300);</script></body>"));
+  v.document.close();
+  return null;
+}

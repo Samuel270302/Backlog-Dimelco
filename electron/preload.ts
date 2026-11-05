@@ -3,8 +3,8 @@ import { contextBridge, ipcRenderer } from "electron";
 contextBridge.exposeInMainWorld("appInfo", {
   version: process.env.npm_package_version ?? "",
   plataforma: process.platform,
-  guardarPdf: (html: string, nombre: string): Promise<string | null> =>
-    ipcRenderer.invoke("guardar-pdf", html, nombre),
+  guardarPdf: (html: string, nombre: string, vertical = false): Promise<string | null> =>
+    ipcRenderer.invoke("guardar-pdf", html, nombre, vertical),
   guardarArchivo: (datos: Uint8Array, nombre: string): Promise<string | null> =>
     ipcRenderer.invoke("guardar-archivo", datos, nombre),
   // Actualización automática: versión ya descargada (o null) y reinicio para instalarla.

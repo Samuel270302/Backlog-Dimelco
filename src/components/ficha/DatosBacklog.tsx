@@ -7,17 +7,21 @@ import { useUnidades } from "../../lib/unidad";
 import { useAvisos } from "../Avisos";
 import { marcarPendientes } from "../../lib/pendientes";
 import { fFecha, hoyISO } from "../../lib/fmt";
-import { ORIGENES, PRIORIDADES, type BacklogFila, type Origen, type Prioridad } from "../../lib/types";
+import { ORIGENES, PRIORIDADES, TIPOS_PEDIDO, type BacklogFila, type Origen, type Prioridad, type TipoPedido } from "../../lib/types";
 
 const editables = (b: BacklogFila) => ({
   sistema_id: b.sistema_id,
   origen: b.origen,
+  tipo_pedido: b.tipo_pedido,
   prioridad: b.prioridad,
   fecha_deteccion: b.fecha_deteccion,
   reportado_por: b.reportado_por ?? "",
   aviso_sap: b.aviso_sap ?? "",
   ot_sap: b.ot_sap ?? "",
   descripcion: b.descripcion,
+  componente: b.componente ?? "",
+  horometro: b.horometro === null ? "" : String(b.horometro),
+  justificacion: b.justificacion ?? "",
 });
 
 export default function DatosBacklog({ b, editable }: { b: BacklogFila; editable: boolean }) {
@@ -46,12 +50,16 @@ export default function DatosBacklog({ b, editable }: { b: BacklogFila; editable
         .update({
           sistema_id: f.sistema_id,
           origen: f.origen,
+          tipo_pedido: f.tipo_pedido,
           prioridad: f.prioridad,
           fecha_deteccion: f.fecha_deteccion,
           reportado_por: f.reportado_por.trim() || null,
           aviso_sap: f.aviso_sap.trim() || null,
           ot_sap: f.ot_sap.trim() || null,
           descripcion: f.descripcion.trim(),
+          componente: f.componente.trim() || null,
+          horometro: f.horometro.trim() === "" ? null : Number(f.horometro),
+          justificacion: f.justificacion.trim() || null,
         })
         .eq("id", b.id);
       if (error) throw error;
@@ -70,7 +78,8 @@ export default function DatosBacklog({ b, editable }: { b: BacklogFila; editable
   return (
     <div className="bloque-ficha">
       <dl className="datos-fijos">
-        <div><dt>Equipo</dt><dd><Link to={`/equipo/${b.equipo_id}`}>{b.cod_interno}</Link> · {b.modelo}</dd></div>
+        <div><dt>Código interno</dt><dd><Link to={`/equipo/${b.equipo_id}`}>{b.cod_interno}</Link></dd></div>
+        <div><dt>Equipo</dt><dd>{[b.flota, b.marca, b.modelo].filter(Boolean).join(" · ")}</dd></div>
         <div><dt>Unidad</dt><dd>{unidad}</dd></div>
         <div><dt>Fecha límite</dt><dd className={b.vencido ? "texto-vencido" : undefined}>{fFecha(b.fecha_limite)}{b.vencido && " (vencido)"}</dd></div>
         <div><dt>Antigüedad</dt><dd>{b.antiguedad_dias} días</dd></div>
@@ -82,9 +91,25 @@ export default function DatosBacklog({ b, editable }: { b: BacklogFila; editable
 
       <fieldset disabled={!editable} className="sin-borde">
         <label className="campo">
-          <span>Descripción</span>
-          <textarea rows={3} value={f.descripcion} onChange={(e) => campo("descripcion", e.target.value)} />
+          <span>Descripción del trabajo</span>
+          <input value={f.descripcion} onChange={(e) => campo("descripcion", e.target.value)} />
         </label>
+        <div className="fila-campos">
+          <label className="campo">
+            <span>Componente</span>
+            <input value={f.componente} onChange={(e) => campo("componente", e.target.value)} />
+          </label>
+          <label className="campo">
+            <span>Horómetro (h)</span>
+            <input type="number" min={0} step="any" value={f.horometro} onChange={(e) => campo("horometro", e.target.value)} />
+          </label>
+          <label className="campo">
+            <span>Tipo de pedido</span>
+            <select value={f.tipo_pedido} onChange={(e) => campo("tipo_pedido", e.target.value as TipoPedido)}>
+              {TIPOS_PEDIDO.map((t) => <option key={t}>{t}</option>)}
+            </select>
+          </label>
+        </div>
         <div className="fila-campos">
           <label className="campo">
             <span>Sistema</span>
@@ -113,7 +138,7 @@ export default function DatosBacklog({ b, editable }: { b: BacklogFila; editable
         </div>
         <div className="fila-campos">
           <label className="campo">
-            <span>Reportado por</span>
+            <span>Solicitado por</span>
             <input value={f.reportado_por} onChange={(e) => campo("reportado_por", e.target.value)} />
           </label>
           <label className="campo">
@@ -125,6 +150,10 @@ export default function DatosBacklog({ b, editable }: { b: BacklogFila; editable
             <input value={f.ot_sap} onChange={(e) => campo("ot_sap", e.target.value)} />
           </label>
         </div>
+        <label className="campo">
+          <span>Justificación</span>
+          <textarea rows={3} value={f.justificacion} onChange={(e) => campo("justificacion", e.target.value)} />
+        </label>
       </fieldset>
       {editable && (
         <div className="barra-acciones">
@@ -132,7 +161,7 @@ export default function DatosBacklog({ b, editable }: { b: BacklogFila; editable
           <button className="boton-plano" disabled={!sucio} onClick={() => setF(editables(b))}>
             Deshacer
           </button>
-          <button disabled={!sucio || f.descripcion.trim().length < 5 || grabar.isPending} onClick={() => grabar.mutate()}>
+          <button disabled={!sucio || f.descripcion.trim().length < 5 || (f.horometro !== "" && !(Number(f.horometro) >= 0)) || grabar.isPending} onClick={() => grabar.mutate()}>
             {grabar.isPending ? "Grabando…" : "Grabar datos"}
           </button>
         </div>

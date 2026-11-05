@@ -104,7 +104,13 @@ const enDias = (n) => {
 };
 
 try {
-  // 1. El capturador registra un backlog con HH estimadas.
+  // 1. El capturador registra el caso del formato de ejemplo (N° 105, PS011) en un solo formulario.
+  const REPUESTOS = [
+    ["6060003007", "2", "", "Juego de cierres EOD"],
+    ["6060013890", "2", "", "KIT DE RETENES (Dirección)"],
+    ["5541120900", "2", "", "JUEGO CIERRES"],
+    ["6060015161", "4", "1", "Kit de sellos"],
+  ];
   const cap = await abrir("cap");
   await cap.goto(base + "#/nuevo");
   await cap.getByRole("heading", { name: "Nuevo backlog" }).waitFor();
@@ -112,29 +118,63 @@ try {
   const equipoElegido = cap.getByLabel("Equipo elegido");
   await cap.waitForFunction(() => document.querySelectorAll("select[size] option").length === 2);
   const opciones = await equipoElegido.locator("option").allTextContents();
-  if (opciones.some((t) => t.includes("Scooptram #9"))) throw new Error("El capturador de HEMCO ve equipos de Veta Nueva");
-  ok("el buscador filtra equipos y el capturador solo ve su unidad");
-  await equipoElegido.selectOption({ label: "Scooptram #1 · ST1030" });
+  if (opciones.some((t) => t.includes("PS090"))) throw new Error("El capturador de HEMCO ve equipos de Veta Nueva");
+  ok("el buscador filtra por flota y el capturador solo ve su unidad");
+  await equipoElegido.selectOption({ label: "PS011 · ST1030" });
+  await cap.locator(".datos-equipo", { hasText: "Epiroc" }).waitFor();
+  if ((await cap.getByLabel("Solicitado por").inputValue()) !== "Carlos Capturador") throw new Error("Solicitado por no toma el usuario");
   await cap.getByLabel("Sistema").selectOption({ label: "Sistema hidráulico" });
-  await cap.getByLabel("Descripción del hallazgo").fill("Fuga en cilindro de levante izquierdo, sello dañado");
-  await cap.getByLabel("Reportado por").fill("J. Pérez");
+  await cap.getByLabel("Descripción del trabajo").fill("Reempaque de block de implementos por fugas de aceite");
+  await cap.getByLabel("Componente", { exact: true }).fill("Block de implementos");
+  await cap.getByLabel("Horómetro (h)").fill("12450");
+  for (const [i, [parte, cant, stock, desc]] of REPUESTOS.entries()) {
+    await cap.getByRole("button", { name: "Agregar repuesto" }).click();
+    await cap.getByLabel(`Número de parte ítem ${i + 1}`).fill(parte);
+    await cap.getByLabel(`Cantidad ítem ${i + 1}`).fill(cant);
+    if (stock) await cap.getByLabel(`Stock ítem ${i + 1}`).fill(stock);
+    await cap.getByLabel(`Descripción ítem ${i + 1}`).fill(desc);
+    await cap.getByLabel(`Componente ítem ${i + 1}`).fill("Block de implementos");
+  }
   await cap.getByRole("button", { name: "Agregar especialidad" }).click();
   await cap.locator(".fila-hh").getByLabel("Especialidad").selectOption({ label: "Mecánico" });
   await cap.locator(".fila-hh").getByLabel("Personas").fill("2");
   await cap.locator(".fila-hh").getByLabel("Horas").fill("4");
-  await cap.screenshot({ path: join(SALIDA, "nuevo-backlog.png"), fullPage: true });
+  await cap.getByPlaceholder("Por qué hay que hacer el trabajo").fill("Fugas de aceite en el block de implementos; riesgo de daño a bombas.");
+  await cap.setViewportSize({ width: 1366, height: 1500 });
+  await cap.screenshot({ path: join(SALIDA, "nuevo-backlog.png") });
+  await cap.setViewportSize({ width: 1366, height: 860 });
   await cap.getByRole("button", { name: "Registrar backlog" }).click();
   await esperarEstado(cap, "Identificado");
   const id = cap.url().split("/backlog/")[1];
   const folio = await cap.locator(".ficha-folio").textContent();
   if (!folio.includes("BL-HEM-000001")) throw new Error(`Folio inesperado: ${folio}`);
-  ok("registro crea BL-HEM-000001 y abre la ficha");
-  if (await cap.locator(".ficha-acciones button").count()) throw new Error("El capturador ve acciones de admin en Identificado");
+  await cap.getByRole("heading", { name: "PS011 · Sistema hidráulico · Block de implementos" }).waitFor();
+  ok("registro crea BL-HEM-000001 con componente y abre la ficha");
+  if (await cap.locator(".ficha-acciones button", { hasNotText: "Imprimir formato" }).count())
+    throw new Error("El capturador ve acciones de admin en Identificado");
+  await cap.getByRole("tab", { name: /^Repuestos/ }).click();
+  for (const [parte] of REPUESTOS) await cap.getByRole("cell", { name: parte }).waitFor();
   await cap.getByRole("tab", { name: /^HH/ }).click();
   await cap.getByText("8", { exact: true }).first().waitFor();
-  ok("HH estimadas grabadas (2 x 4 = 8) y sin botones de estado para el capturador");
+  ok("4 repuestos y 8 HH grabados junto con el backlog; el capturador no ve botones de estado");
 
-  // 2. El admin aprueba, carga repuestos y la base bloquea pasar a Listo con repuestos pendientes.
+  // Formato imprimible: en el navegador se abre en una ventana nueva.
+  const [ventana] = await Promise.all([cap.context().waitForEvent("page"), cap.getByRole("button", { name: "Imprimir formato" }).click()]);
+  await ventana.waitForLoadState();
+  const htmlFormato = await ventana.content();
+  for (const [parte, , , desc] of REPUESTOS) {
+    if (!htmlFormato.includes(parte) || !htmlFormato.includes(desc.replace("(", "(")))
+      throw new Error(`El formato no tiene el repuesto ${parte}`);
+  }
+  if (!htmlFormato.includes("data:image/png")) throw new Error("El formato no lleva el logo Dimelco incrustado");
+  if (htmlFormato.includes("TMSA")) throw new Error("El formato tiene datos del cliente");
+  if (!htmlFormato.includes("Reempaque de block de implementos")) throw new Error("Falta la descripción del trabajo");
+  await ventana.setViewportSize({ width: 900, height: 1270 });
+  await ventana.screenshot({ path: join(SALIDA, "formato.png"), fullPage: true });
+  await ventana.close();
+  ok("el formato impreso tiene los 4 repuestos, el logo Dimelco y nada del cliente");
+
+  // 2. El admin aprueba, agrega un repuesto y la base bloquea pasar a Listo con repuestos pendientes.
   const adm = await abrir("admin");
   await adm.goto(base + `#/backlog/${id}`);
   await esperarEstado(adm, "Identificado");
@@ -143,21 +183,25 @@ try {
   await adm.locator(".etiqueta-prioridad", { hasText: "P2" }).waitFor();
   ok("admin aprueba con prioridad P2");
   await adm.getByRole("tab", { name: /^Repuestos/ }).click();
-  await adm.getByLabel("Código SAP nuevo").fill("100234");
-  await adm.getByLabel("Descripción nueva").fill("Kit de sellos cilindro de levante");
+  await adm.getByLabel("Código nuevo").fill("100234");
+  await adm.getByLabel("Descripción nueva").fill("Aceite hidráulico ISO 68");
   await adm.getByRole("button", { name: "Agregar", exact: true }).click();
-  await adm.getByRole("cell", { name: "100234" }).waitFor();
+  await adm.getByLabel("Estado ítem 5").waitFor();
+  ok("repuesto agregado en la ficha toma el ítem 5");
   await transicion(adm, "Listo para programar");
-  await aviso(adm, "Faltan 1 repuesto");
+  await aviso(adm, "Faltan 5 repuesto");
   await adm.getByRole("dialog").getByRole("button", { name: "Cancelar" }).click();
-  ok("la base rechaza «Listo para programar» con un repuesto sin recibir y la app muestra el motivo");
+  ok("la base rechaza «Listo para programar» con repuestos sin recibir y la app muestra el motivo");
   await transicion(adm, "Pasar a esperar repuestos");
   await esperarEstado(adm, "Esperando repuestos");
-  await adm.getByLabel("Solicitud 100234").fill("10045678");
-  await adm.getByLabel("Solicitud 100234").blur();
-  await adm.getByLabel("Estado 100234").selectOption("Recibido");
+  await adm.getByLabel("Solicitud ítem 1").fill("10045678");
+  await adm.getByLabel("Solicitud ítem 1").blur();
+  for (let i = 1; i <= 5; i++) {
+    await adm.getByLabel(`Estado ítem ${i}`).selectOption("Recibido");
+    await adm.locator("tr.fila-recibida").nth(i - 1).waitFor();
+  }
   await esperarEstado(adm, "Listo para programar");
-  ok("al recibir el último repuesto pasa solo a «Listo para programar»");
+  ok("al recibir el último de los 5 repuestos pasa solo a «Listo para programar»");
 
   // 3. Programar.
   await transicion(adm, "Programar", async (d) => {
@@ -189,9 +233,10 @@ try {
   await esperarEstado(adm, "Ejecutado");
   await transicion(adm, "Cerrar");
   await esperarEstado(adm, "Cerrado");
-  if (await adm.locator(".ficha-acciones button").count()) throw new Error("Quedan acciones en un backlog cerrado");
+  if (await adm.locator(".ficha-acciones button", { hasNotText: "Imprimir formato" }).count())
+    throw new Error("Quedan acciones en un backlog cerrado");
   await adm.getByRole("tab", { name: "Datos" }).click();
-  if (!(await adm.locator("label.campo", { hasText: "Descripción" }).locator("textarea").isDisabled()))
+  if (!(await adm.locator("label.campo", { hasText: "Descripción del trabajo" }).locator("input").isDisabled()))
     throw new Error("Datos editables en un backlog cerrado");
   const deteccion = await adm.locator("label.campo", { hasText: "Fecha de detección" }).locator("input").inputValue();
   if (!/^\d{4}-\d{2}-\d{2}$/.test(deteccion)) throw new Error(`Fecha de detección vacía o mal formada: «${deteccion}»`);

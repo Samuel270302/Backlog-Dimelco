@@ -605,3 +605,32 @@ fieldset.sin-borde:disabled input, fieldset.sin-borde:disabled select, fieldset.
 .evento-texto { margin-top: 2px; white-space: pre-wrap; }
 .comentar { display: flex; gap: 8px; align-items: flex-end; }
 .comentar textarea { flex: 1; }
+
+/* ===== Formato de registro (fase 3b) ===== */
+.pagina-formulario.formato { max-width: 1180px; }
+.titulo-seccion { font-size: 14px; margin: 0 0 10px; color: var(--oscuro-2); }
+.barra-acciones .titulo-seccion { margin: 0; }
+.datos-equipo { background: var(--panel-2); border-radius: 8px; padding: 10px 12px; margin: -4px 0 14px; }
+.etiqueta-campo { display: block; font-size: 12px; color: var(--texto-suave); margin-bottom: 4px; }
+.opciones-radio { display: flex; gap: 6px; }
+.opcion-radio {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  border: 1px solid #c4c4c0;
+  border-radius: 6px;
+  padding: 8px 10px;
+  cursor: pointer;
+  font-size: 13px;
+  background: #ffffff;
+}
+.opcion-radio input { width: auto; margin: 0; }
+.opcion-radio.activa { border-color: var(--oscuro); background: var(--ambar-suave); font-weight: 600; }
+.opcion-radio.urgente.activa { border-color: var(--rojo-letra); background: var(--rojo-fondo); color: var(--rojo-letra); }
+.bloque-ficha .tabla-repuestos-formato { min-width: 1100px; }
+.tabla-repuestos-formato input { min-width: 0; width: 100%; }
+.tabla-repuestos-formato td.num input { width: 64px; }
+.boton-quitar { padding: 4px 9px; font-size: 15px; line-height: 1; }
+.etiqueta-urgente { background: var(--rojo-letra); color: #ffffff; padding: 2px 8px; border-radius: 10px; font-size: 12px; font-weight: 600; }

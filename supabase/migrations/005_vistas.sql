@@ -1,7 +1,9 @@
 -- Vistas del tablero, la programación y los indicadores. Respetan las políticas
 -- de las tablas base (security_invoker) en Supabase.
 
-create or replace view v_backlog as
+-- Se borra y se recrea: usa b.* y 008 le agrega columnas a backlogs.
+drop view if exists v_backlog;
+create view v_backlog as
 with hh as (
   select backlog_id,
          sum(hh) filter (where tipo = 'estimada') as hh_estimadas,
