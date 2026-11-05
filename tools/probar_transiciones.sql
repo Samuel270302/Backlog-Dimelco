@@ -111,8 +111,19 @@ select cambiar_estado_backlog('20000000-0000-0000-0000-000000000001', 'Listo par
 select pruebas.igual((select reprogramaciones from backlogs where id = '20000000-0000-0000-0000-000000000001'), 1, 'reprogramaciones');
 select cambiar_estado_backlog('20000000-0000-0000-0000-000000000001', 'Programado', '{"fecha_programada":"2026-11-10","ot_sap":"4001234","aprovechar_pm":true}');
 
+-- Reprogramación directa (009): otra fecha y motivo en un solo llamado.
+select pruebas.espera_error($$select cambiar_estado_backlog('20000000-0000-0000-0000-000000000001', 'Programado', '{"fecha_programada":"2026-11-10","motivo":"x"}')$$, 'distinta');
+select pruebas.espera_error($$select cambiar_estado_backlog('20000000-0000-0000-0000-000000000001', 'Programado', '{"fecha_programada":"2026-11-12"}')$$, 'motivo');
+select pruebas.espera_error($$select cambiar_estado_backlog('20000000-0000-0000-0000-000000000001', 'Programado', '{"fecha_programada":"2026-10-30","motivo":"x"}')$$, 'pasada');
+select cambiar_estado_backlog('20000000-0000-0000-0000-000000000001', 'Programado', '{"fecha_programada":"2026-11-12","motivo":"Sin parada de producción el martes"}');
+select pruebas.igual((select fecha_programada || ' ' || semana_programada || ' ' || reprogramaciones || ' ' || ot_sap
+  from backlogs where id = '20000000-0000-0000-0000-000000000001'), '2026-11-12 2026-11-09 2 4001234', 'reprogramado con la misma OT');
+select pruebas.igual((select texto from backlog_eventos where backlog_id = '20000000-0000-0000-0000-000000000001'
+  order by creado_en desc, id desc limit 1), '10/11/2026 → 12/11/2026 · Sin parada de producción el martes', 'evento de reprogramación');
+
 -- Capturador ejecuta con HH reales; admin cierra.
 select set_config('request.jwt.claims', '{"sub":"00000000-0000-0000-0000-00000000000c"}', false);
+select pruebas.espera_error($$select cambiar_estado_backlog('20000000-0000-0000-0000-000000000001', 'Programado', '{"fecha_programada":"2026-11-13","motivo":"x"}')$$, 'Solo el administrador');
 select pruebas.espera_error($$select cambiar_estado_backlog('20000000-0000-0000-0000-000000000001', 'Ejecutado', '{"fecha_ejecucion":"2026-11-02"}')$$, 'HH reales');
 insert into backlog_hh (backlog_id, especialidad_id, tipo, personas, horas)
 values ('20000000-0000-0000-0000-000000000001', (select id from especialidades where nombre = 'Mecánico'), 'real', 2, 5);

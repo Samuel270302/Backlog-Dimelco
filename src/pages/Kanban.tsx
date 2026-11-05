@@ -59,7 +59,8 @@ export default function Kanban() {
 
   const { data: detalle } = useDetalleBacklogs(visibles.map((b) => b.id));
 
-  const transicionHacia = (b: BacklogFila, destino: Estado) => permitidas(b.estado).find((t) => t.destino === destino);
+  const transicionHacia = (b: BacklogFila, destino: Estado) =>
+    b.estado === destino ? undefined : permitidas(b.estado).find((t) => t.destino === destino);
 
   function alternar(id: string) {
     setAbiertas((s) => {

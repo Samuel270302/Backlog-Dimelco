@@ -5,6 +5,7 @@ import { cambiarEstado, transiciones, type Transicion } from "../lib/backlog";
 import type { BacklogFila, Estado } from "../lib/types";
 import { useAvisos } from "./Avisos";
 import DialogoTransicion from "./DialogoTransicion";
+import { fFecha } from "../lib/fmt";
 
 // Transiciones que el usuario actual puede hacer sobre un backlog.
 export function useTransicionesPermitidas() {
@@ -16,7 +17,7 @@ export function useTransicionesPermitidas() {
 export function useCambioEstado() {
   const qc = useQueryClient();
   const { avisar } = useAvisos();
-  const [pendiente, setPendiente] = useState<{ b: BacklogFila; t: Transicion } | null>(null);
+  const [pendiente, setPendiente] = useState<{ b: BacklogFila; t: Transicion; fecha?: string } | null>(null);
   const [ocupado, setOcupado] = useState(false);
 
   async function aplicar(datos: Record<string, unknown>) {
@@ -25,7 +26,11 @@ export function useCambioEstado() {
     setOcupado(true);
     try {
       await cambiarEstado(b.id, t.destino, datos);
-      avisar(`${b.folio}: ${t.destino}`);
+      avisar(
+        t.etiqueta === "Reprogramar"
+          ? `${b.folio}: reprogramado al ${fFecha(String(datos.fecha_programada))}`
+          : `${b.folio}: ${t.destino}`
+      );
       setPendiente(null);
       qc.invalidateQueries();
     } catch (e) {
@@ -41,11 +46,12 @@ export function useCambioEstado() {
       transicion={pendiente.t}
       prioridadActual={pendiente.b.prioridad}
       otActual={pendiente.b.ot_sap}
+      fechaInicial={pendiente.fecha}
       ocupado={ocupado}
       onAceptar={aplicar}
       onCerrar={() => setPendiente(null)}
     />
   ) : null;
 
-  return { abrir: (b: BacklogFila, t: Transicion) => setPendiente({ b, t }), dialogo };
+  return { abrir: (b: BacklogFila, t: Transicion, fecha?: string) => setPendiente({ b, t, fecha }), dialogo };
 }

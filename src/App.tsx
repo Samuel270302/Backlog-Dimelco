@@ -16,6 +16,8 @@ import FichaBacklog from "./pages/FichaBacklog";
 import Kanban from "./pages/Kanban";
 import PorEquipo from "./pages/PorEquipo";
 import FichaEquipo from "./pages/FichaEquipo";
+import Calendario from "./pages/Calendario";
+import Capacidad from "./pages/Capacidad";
 
 function Interior() {
   const { session, perfil, cargando, esAdmin, puedeCapturar } = useAuth();
@@ -57,12 +59,12 @@ function ConRealtime({ esAdmin, puedeCapturar }: { esAdmin: boolean; puedeCaptur
         <Route path="/backlog" element={<Navigate to="/flota" replace />} />
         <Route path="/backlog/:id" element={<FichaBacklog />} />
         <Route path="/kanban" element={<Kanban />} />
-        <Route path="/calendario" element={<EnConstruccion titulo="Calendario semanal" fase={5} />} />
+        <Route path="/calendario" element={<Calendario />} />
         <Route path="/equipo/:id" element={<FichaEquipo />} />
         <Route path="/indicadores" element={<EnConstruccion titulo="Indicadores" fase={6} />} />
         {esAdmin && <Route path="/equipos" element={<EnConstruccion titulo="Equipos" fase={2} />} />}
         {esAdmin && <Route path="/catalogos" element={<EnConstruccion titulo="Sistemas y especialidades" fase={2} />} />}
-        {esAdmin && <Route path="/capacidad" element={<EnConstruccion titulo="Capacidad del taller" fase={5} />} />}
+        {esAdmin && <Route path="/capacidad" element={<Capacidad />} />}
         {esAdmin && <Route path="/usuarios" element={<Usuarios />} />}
         <Route path="*" element={<Navigate to="/flota" replace />} />
       </Routes>

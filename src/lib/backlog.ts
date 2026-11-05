@@ -81,7 +81,8 @@ export function transiciones(estado: Estado): Transicion[] {
     case "Programado":
       return [
         { destino: "Ejecutado", etiqueta: "Marcar ejecutado", soloAdmin: false, campos: ["fecha_ejecucion"] },
-        { destino: "Listo para programar", etiqueta: "Reprogramar", soloAdmin: true, campos: ["motivo"] },
+        { destino: "Programado", etiqueta: "Reprogramar", soloAdmin: true, campos: ["fecha_programada", "motivo"] },
+        { destino: "Listo para programar", etiqueta: "Quitar del calendario", soloAdmin: true, campos: ["motivo"] },
         anular,
       ];
     case "Ejecutado":

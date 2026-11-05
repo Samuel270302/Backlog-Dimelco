@@ -752,3 +752,83 @@ fieldset.sin-borde:disabled input, fieldset.sin-borde:disabled select, fieldset.
 }
 .te-folio { font-weight: 700; }
 .te-trabajo { flex: 1; min-width: 200px; }
+
+/* ===== Calendario semanal (fase 5) ===== */
+.pagina-calendario { display: flex; flex-direction: column; }
+.semana-titulo { font-weight: 600; color: var(--texto-suave); }
+.carga-semana {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 8px 16px;
+  background: var(--panel);
+  border: 1px solid var(--borde);
+  border-radius: 10px;
+  padding: 10px 14px;
+  margin-bottom: 12px;
+}
+.bc-texto { display: flex; justify-content: space-between; font-size: 12px; margin-bottom: 3px; }
+.bc-texto span:first-child { font-weight: 600; }
+.bc-fondo { height: 9px; background: var(--panel-2); border-radius: 5px; overflow: hidden; }
+.bc-relleno { height: 100%; border-radius: 5px; }
+.bc-relleno.normal { background: #4f8a2f; }
+.bc-relleno.alta { background: var(--ambar); }
+.bc-relleno.excedida { background: var(--rojo-letra); }
+.bc-relleno.sin-capacidad { background: repeating-linear-gradient(45deg, #bbb, #bbb 4px, #ddd 4px, #ddd 8px); }
+
+.calendario { display: grid; grid-template-columns: 220px 1fr; gap: 12px; align-items: start; }
+.panel-listos {
+  background: var(--panel-2);
+  border: 1px solid var(--borde);
+  border-radius: 10px;
+  padding: 10px;
+  max-height: calc(100vh - 200px);
+  overflow-y: auto;
+}
+.panel-listos h2 { font-size: 14px; margin: 0 0 6px; }
+.panel-listos .tarjeta-cal { margin-bottom: 8px; }
+.grilla-semana table { table-layout: fixed; min-width: 820px; }
+.grilla-semana th, .grilla-semana td { vertical-align: top; }
+.grilla-semana .col-equipo { width: 96px; font-weight: 600; }
+.grilla-semana td { padding: 4px; height: 64px; }
+.grilla-semana tr:nth-child(even) td { background: transparent; }
+.grilla-semana tr:hover td { background: transparent; }
+.grilla-semana .hoy { background: #fffbea !important; }
+.grilla-semana th.hoy { color: var(--oscuro-2); box-shadow: inset 0 -3px 0 var(--ambar); }
+.grilla-semana .pasado { background: #f6f6f4 !important; color: var(--texto-suave); }
+.grilla-semana .admite { outline: 2px dashed var(--ambar); outline-offset: -3px; }
+.grilla-semana .sobre { background: var(--ambar-suave) !important; }
+.grilla-semana tfoot td { font-weight: 700; height: auto; border-top: 2px solid var(--borde); }
+.celda-vacia { color: var(--texto-suave); font-size: 12px; text-align: center; vertical-align: middle !important; }
+
+.tarjeta-cal {
+  background: var(--panel);
+  border: 1px solid var(--borde);
+  border-left: 4px solid #1f4e79;
+  border-radius: 6px;
+  padding: 5px 7px;
+  font-size: 12px;
+  margin-bottom: 4px;
+}
+.tarjeta-cal[draggable="true"] { cursor: grab; }
+.tarjeta-cal.listo { border-left-color: #4b2c7f; }
+.tarjeta-cal.urgente { border-left-color: var(--rojo-letra); }
+.tarjeta-cal.vencida { background: #fff8f7; }
+.tarjeta-cal.hecha { opacity: 0.6; border-left-color: var(--verde-letra); }
+.tc-linea1 { display: flex; gap: 4px; align-items: center; flex-wrap: wrap; }
+.tc-folio { font-weight: 700; color: var(--texto-suave); margin-right: auto; text-decoration: none; }
+.tc-folio:hover { text-decoration: underline; }
+.tc-equipo { font-weight: 700; font-size: 13px; }
+.tc-trabajo { line-height: 1.25; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
+.tc-datos { display: flex; gap: 6px; flex-wrap: wrap; color: var(--texto-suave); margin-top: 2px; }
+.tc-pm { color: var(--verde-letra); font-weight: 600; }
+
+/* ===== Capacidad (fase 5) ===== */
+.calculadora { display: flex; gap: 8px; align-items: flex-end; flex-wrap: wrap; }
+.calculadora label { display: flex; flex-direction: column; font-size: 11px; color: var(--texto-suave); gap: 3px; }
+.calculadora input { width: 110px; }
+.calculadora > span { padding-bottom: 8px; font-weight: 700; }
+.grilla-semana th { background: var(--panel-2); color: var(--texto); border-bottom: 2px solid var(--borde); }
+.grilla-semana th.pasado { color: var(--texto-suave); }
+.tarjeta-cal { overflow: hidden; }
+.grilla-semana .tc-folio { font-size: 11px; }
+.grilla-semana .tc-trabajo { font-size: 11.5px; }

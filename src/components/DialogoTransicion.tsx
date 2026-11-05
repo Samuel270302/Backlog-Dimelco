@@ -10,6 +10,7 @@ export default function DialogoTransicion({
   transicion,
   prioridadActual,
   otActual,
+  fechaInicial,
   ocupado,
   onAceptar,
   onCerrar,
@@ -18,6 +19,7 @@ export default function DialogoTransicion({
   transicion: Transicion;
   prioridadActual: Prioridad;
   otActual: string | null;
+  fechaInicial?: string;
   ocupado: boolean;
   onAceptar: (datos: Record<string, unknown>) => void;
   onCerrar: () => void;
@@ -30,7 +32,7 @@ export default function DialogoTransicion({
 
   const pide = (c: Transicion["campos"][number]) => transicion.campos.includes(c);
   const [prioridad, setPrioridad] = useState<Prioridad>(prioridadActual);
-  const [fechaProg, setFechaProg] = useState("");
+  const [fechaProg, setFechaProg] = useState(fechaInicial ?? "");
   const [ot, setOt] = useState(otActual ?? "");
   const [aprovecharPm, setAprovecharPm] = useState(false);
   const [fechaEjec, setFechaEjec] = useState(hoyISO());
@@ -67,9 +69,10 @@ export default function DialogoTransicion({
         {transicion.etiqueta} · {folio}
       </h1>
       <p className="nota" style={{ marginTop: 0 }}>
-        Pasa a «{transicion.destino}».
+        {transicion.etiqueta === "Reprogramar" ? "Cambia la fecha programada." : `Pasa a «${transicion.destino}».`}
         {transicion.destino === "En planificación" && " Revise la prioridad: la fecha límite se recalcula con ella."}
         {transicion.destino === "Ejecutado" && " Antes deben estar cargadas las HH reales por especialidad."}
+        {transicion.etiqueta === "Reprogramar" && " Se mantiene la OT y queda registrada la reprogramación."}
       </p>
       {pide("prioridad") && (
         <label className="campo">

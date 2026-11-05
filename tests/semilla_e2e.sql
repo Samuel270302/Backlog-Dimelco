@@ -47,3 +47,10 @@ select cambiar_estado_backlog('30000000-0000-0000-0000-000000000004', 'Listo par
 select cambiar_estado_backlog('30000000-0000-0000-0000-000000000004', 'Programado',
   jsonb_build_object('fecha_programada', current_date + 1, 'ot_sap', '4001190'));
 select set_config('request.jwt.claims', '', false);
+
+-- Capacidad de HEMCO (Mecánico la carga la prueba desde la pantalla).
+insert into capacidad_taller (unidad_id, especialidad_id, hh_semana, vigente_desde)
+select u.id, e.id, v.hh, current_date - 30
+from unidades u, (values ('Eléctrico', 20), ('Hidráulico', 10)) v(esp, hh)
+join especialidades e on e.nombre = v.esp
+where u.sigla = 'HEM';

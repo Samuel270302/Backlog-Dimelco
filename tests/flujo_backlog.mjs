@@ -75,6 +75,10 @@ async function abrir(quien, ancho = 1366, alto = 860) {
   const pagina = await ctx.newPage();
   paginas.push([quien, pagina]);
   pagina.on("pageerror", (e) => errores.push(`${quien}: ${e}`));
+  pagina.on("response", async (r) => {
+    if (r.status() >= 400 && r.url().includes("/rest/v1/"))
+      console.log(`  [${quien}] ${r.status()} ${r.request().method()} ${decodeURIComponent(r.url().split("/rest/v1/")[1]).slice(0, 90)} ${(await r.text().catch(() => "")).slice(0, 160)}`);
+  });
   return pagina;
 }
 
@@ -216,16 +220,72 @@ try {
     throw new Error("Kanban mezcla unidades con filtro de unidad");
   await adm.locator(".kanban").evaluate((k) => (k.scrollLeft = 0));
   await adm.screenshot({ path: join(SALIDA, "kanban.png") });
-  await tarjeta.locator(".tk-cabecera").click(); // se cierra para arrastrarla
-  await tarjeta.dragTo(adm.locator('section[aria-label="Programado"] .columna-cabecera'), { sourcePosition: { x: 40, y: 12 } });
-  const dlg = adm.getByRole("dialog");
-  await dlg.waitFor();
-  await dlg.getByLabel("Fecha programada").fill(enDias(1));
-  await dlg.getByLabel("OT SAP").fill("4001234");
-  await dlg.getByLabel("Aprovechar la parada de un PM").check();
-  await dlg.getByRole("button", { name: "Programar", exact: true }).click();
-  await adm.locator('section[aria-label="Programado"]').getByRole("article", { name: `${folio} PS011` }).waitFor();
-  ok("arrastrar la tarjeta a «Programado» abre el diálogo y la programa con fecha y OT");
+  await tarjeta.locator(".tk-cabecera").click(); // se cierra
+  // Arrastre en Kanban: PS012 (En planificación, con repuestos sin recibir) a «Esperando repuestos».
+  const ps012 = adm.getByRole("article", { name: "BL-HEM-000002 PS012" });
+  await ps012.dragTo(adm.locator('section[aria-label="Esperando repuestos"] .columna-cabecera'), { sourcePosition: { x: 40, y: 12 } });
+  const dlgK = adm.getByRole("dialog");
+  await dlgK.waitFor();
+  await dlgK.getByRole("button", { name: "Pasar a esperar repuestos", exact: true }).click();
+  await adm.locator('section[aria-label="Esperando repuestos"]').getByRole("article", { name: "BL-HEM-000002 PS012" }).waitFor();
+  ok("arrastrar una tarjeta en el Kanban abre el diálogo de la transición y la mueve de columna");
+
+  // 3b. Capacidad: el admin carga Mecánico de HEMCO con la calculadora (2 personas × 10 h × 2 turnos = 40 HH).
+  await adm.goto(base + "#/capacidad");
+  await adm.getByRole("button", { name: "Cambiar Mecánico HEMCO" }).click();
+  await adm.getByLabel("Personas Mecánico").fill("2");
+  await adm.getByLabel("Horas por turno Mecánico").fill("10");
+  await adm.getByLabel("Turnos Mecánico").fill("2");
+  if ((await adm.getByLabel("HH por semana Mecánico").inputValue()) !== "40") throw new Error("La calculadora no da 40 HH");
+  await adm.getByRole("button", { name: "Grabar" }).click();
+  await aviso(adm, "Capacidad grabada");
+  await adm.locator("section", { has: adm.getByRole("heading", { name: "HEMCO" }) }).getByRole("row", { name: /Mecánico 40/ }).waitFor();
+  await adm.screenshot({ path: join(SALIDA, "capacidad.png"), fullPage: true });
+  ok("capacidad de Mecánico cargada con la calculadora: 40 HH por semana");
+
+  // 3c. Calendario: arrastrar el backlog listo a mañana, completar la OT y reprogramarlo.
+  const lunesIso = (iso) => {
+    const d = new Date(iso + "T00:00:00");
+    d.setDate(d.getDate() - ((d.getDay() + 6) % 7));
+    return d.toISOString().slice(0, 10);
+  };
+  const ddmm = (iso) => `${iso.slice(8, 10)}/${iso.slice(5, 7)}/${iso.slice(0, 4)}`;
+  const manana = enDias(1);
+  await adm.goto(base + "#/calendario");
+  await adm.getByRole("heading", { name: "Calendario" }).waitFor();
+  if (lunesIso(manana) !== lunesIso(enDias(0))) await adm.getByRole("button", { name: "Semana siguiente" }).click();
+  const listo = adm.getByRole("complementary", { name: "Listos para programar" }).getByLabel(`${folio} PS011`);
+  await listo.dragTo(adm.getByRole("columnheader", { name: `Día ${ddmm(manana)}` }));
+  const dlgC = adm.getByRole("dialog");
+  await dlgC.waitFor();
+  if ((await dlgC.getByLabel("Fecha programada").inputValue()) !== manana) throw new Error("El diálogo no trae la fecha del día soltado");
+  await dlgC.getByLabel("OT SAP").fill("4001234");
+  await dlgC.getByLabel("Aprovechar la parada de un PM").check();
+  await dlgC.getByRole("button", { name: "Programar", exact: true }).click();
+  const enGrilla = adm.locator(".grilla-semana").getByLabel(`${folio} PS011`);
+  await enGrilla.waitFor();
+  // Mecánico de la semana: JU005 (2 × 4) + PS011 (2 × 4) = 16 de 40 HH.
+  await adm.getByLabel("Carga Mecánico").filter({ hasText: "16 / 40 HH · 40 %" }).waitFor();
+  ok("arrastrar al calendario programa con la fecha del día y la barra muestra 16 de 40 HH de Mecánico");
+  const otroDia = lunesIso(enDias(2)) === lunesIso(manana) ? enDias(2) : enDias(0);
+  await enGrilla.dragTo(adm.getByRole("columnheader", { name: `Día ${ddmm(otroDia)}` }));
+  const dlgR = adm.getByRole("dialog");
+  await dlgR.waitFor();
+  if ((await dlgR.getByLabel("Fecha programada").inputValue()) !== otroDia) throw new Error("Reprogramar no trae la fecha nueva");
+  await dlgR.getByLabel("Motivo").fill("Equipo en producción, sin parada ese día");
+  await dlgR.getByRole("button", { name: "Reprogramar", exact: true }).click();
+  await aviso(adm, `reprogramado al ${ddmm(otroDia)}`);
+  await adm.screenshot({ path: join(SALIDA, "calendario.png") });
+  ok("arrastrar un programado a otro día lo reprograma con motivo y misma OT");
+
+  // Sin tiempo real en la prueba: se recarga para no ver la caché (15 s) del capturador.
+  await cap.goto(base + "#/calendario");
+  await cap.reload();
+  await cap.getByRole("heading", { name: "Calendario" }).waitFor();
+  if (lunesIso(otroDia) !== lunesIso(enDias(0))) await cap.getByRole("button", { name: "Semana siguiente" }).click();
+  await cap.locator(".grilla-semana").getByLabel(`${folio} PS011`).waitFor();
+  if (await cap.locator('.pagina-calendario [draggable="true"]').count()) throw new Error("El capturador puede arrastrar en el calendario");
+  ok("el capturador ve el calendario pero no puede arrastrar");
 
   // Vista por equipo: el capturador ve PS011 en la flota Scoop con su backlog abierto, y no ve Veta Nueva.
   await cap.goto(base + "#/flota");
@@ -274,9 +334,10 @@ try {
 
   await adm.getByRole("tab", { name: /^Bitácora/ }).click();
   const eventos = await adm.locator(".bitacora .evento").count();
-  if (eventos !== 7) throw new Error(`La bitácora debía tener 7 eventos, tiene ${eventos}`);
+  if (eventos !== 8) throw new Error(`La bitácora debía tener 8 eventos, tiene ${eventos}`);
+  await adm.locator(".evento-texto", { hasText: "Equipo en producción, sin parada ese día" }).waitFor();
   await adm.locator(".evento-texto", { hasText: "Automático: todos los repuestos recibidos" }).waitFor();
-  ok("bitácora con 7 eventos, incluido el paso automático");
+  ok("bitácora con 8 eventos, incluidos el paso automático y la reprogramación");
   await adm.screenshot({ path: join(SALIDA, "ficha-bitacora.png"), fullPage: true });
   await adm.getByRole("tab", { name: "Datos" }).click();
   await adm.screenshot({ path: join(SALIDA, "ficha-datos.png"), fullPage: true });

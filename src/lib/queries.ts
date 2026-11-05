@@ -3,7 +3,7 @@ import { useCallback, useEffect } from "react";
 import { supabase } from "./supabase";
 import { reportarCanal } from "./conexion";
 import { useUnidad } from "./unidad";
-import type { BacklogFila, Catalogo, Equipo, Perfil } from "./types";
+import type { BacklogFila, CapacidadTaller, Catalogo, Equipo, Perfil } from "./types";
 
 export async function todo<T>(tabla: string, orden?: string): Promise<T[]> {
   let q = supabase().from(tabla).select("*");
@@ -41,6 +41,21 @@ export const useBacklogs = () =>
     queryKey: ["v_backlog"],
     queryFn: () => todo<BacklogFila>("v_backlog", "fecha_deteccion"),
     select: usePorUnidad<BacklogFila>(),
+  });
+
+// Capacidad del taller: historial completo y la vigente a hoy() por unidad y especialidad.
+export const useCapacidad = () =>
+  useQuery({
+    queryKey: ["capacidad_taller"],
+    queryFn: () => todo<CapacidadTaller>("capacidad_taller", "vigente_desde"),
+    select: usePorUnidad<CapacidadTaller>(),
+  });
+
+export const useCapacidadVigente = () =>
+  useQuery({
+    queryKey: ["v_capacidad_vigente"],
+    queryFn: () => todo<CapacidadTaller>("v_capacidad_vigente"),
+    select: usePorUnidad<CapacidadTaller>(),
   });
 
 // Tablas cuyo cambio recarga las consultas abiertas (tiempo real de Supabase).
