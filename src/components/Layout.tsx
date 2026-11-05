@@ -11,10 +11,10 @@ import { SelectorUnidad } from "../lib/unidad";
 import { useAvisos } from "./Avisos";
 import {
   IconoAjustes,
+  IconoCalendario,
   IconoCamion,
   IconoIndicadores,
   IconoKanban,
-  IconoLista,
   IconoLlave,
   IconoMas,
   IconoPrograma,
@@ -24,16 +24,16 @@ import logoApp from "../assets/logo-app.svg";
 
 const enlaces = [
   { a: "/nuevo", texto: "Nuevo backlog", icono: <IconoMas />, captura: true },
-  { a: "/backlog", texto: "Tablero", icono: <IconoLista />, captura: false },
+  { a: "/flota", texto: "Por equipo", icono: <IconoCamion />, captura: false },
   { a: "/kanban", texto: "Kanban", icono: <IconoKanban />, captura: false },
-  { a: "/programa", texto: "Programación", icono: <IconoPrograma />, captura: false },
+  { a: "/calendario", texto: "Calendario", icono: <IconoCalendario />, captura: false },
   { a: "/indicadores", texto: "Indicadores", icono: <IconoIndicadores />, captura: false },
 ];
 
 const NOMBRE_ROL = { admin: "Administrador", capturador: "Capturador", invitado: "Invitado (solo consulta)" };
 
 const enlacesAdmin = [
-  { a: "/equipos", texto: "Equipos", icono: <IconoCamion /> },
+  { a: "/equipos", texto: "Equipos", icono: <IconoPrograma /> },
   { a: "/catalogos", texto: "Sistemas y especialidades", icono: <IconoLlave /> },
   { a: "/capacidad", texto: "Capacidad del taller", icono: <IconoAjustes /> },
   { a: "/usuarios", texto: "Usuarios", icono: <IconoUsuarios /> },

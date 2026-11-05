@@ -13,6 +13,9 @@ import Usuarios from "./pages/Usuarios";
 import EnConstruccion from "./pages/EnConstruccion";
 import NuevoBacklog from "./pages/NuevoBacklog";
 import FichaBacklog from "./pages/FichaBacklog";
+import Kanban from "./pages/Kanban";
+import PorEquipo from "./pages/PorEquipo";
+import FichaEquipo from "./pages/FichaEquipo";
 
 function Interior() {
   const { session, perfil, cargando, esAdmin, puedeCapturar } = useAuth();
@@ -48,19 +51,20 @@ function ConRealtime({ esAdmin, puedeCapturar }: { esAdmin: boolean; puedeCaptur
   return (
     <Layout>
       <Routes>
-        <Route path="/" element={<Navigate to="/backlog" replace />} />
+        <Route path="/" element={<Navigate to="/flota" replace />} />
         {puedeCapturar && <Route path="/nuevo" element={<NuevoBacklog />} />}
-        <Route path="/backlog" element={<EnConstruccion titulo="Tablero de backlog" fase={4} />} />
+        <Route path="/flota" element={<PorEquipo />} />
+        <Route path="/backlog" element={<Navigate to="/flota" replace />} />
         <Route path="/backlog/:id" element={<FichaBacklog />} />
-        <Route path="/kanban" element={<EnConstruccion titulo="Kanban" fase={4} />} />
-        <Route path="/programa" element={<EnConstruccion titulo="Programación semanal" fase={5} />} />
-        <Route path="/equipo/:id" element={<EnConstruccion titulo="Ficha de equipo" fase={4} />} />
+        <Route path="/kanban" element={<Kanban />} />
+        <Route path="/calendario" element={<EnConstruccion titulo="Calendario semanal" fase={5} />} />
+        <Route path="/equipo/:id" element={<FichaEquipo />} />
         <Route path="/indicadores" element={<EnConstruccion titulo="Indicadores" fase={6} />} />
         {esAdmin && <Route path="/equipos" element={<EnConstruccion titulo="Equipos" fase={2} />} />}
         {esAdmin && <Route path="/catalogos" element={<EnConstruccion titulo="Sistemas y especialidades" fase={2} />} />}
         {esAdmin && <Route path="/capacidad" element={<EnConstruccion titulo="Capacidad del taller" fase={5} />} />}
         {esAdmin && <Route path="/usuarios" element={<Usuarios />} />}
-        <Route path="*" element={<Navigate to="/backlog" replace />} />
+        <Route path="*" element={<Navigate to="/flota" replace />} />
       </Routes>
     </Layout>
   );

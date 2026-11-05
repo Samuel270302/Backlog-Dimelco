@@ -146,10 +146,10 @@ try {
   await cap.getByRole("button", { name: "Registrar backlog" }).click();
   await esperarEstado(cap, "Identificado");
   const id = cap.url().split("/backlog/")[1];
-  const folio = await cap.locator(".ficha-folio").textContent();
-  if (!folio.includes("BL-HEM-000001")) throw new Error(`Folio inesperado: ${folio}`);
+  const folio = (await cap.locator(".ficha-folio").textContent()).match(/BL-HEM-\d{6}/)?.[0];
+  if (!folio) throw new Error("La ficha no muestra el folio");
   await cap.getByRole("heading", { name: "PS011 · Sistema hidráulico · Block de implementos" }).waitFor();
-  ok("registro crea BL-HEM-000001 con componente y abre la ficha");
+  ok(`registro crea ${folio} con componente y abre la ficha`);
   if (await cap.locator(".ficha-acciones button", { hasNotText: "Imprimir formato" }).count())
     throw new Error("El capturador ve acciones de admin en Identificado");
   await cap.getByRole("tab", { name: /^Repuestos/ }).click();
@@ -203,17 +203,46 @@ try {
   await esperarEstado(adm, "Listo para programar");
   ok("al recibir el último de los 5 repuestos pasa solo a «Listo para programar»");
 
-  // 3. Programar.
-  await transicion(adm, "Programar", async (d) => {
-    await d.getByLabel("Fecha programada").fill(enDias(1));
-    await d.getByLabel("OT SAP").fill("4001234");
-    await d.getByLabel("Aprovechar la parada de un PM").check();
-  });
-  await esperarEstado(adm, "Programado");
-  ok("admin programa con fecha, OT y aprovechando PM");
+  // 3. Kanban: la tarjeta se despliega con repuestos, especialidades y HH; se programa arrastrándola.
+  await adm.goto(base + "#/kanban");
+  const tarjeta = adm.getByRole("article", { name: `${folio} PS011` });
+  await adm.locator('section[aria-label="Listo para programar"]').getByRole("article", { name: `${folio} PS011` }).waitFor();
+  await tarjeta.locator(".tk-cabecera").click();
+  for (const texto of ["6060003007", "Juego de cierres EOD", "Mecánico", "2 × 4 = 8", "Fugas de aceite en el block"]) {
+    await tarjeta.locator(".tk-detalle", { hasText: texto }).waitFor();
+  }
+  ok("la tarjeta del Kanban se despliega con repuestos, especialidades × horas y justificación");
+  if (await adm.locator(`section[aria-label="Listo para programar"] .tarjeta-kanban`, { hasText: "PS090" }).count())
+    throw new Error("Kanban mezcla unidades con filtro de unidad");
+  await adm.locator(".kanban").evaluate((k) => (k.scrollLeft = 0));
+  await adm.screenshot({ path: join(SALIDA, "kanban.png") });
+  await tarjeta.locator(".tk-cabecera").click(); // se cierra para arrastrarla
+  await tarjeta.dragTo(adm.locator('section[aria-label="Programado"] .columna-cabecera'), { sourcePosition: { x: 40, y: 12 } });
+  const dlg = adm.getByRole("dialog");
+  await dlg.waitFor();
+  await dlg.getByLabel("Fecha programada").fill(enDias(1));
+  await dlg.getByLabel("OT SAP").fill("4001234");
+  await dlg.getByLabel("Aprovechar la parada de un PM").check();
+  await dlg.getByRole("button", { name: "Programar", exact: true }).click();
+  await adm.locator('section[aria-label="Programado"]').getByRole("article", { name: `${folio} PS011` }).waitFor();
+  ok("arrastrar la tarjeta a «Programado» abre el diálogo y la programa con fecha y OT");
+
+  // Vista por equipo: el capturador ve PS011 en la flota Scoop con su backlog abierto, y no ve Veta Nueva.
+  await cap.goto(base + "#/flota");
+  const ps011 = cap.getByRole("article", { name: "PS011" });
+  await ps011.waitFor();
+  if (await cap.getByRole("article", { name: "PS090" }).count()) throw new Error("La vista por equipo muestra equipos de otra unidad");
+  await ps011.locator(".te-cabecera").click();
+  await ps011.getByRole("link", { name: folio }).waitFor();
+  await cap.screenshot({ path: join(SALIDA, "por-equipo.png"), fullPage: true });
+  await ps011.getByRole("link", { name: "Historial del equipo" }).click();
+  await cap.getByRole("heading", { name: "PS011" }).waitFor();
+  await cap.getByRole("cell", { name: "Sistema hidráulico" }).first().waitFor();
+  ok("vista por equipo agrupa por flota, despliega los backlogs y abre el historial del equipo");
+  await cap.goto(base + `#/backlog/${id}`);
+  await cap.reload();
 
   // 4. El capturador carga HH reales y marca ejecutado.
-  await cap.reload();
   await esperarEstado(cap, "Programado");
   await cap.getByRole("tab", { name: /^HH/ }).click();
   const reales = cap.locator(".bloque-ficha", { has: cap.getByRole("heading", { name: "HH reales" }) });
@@ -229,6 +258,7 @@ try {
   ok("capturador carga 10 HH reales y marca ejecutado");
 
   // 5. El admin cierra; la ficha queda de solo lectura.
+  await adm.goto(base + `#/backlog/${id}`);
   await adm.reload();
   await esperarEstado(adm, "Ejecutado");
   await transicion(adm, "Cerrar");

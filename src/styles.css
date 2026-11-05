@@ -634,3 +634,121 @@ fieldset.sin-borde:disabled input, fieldset.sin-borde:disabled select, fieldset.
 .tabla-repuestos-formato td.num input { width: 64px; }
 .boton-quitar { padding: 4px 9px; font-size: 15px; line-height: 1; }
 .etiqueta-urgente { background: var(--rojo-letra); color: #ffffff; padding: 2px 8px; border-radius: 10px; font-size: 12px; font-weight: 600; }
+
+/* ===== Kanban (fase 4) ===== */
+.pagina-kanban { display: flex; flex-direction: column; height: 100%; }
+.filtro-buscar { width: 240px; }
+.barra-acciones select { width: auto; }
+.kanban { display: flex; gap: 10px; overflow-x: auto; flex: 1; align-items: flex-start; padding-bottom: 8px; }
+.columna-kanban {
+  flex: 0 0 292px;
+  background: var(--panel-2);
+  border: 1px solid var(--borde);
+  border-radius: 10px;
+  display: flex;
+  flex-direction: column;
+  max-height: calc(100vh - 110px);
+  transition: outline-color 0.1s;
+  outline: 2px dashed transparent;
+}
+.columna-kanban:has(.tarjeta-kanban.abierta) { flex-basis: 470px; }
+.columna-kanban.admite { outline-color: var(--ambar); }
+.columna-kanban.sobre { background: var(--ambar-suave); }
+.columna-kanban.no-admite { opacity: 0.55; }
+.columna-cabecera {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 10px;
+  border-radius: 9px 9px 0 0;
+  font-weight: 600;
+  font-size: 13px;
+  text-decoration: none;
+}
+.columna-cuenta { font-weight: 500; font-size: 12px; opacity: 0.85; }
+.columna-tarjetas { padding: 8px; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; min-height: 80px; }
+.columna-vacia { text-align: center; margin: 14px 0; }
+
+.tarjeta-kanban {
+  background: var(--panel);
+  border: 1px solid var(--borde);
+  border-left: 4px solid var(--borde);
+  border-radius: 8px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+}
+.tarjeta-kanban[draggable="true"] .tk-cabecera { cursor: grab; user-select: none; }
+.tarjeta-kanban.urgente { border-left-color: var(--rojo-letra); }
+.tarjeta-kanban.vencida { background: #fff8f7; }
+.tarjeta-kanban.abierta { box-shadow: 0 3px 10px rgba(0, 0, 0, 0.12); }
+.tk-cabecera {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  width: 100%;
+  background: transparent;
+  color: var(--texto);
+  text-align: left;
+  padding: 8px 10px;
+  font-weight: 400;
+  border-radius: 8px;
+}
+.tk-cabecera:hover { filter: none; background: #fafaf8; }
+.tk-linea1 { display: flex; gap: 5px; align-items: center; flex-wrap: wrap; }
+.tk-folio { font-size: 12px; font-weight: 700; color: var(--texto-suave); margin-right: auto; }
+.tk-equipo { font-weight: 700; font-size: 13px; }
+.tk-descripcion { font-size: 13px; line-height: 1.3; }
+.tk-datos { display: flex; gap: 10px; flex-wrap: wrap; font-size: 12px; color: var(--texto-suave); margin-top: 2px; }
+.tk-detalle { border-top: 1px solid var(--borde); padding: 8px 10px 10px; font-size: 12px; }
+.tk-ficha { display: grid; grid-template-columns: 1fr 1fr; gap: 4px 10px; margin: 0 0 6px; }
+.tk-ficha dt { color: var(--texto-suave); font-size: 11px; }
+.tk-ficha dd { margin: 0; font-weight: 600; }
+.tk-seccion { font-weight: 700; margin: 8px 0 4px; color: var(--oscuro-2); }
+.tk-tabla { font-size: 11.5px; width: 100%; }
+.tk-tabla th, .tk-tabla td { padding: 3px 4px; border-bottom: 1px solid var(--borde); }
+.tk-tabla th { background: var(--panel-2); color: var(--texto); font-weight: 600; }
+.tk-tabla tr:nth-child(even) td { background: transparent; }
+.tk-tabla tr.fila-recibida td { color: var(--verde-letra); }
+.tk-tabla .tk-total td { font-weight: 700; }
+.tk-texto { margin: 0; white-space: pre-wrap; }
+.tk-acciones { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; margin-top: 10px; }
+.boton-chico { padding: 5px 10px; font-size: 12px; }
+.tk-acciones .boton-plano { padding: 5px 10px; font-size: 12px; }
+.enlace-ficha { margin-left: auto; font-size: 12px; font-weight: 600; color: var(--oscuro-2); }
+
+/* ===== Por equipo (fase 4) ===== */
+.grupo-flota { margin-bottom: 18px; }
+.titulo-flota { font-size: 15px; margin: 6px 0 8px; border-bottom: 2px solid var(--oscuro); padding-bottom: 4px; }
+.rejilla-equipos { display: grid; grid-template-columns: repeat(auto-fill, minmax(330px, 1fr)); gap: 10px; align-items: start; }
+.tarjeta-equipo { background: var(--panel); border: 1px solid var(--borde); border-left: 4px solid var(--verde-letra); border-radius: 8px; }
+.tarjeta-equipo.con-vencidos { border-left-color: var(--rojo-letra); }
+.tarjeta-equipo.desplegada { grid-column: 1 / -1; }
+.te-cabecera {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 2px 10px;
+  width: 100%;
+  background: transparent;
+  color: var(--texto);
+  text-align: left;
+  padding: 10px 12px;
+  font-weight: 400;
+}
+.te-cabecera:hover { filter: none; background: #fafaf8; }
+.te-codigo { font-size: 16px; font-weight: 700; }
+.te-modelo { color: var(--texto-suave); align-self: center; }
+.te-cifras, .te-estados { grid-column: 1 / -1; display: flex; gap: 12px; flex-wrap: wrap; font-size: 12px; align-items: center; }
+.te-estados { gap: 8px; margin-top: 4px; }
+.te-estado { display: inline-flex; gap: 3px; align-items: center; font-weight: 600; }
+.te-detalle { border-top: 1px solid var(--borde); padding: 8px 12px 10px; }
+.te-lista { list-style: none; margin: 0 0 8px; padding: 0; }
+.te-lista li {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+  padding: 6px 0;
+  border-bottom: 1px solid var(--borde);
+  font-size: 13px;
+}
+.te-folio { font-weight: 700; }
+.te-trabajo { flex: 1; min-width: 200px; }

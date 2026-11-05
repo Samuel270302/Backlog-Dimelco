@@ -1,22 +1,12 @@
 import { useState } from "react";
 import { Link, useParams } from "react-router-dom";
-import { useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "../auth";
 import { useEspecialidades, usePerfiles } from "../lib/queries";
 import { useUnidades } from "../lib/unidad";
 import { imprimirFormato } from "../lib/formato";
-import {
-  ESTADOS_FINALES,
-  cambiarEstado,
-  transiciones,
-  useBacklog,
-  useEventosBacklog,
-  useHhBacklog,
-  useRepuestosBacklog,
-  type Transicion,
-} from "../lib/backlog";
+import { ESTADOS_FINALES, useBacklog, useEventosBacklog, useHhBacklog, useRepuestosBacklog } from "../lib/backlog";
+import { useCambioEstado, useTransicionesPermitidas } from "../components/CambioEstado";
 import { EtiquetaEstado, EtiquetaPrioridad } from "../components/Etiquetas";
-import DialogoTransicion from "../components/DialogoTransicion";
 import DatosBacklog from "../components/ficha/DatosBacklog";
 import TablaHh from "../components/ficha/TablaHh";
 import TablaRepuestos from "../components/ficha/TablaRepuestos";
@@ -29,8 +19,9 @@ type Pestania = "datos" | "hh" | "repuestos" | "fotos" | "bitacora";
 export default function FichaBacklog() {
   const { id = "" } = useParams();
   const { esAdmin, puedeCapturar } = useAuth();
-  const qc = useQueryClient();
   const { avisar } = useAvisos();
+  const permitidas = useTransicionesPermitidas();
+  const cambio = useCambioEstado();
   const { data: b, isLoading } = useBacklog(id);
   const { data: hh } = useHhBacklog(id);
   const { data: repuestos } = useRepuestosBacklog(id);
@@ -40,15 +31,13 @@ export default function FichaBacklog() {
   const { data: unidades } = useUnidades();
   const [imprimiendo, setImprimiendo] = useState(false);
   const [pestania, setPestania] = useState<Pestania>("datos");
-  const [transicion, setTransicion] = useState<Transicion | null>(null);
-  const [ocupado, setOcupado] = useState(false);
 
   if (isLoading) return <div className="nota">Cargando…</div>;
   if (!b)
     return (
       <div>
         <h1>Backlog no encontrado</h1>
-        <p className="nota">No existe o es de otra unidad. <Link to="/backlog">Volver al tablero</Link></p>
+        <p className="nota">No existe o es de otra unidad. <Link to="/flota">Volver</Link></p>
       </div>
     );
 
@@ -57,24 +46,9 @@ export default function FichaBacklog() {
   const detalleEditable = puedeCapturar && !final;
   const estimadasEditables = detalleEditable && b.estado !== "Ejecutado";
   const realesEditables = detalleEditable && (b.estado === "Programado" || b.estado === "Ejecutado");
-  const acciones = transiciones(b.estado).filter((t) => esAdmin || (puedeCapturar && !t.soloAdmin));
+  const acciones = permitidas(b.estado);
   const hhEst = (hh ?? []).filter((h) => h.tipo === "estimada");
   const hhReal = (hh ?? []).filter((h) => h.tipo === "real");
-
-  async function aplicar(datos: Record<string, unknown>) {
-    if (!transicion || !b) return;
-    setOcupado(true);
-    try {
-      await cambiarEstado(b.id, transicion.destino, datos);
-      avisar(`${b.folio}: ${transicion.destino}`);
-      setTransicion(null);
-      qc.invalidateQueries();
-    } catch (e) {
-      avisar((e as Error).message, "error");
-    } finally {
-      setOcupado(false);
-    }
-  }
 
   async function imprimir() {
     if (!b) return;
@@ -132,7 +106,7 @@ export default function FichaBacklog() {
             <button
               key={t.destino}
               className={t.peligro ? "boton-plano boton-peligro-plano" : undefined}
-              onClick={() => setTransicion(t)}
+              onClick={() => cambio.abrir(b, t)}
             >
               {t.etiqueta}
             </button>
@@ -183,17 +157,7 @@ export default function FichaBacklog() {
       )}
       {pestania === "bitacora" && <Bitacora backlogId={b.id} eventos={eventos ?? []} puedeComentar={puedeCapturar} />}
 
-      {transicion && (
-        <DialogoTransicion
-          folio={b.folio}
-          transicion={transicion}
-          prioridadActual={b.prioridad}
-          otActual={b.ot_sap}
-          ocupado={ocupado}
-          onAceptar={aplicar}
-          onCerrar={() => setTransicion(null)}
-        />
-      )}
+      {cambio.dialogo}
     </div>
   );
 }

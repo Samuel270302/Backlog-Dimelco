@@ -14,3 +14,36 @@ from unidades u,
 where u.sigla = 'HEM';
 insert into equipos (unidad_id, cod_interno, modelo, flota, marca)
 select id, 'PS090', 'ST7', 'Scoop', 'Epiroc' from unidades where sigla = 'VTN';
+
+-- Backlogs de contexto en varios estados (los mueve el admin con la función real).
+select set_config('request.jwt.claims', '{"sub":"00000000-0000-0000-0000-00000000000a"}', false);
+insert into backlogs (id, equipo_id, sistema_id, descripcion, origen, prioridad, tipo_pedido, componente, fecha_deteccion, reportado_por, justificacion)
+select v.id::uuid, e.id, s.id, v.descr, v.origen, v.pri, v.tipo, v.comp, current_date - v.dias, 'Supervisor turno A', v.just
+from (values
+  ('30000000-0000-0000-0000-000000000001', 'PS012', 'Sistema hidráulico', 'Cambio de mangueras de levante por desgaste', 'Inspección', 'P2', 'Urgente', 'Mangueras de levante', 3, 'Mangueras con cordones expuestos'),
+  ('30000000-0000-0000-0000-000000000002', 'PS012', 'Frenos', 'Regular frenos de servicio', 'PM', 'P3', 'Normal', 'Frenos de servicio', 40, null),
+  ('30000000-0000-0000-0000-000000000003', 'JU005', 'Sistema eléctrico', 'Reparar luminaria de cabina', 'Operador', 'P4', 'Normal', 'Luminaria de cabina', 1, null),
+  ('30000000-0000-0000-0000-000000000004', 'JU005', 'Perforadora', 'Cambio de centralizador de barra', 'PM', 'P3', 'Normal', 'Centralizador', 6, null),
+  ('30000000-0000-0000-0000-000000000005', 'PS090', 'Motor', 'Fuga de refrigerante en radiador', 'Inspección', 'P2', 'Normal', 'Radiador', 2, null)
+) v(id, equipo, sistema, descr, origen, pri, tipo, comp, dias, just)
+join equipos e on e.cod_interno = v.equipo
+join sistemas s on s.nombre = v.sistema;
+
+insert into backlog_hh (backlog_id, especialidad_id, tipo, personas, horas)
+select v.b::uuid, e.id, 'estimada', v.p, v.h
+from (values ('30000000-0000-0000-0000-000000000001', 'Mecánico', 2, 6),
+             ('30000000-0000-0000-0000-000000000001', 'Hidráulico', 1, 6),
+             ('30000000-0000-0000-0000-000000000002', 'Mecánico', 2, 3),
+             ('30000000-0000-0000-0000-000000000003', 'Eléctrico', 1, 2),
+             ('30000000-0000-0000-0000-000000000004', 'Mecánico', 2, 4)) v(b, n, p, h)
+join especialidades e on e.nombre = v.n;
+insert into backlog_repuestos (backlog_id, numero_parte, descripcion, cantidad, stock) values
+  ('30000000-0000-0000-0000-000000000001', '3222337000', 'Manguera de levante 1"', 2, 0),
+  ('30000000-0000-0000-0000-000000000001', '0663210201', 'Juego de o-rings', 4, 10);
+
+select cambiar_estado_backlog('30000000-0000-0000-0000-000000000001', 'En planificación');
+select cambiar_estado_backlog('30000000-0000-0000-0000-000000000004', 'En planificación');
+select cambiar_estado_backlog('30000000-0000-0000-0000-000000000004', 'Listo para programar');
+select cambiar_estado_backlog('30000000-0000-0000-0000-000000000004', 'Programado',
+  jsonb_build_object('fecha_programada', current_date + 1, 'ot_sap', '4001190'));
+select set_config('request.jwt.claims', '', false);

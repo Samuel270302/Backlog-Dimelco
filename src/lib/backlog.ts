@@ -114,3 +114,42 @@ export function lunesDe(iso: string): string {
   const p = (n: number) => String(n).padStart(2, "0");
   return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`;
 }
+
+// Repuestos y HH de varios backlogs en pocas consultas (por tandas de ids, para
+// no pasar el largo máximo de la URL). Se usa en el Kanban y en la vista por equipo.
+const TANDA = 80;
+
+async function porIds<T>(tabla: string, ids: string[]): Promise<T[]> {
+  const salida: T[] = [];
+  for (let i = 0; i < ids.length; i += TANDA) {
+    const { data, error } = await supabase().from(tabla).select("*").in("backlog_id", ids.slice(i, i + TANDA));
+    if (error) throw error;
+    salida.push(...(data as T[]));
+  }
+  return salida;
+}
+
+function agrupar<T extends { backlog_id: string }>(filas: T[]): Map<string, T[]> {
+  const m = new Map<string, T[]>();
+  for (const f of filas) {
+    const lista = m.get(f.backlog_id);
+    if (lista) lista.push(f);
+    else m.set(f.backlog_id, [f]);
+  }
+  return m;
+}
+
+export function useDetalleBacklogs(ids: string[]) {
+  const clave = [...ids].sort().join(",");
+  return useQuery({
+    queryKey: ["detalle-backlogs", clave],
+    enabled: ids.length > 0,
+    queryFn: async () => {
+      const [repuestos, hh] = await Promise.all([
+        porIds<BacklogRepuesto>("backlog_repuestos", ids),
+        porIds<BacklogHh>("backlog_hh", ids),
+      ]);
+      return { repuestos: agrupar(repuestos), hh: agrupar(hh) };
+    },
+  });
+}
