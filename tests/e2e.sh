@@ -1,6 +1,8 @@
 #!/usr/bin/env bash
 # Prueba de extremo a extremo: PostgreSQL temporal con las migraciones y la semilla,
 # app construida y navegador (Playwright) recorriendo el flujo con dos usuarios.
+# Uso: tests/e2e.sh                 flujo completo en Chromium
+#      tests/e2e.sh electron.mjs    la app de escritorio (Electron) con PDF, Excel y fotos
 set -euo pipefail
 RAIZ="$(cd "$(dirname "$0")/.." && pwd)"
 PGBIN="${PGBIN:-$(ls -d /usr/lib/postgresql/*/bin | sort -V | tail -1)}"
@@ -16,5 +18,12 @@ PSQL=(psql -U postgres -d postgres -v ON_ERROR_STOP=1 -q -X)
 "${PSQL[@]}" -f "$RAIZ/tools/base_local.sql"
 for f in "$RAIZ"/supabase/migrations/*.sql; do "${PSQL[@]}" -f "$f"; done
 "${PSQL[@]}" -f "$RAIZ/tests/semilla_e2e.sql"
-[ "${SIN_BUILD:-}" = "1" ] || (cd "$RAIZ" && npx vite build --logLevel warn)
-PGOPTIONS="" node "$RAIZ/tests/flujo_backlog.mjs"
+GUION="${1:-flujo_backlog.mjs}"
+if [ "${SIN_BUILD:-}" != "1" ]; then
+  if [ "$GUION" = "electron.mjs" ]; then (cd "$RAIZ" && npm run build >/dev/null); else (cd "$RAIZ" && npx vite build --logLevel warn); fi
+fi
+if [ "$GUION" = "electron.mjs" ]; then
+  PGOPTIONS="" xvfb-run -a node "$RAIZ/tests/$GUION"
+else
+  PGOPTIONS="" node "$RAIZ/tests/$GUION"
+fi

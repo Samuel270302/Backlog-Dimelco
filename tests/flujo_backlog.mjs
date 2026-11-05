@@ -7,6 +7,7 @@ import { createServer } from "node:http";
 import { existsSync, mkdirSync, readFileSync } from "node:fs";
 import { extname, join } from "node:path";
 import { iniciarServidorRest } from "./servidor_rest.mjs";
+import { png, token } from "./utilidades.mjs";
 
 const require = createRequire(import.meta.url);
 let playwright;
@@ -44,42 +45,7 @@ const USUARIOS = {
   capVtn: { id: "00000000-0000-0000-0000-00000000000d", email: "cap.vtn@prueba" },
 };
 
-function token(u) {
-  const b64 = (o) => Buffer.from(JSON.stringify(o)).toString("base64url");
-  const exp = Math.floor(Date.now() / 1000) + 86400;
-  return `${b64({ alg: "HS256", typ: "JWT" })}.${b64({ sub: u.id, role: "authenticated", email: u.email, exp })}.prueba`;
-}
 
-// PNG de un color (sin librerías): sirve como foto de prueba.
-import { deflateSync } from "node:zlib";
-function png(ancho, alto, [r, g, b]) {
-  const crcTabla = Array.from({ length: 256 }, (_, n) => {
-    let c = n;
-    for (let k = 0; k < 8; k++) c = c & 1 ? 0xedb88320 ^ (c >>> 1) : c >>> 1;
-    return c >>> 0;
-  });
-  const crc = (buf) => {
-    let c = 0xffffffff;
-    for (const x of buf) c = crcTabla[(c ^ x) & 0xff] ^ (c >>> 8);
-    return (c ^ 0xffffffff) >>> 0;
-  };
-  const trozo = (tipo, datos) => {
-    const t = Buffer.from(tipo);
-    const largo = Buffer.alloc(4);
-    largo.writeUInt32BE(datos.length);
-    const c = Buffer.alloc(4);
-    c.writeUInt32BE(crc(Buffer.concat([t, datos])));
-    return Buffer.concat([largo, t, datos, c]);
-  };
-  const ihdr = Buffer.alloc(13);
-  ihdr.writeUInt32BE(ancho, 0);
-  ihdr.writeUInt32BE(alto, 4);
-  ihdr[8] = 8;
-  ihdr[9] = 2;
-  const fila = Buffer.concat([Buffer.from([0]), Buffer.alloc(ancho * 3).map((_, i) => [r, g, b][i % 3])]);
-  const crudo = Buffer.concat(Array.from({ length: alto }, () => fila));
-  return Buffer.concat([Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]), trozo("IHDR", ihdr), trozo("IDAT", deflateSync(crudo)), trozo("IEND", Buffer.alloc(0))]);
-}
 const FOTO = (nombre, color) => ({ name: nombre, mimeType: "image/png", buffer: png(320, 240, color) });
 
 const navegador = await chromium.launch();
@@ -466,6 +432,59 @@ try {
   await adm.screenshot({ path: join(SALIDA, "ficha-bitacora.png"), fullPage: true });
   await adm.getByRole("tab", { name: "Datos" }).click();
   await adm.screenshot({ path: join(SALIDA, "ficha-datos.png"), fullPage: true });
+
+  // 7. Administración: equipos, sistemas y especialidades, plazos.
+  await adm.goto(base + "#/equipos");
+  await adm.getByRole("heading", { name: "Equipos" }).waitFor();
+  const nuevoEq = adm.locator(".panel-formulario");
+  await nuevoEq.getByLabel("Unidad").selectOption({ label: "HEMCO" });
+  await nuevoEq.getByLabel("Código interno").fill("PS013");
+  await nuevoEq.getByLabel("Equipo (flota)").fill("Scoop");
+  await nuevoEq.getByLabel("Marca").fill("Epiroc");
+  await nuevoEq.getByLabel("Modelo").fill("ST14");
+  await nuevoEq.getByRole("button", { name: "Crear" }).click();
+  await aviso(adm, "Equipo PS013 creado");
+  await nuevoEq.getByLabel("Código interno").fill("PS013");
+  await nuevoEq.getByLabel("Modelo").fill("ST14");
+  await nuevoEq.getByRole("button", { name: "Crear" }).click();
+  await aviso(adm, "Ya existe un equipo con ese código interno en la unidad");
+  await adm.screenshot({ path: join(SALIDA, "equipos.png") });
+  await adm.goto(base + "#/nuevo");
+  await adm.getByLabel("Equipo", { exact: true }).fill("PS013");
+  await adm.getByLabel("Equipo elegido").locator("option", { hasText: "PS013" }).waitFor();
+  await adm.goto(base + "#/equipos");
+  await adm.getByLabel("Activo PS013").click();
+  await adm.getByLabel("Activo PS013").waitFor({ state: "detached" }); // sin «Mostrar inactivos» sale de la lista
+  await adm.goto(base + "#/nuevo");
+  await adm.reload();
+  await adm.getByLabel("Equipo", { exact: true }).fill("PS013");
+  await adm.waitForTimeout(500);
+  if (await adm.getByLabel("Equipo elegido").locator("option", { hasText: "PS013" }).count())
+    throw new Error("Un equipo inactivo sigue apareciendo al registrar");
+  ok("equipo PS013 creado (código repetido rechazado), aparece al registrar y al desactivarlo deja de aparecer");
+
+  await adm.goto(base + "#/catalogos");
+  const esp = adm.getByRole("region", { name: "Especialidades" });
+  await esp.getByLabel("Nuevo en Especialidades").fill("Lubricador");
+  await esp.getByRole("button", { name: "Agregar" }).click();
+  await esp.getByLabel("Nombre Lubricador").waitFor();
+  await esp.getByLabel("Activo Llantero").click();
+  await esp.locator("tr.fila-inactiva", { has: adm.getByLabel("Nombre Llantero") }).waitFor();
+  await adm.goto(base + "#/capacidad");
+  await adm.reload();
+  await adm.getByRole("button", { name: "Cambiar Lubricador HEMCO" }).waitFor();
+  if (await adm.getByRole("button", { name: "Cambiar Llantero HEMCO" }).count()) throw new Error("Especialidad inactiva en capacidad");
+  ok("especialidad Lubricador agregada y Llantero desactivada (sale de Capacidad)");
+
+  await adm.goto(base + "#/plazos");
+  await adm.waitForFunction(() => document.querySelector('[aria-label="Plazo P4"]')?.value === "90");
+  await adm.getByLabel("Plazo P4").fill("10");
+  await adm.getByLabel("Plazo P4").blur();
+  await aviso(adm, "Plazo grabado");
+  await adm.getByRole("button", { name: "Recalcular abiertos" }).click();
+  await adm.getByRole("dialog").getByRole("button", { name: "Recalcular" }).click();
+  await aviso(adm, "1 backlog(s) abiertos con fecha límite nueva");
+  ok("plazo P4 a 10 días y recálculo de 1 backlog abierto");
 
   // 6. Vista de celular.
   const movil = await abrir("cap", 390, 844);

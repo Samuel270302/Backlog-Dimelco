@@ -6,14 +6,17 @@ Es una app separada de Control de Preventivos: repositorio, proyecto Supabase, u
 
 ## Arquitectura
 
-Electron + React + TypeScript para escritorio Windows, y el mismo código como sitio web para celular y tablet. Base PostgreSQL en Supabase con seguridad por rol (admin, capturador, invitado) y por unidad (HEMCO, Veta Nueva, Mina La India, Explotec). El flujo de estados se valida en la base con `cambiar_estado_backlog()`; la app no cambia el estado con un update directo.
+Electron + React + TypeScript para escritorio Windows. El mismo código compila como sitio web (`npm run build:web`), pero la publicación web quedó para más adelante. Base PostgreSQL en Supabase con seguridad por rol (admin, capturador, invitado) y por unidad (HEMCO, Veta Nueva, Mina La India, Explotec). El flujo de estados se valida en la base con `cambiar_estado_backlog()`; la app no cambia el estado con un update directo.
 
 ## Flujo
 
-    Identificado -> En planificación -> Esperando repuestos -> Listo para programar -> Programado -> Ejecutado -> Cerrado
-                 \-> Rechazado        (al recibir el último repuesto pasa solo a Listo)
+Etapas visibles (Kanban y barra de avance): 1. Identificado, 2. Planeado, 3. Programado, 4. Ejecutado, 5. Validado.
+
+    Identificado -> En planificación -> Esperando repuestos -> Listo para programar -> Programado -> Ejecutado -> Validado
+                 \-> Rechazado        (Planeado agrupa estos tres; al recibir el último repuesto pasa solo a Listo)
+    Programado -> Programado (reprogramación con fecha nueva y motivo, misma OT)
+    Programado -> Listo para programar (quitar del calendario, con motivo)
     Cualquier estado abierto -> Anulado (con motivo)
-    Programado -> Listo para programar (reprogramación con motivo)
 
 ## Estructura
 
@@ -30,16 +33,10 @@ Electron + React + TypeScript para escritorio Windows, y el mismo código como s
     npm run build          compila renderer y proceso principal
     npm run build:web      compila el sitio web (usa .env.web)
     npm run dist           instalador de Windows
-    tools/prueba_local.sh  aplica las migraciones en un PostgreSQL temporal y prueba el flujo por rol
-    tests/e2e.sh           prueba en navegador (Playwright) contra la base local, con dos usuarios
+    tools/prueba_local.sh       aplica las migraciones en un PostgreSQL temporal y prueba el flujo por rol
+    tests/e2e.sh                prueba en navegador (Playwright) contra la base local, con dos usuarios
+    tests/e2e.sh electron.mjs   prueba de la app de escritorio (Electron): PDF, Excel y fotos
 
 ## Puesta en marcha
 
-1. Crear un proyecto nuevo en supabase.com (no usar el de preventivos).
-2. Aplicar en orden `supabase/migrations/001_base.sql` a `007_storage.sql` en el SQL Editor.
-3. Desplegar la función: `supabase functions deploy admin-usuarios`.
-4. Crear el primer usuario en Authentication → Users y, en el SQL Editor, activarlo como admin:
-   `update perfiles set rol = 'admin', activo = true where correo = '<correo>';`
-5. Copiar los equipos: `python3 tools/importar_equipos.py --dsn-origen "<preventivos>" --dsn-destino "<backlog>" --probar`, revisar y repetir sin `--probar`.
-6. Cargar la capacidad del taller y los plazos por prioridad (los valores iniciales son provisionales).
-7. En cada PC, instalar la app y capturar URL del proyecto y llave anon. Para la web, crear `.env.web` con `VITE_SUPABASE_URL` y `VITE_SUPABASE_ANON_KEY`.
+Ver [INSTALACION.md](INSTALACION.md): base de datos (`supabase/instalar_todo.sql` o migraciones 001 a 012), verificación con `tools/verificar_instalacion.sql`, datos de arranque, instalación en cada PC, primer recorrido, actualizaciones y respaldo.

@@ -36,6 +36,7 @@ const enlacesAdmin = [
   { a: "/equipos", texto: "Equipos", icono: <IconoPrograma /> },
   { a: "/catalogos", texto: "Sistemas y especialidades", icono: <IconoLlave /> },
   { a: "/capacidad", texto: "Capacidad del taller", icono: <IconoAjustes /> },
+  { a: "/plazos", texto: "Plazos por prioridad", icono: <IconoCalendario /> },
   { a: "/usuarios", texto: "Usuarios", icono: <IconoUsuarios /> },
 ];
 

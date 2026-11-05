@@ -1,0 +1,48 @@
+-- Verificación de la base de backlog en Supabase. Pegar en el SQL Editor del proyecto
+-- backlog-hemco y ejecutar. Solo lee. Cada fila dice OK o FALTA y qué hacer.
+with chequeos(orden, punto, ok, si_falta) as (
+  values
+  (1, 'Tablas base (001 a 007)',
+      to_regclass('public.backlogs') is not null and to_regclass('public.backlog_fotos') is not null,
+      'Ejecutar supabase/instalar_todo.sql'),
+  (2, 'Formato del backlog (008)',
+      exists (select 1 from information_schema.columns where table_name = 'backlogs' and column_name = 'tipo_pedido'),
+      'Ejecutar 008_formato_backlog.sql'),
+  (3, 'Reprogramación directa (009)',
+      exists (select 1 from pg_proc where proname = 'cambiar_estado_backlog' and prosrc like '%distinta a la actual%'),
+      'Ejecutar 009_reprogramar.sql'),
+  (4, 'Estado Validado (010)',
+      exists (select 1 from pg_constraint where conname = 'backlogs_estado_check' and pg_get_constraintdef(oid) like '%Validado%'),
+      'Ejecutar 010_validado.sql'),
+  (5, 'Permisos de fotos (011)',
+      exists (select 1 from pg_policies where tablename = 'backlog_fotos' and policyname = 'borrar_backlog_fotos'),
+      'Ejecutar 011_fotos.sql'),
+  (6, 'Recalcular fechas límite (012)',
+      exists (select 1 from pg_proc where proname = 'recalcular_fechas_limite'),
+      'Ejecutar 012_recalcular_limites.sql'),
+  (7, 'Bucket privado backlog-fotos',
+      exists (select 1 from storage.buckets where id = 'backlog-fotos' and not public),
+      'Ejecutar 007_storage.sql (Storage debe estar habilitado en el proyecto)'),
+  (8, 'Tiempo real de backlogs',
+      exists (select 1 from pg_publication_tables where pubname = 'supabase_realtime' and tablename = 'backlogs'),
+      'Ejecutar 006_rls.sql'),
+  (9, 'Al menos un administrador activo',
+      exists (select 1 from perfiles where rol = 'admin' and activo),
+      'update perfiles set rol = ''admin'', activo = true where correo = ''<correo>'';'),
+  (10, 'Equipos cargados',
+      exists (select 1 from equipos where activo),
+      'Copiar equipos con tools/exportar_equipos_preventivos.sql o crearlos en la pantalla Equipos'),
+  (11, 'Marca en todos los equipos activos',
+      not exists (select 1 from equipos e where e.activo and to_jsonb(e) ->> 'marca' is null),
+      'Completar la marca en la pantalla Equipos'),
+  (12, 'Capacidad del taller cargada',
+      exists (select 1 from capacidad_taller),
+      'Cargar HH por semana en la pantalla Capacidad del taller'),
+  (13, 'Plazos por prioridad',
+      (select count(*) from parametros where clave like 'plazo_p_\_dias' escape '\' and valor is not null) = 4,
+      'Revisar la pantalla Plazos por prioridad')
+)
+select orden as "N°", punto as "Punto", case when ok then 'OK' else 'FALTA' end as "Estado",
+       case when ok then '' else si_falta end as "Qué hacer"
+from chequeos
+order by orden;

@@ -10,7 +10,6 @@ import { AvisosProvider } from "./components/Avisos";
 import Setup from "./pages/Setup";
 import Login from "./pages/Login";
 import Usuarios from "./pages/Usuarios";
-import EnConstruccion from "./pages/EnConstruccion";
 import NuevoBacklog from "./pages/NuevoBacklog";
 import FichaBacklog from "./pages/FichaBacklog";
 import Kanban from "./pages/Kanban";
@@ -19,6 +18,9 @@ import FichaEquipo from "./pages/FichaEquipo";
 import Calendario from "./pages/Calendario";
 import Capacidad from "./pages/Capacidad";
 import Indicadores from "./pages/Indicadores";
+import Equipos from "./pages/Equipos";
+import Catalogos from "./pages/Catalogos";
+import Parametros from "./pages/Parametros";
 
 function Interior() {
   const { session, perfil, cargando, esAdmin, puedeCapturar } = useAuth();
@@ -63,8 +65,9 @@ function ConRealtime({ esAdmin, puedeCapturar }: { esAdmin: boolean; puedeCaptur
         <Route path="/calendario" element={<Calendario />} />
         <Route path="/equipo/:id" element={<FichaEquipo />} />
         <Route path="/indicadores" element={<Indicadores />} />
-        {esAdmin && <Route path="/equipos" element={<EnConstruccion titulo="Equipos" fase={2} />} />}
-        {esAdmin && <Route path="/catalogos" element={<EnConstruccion titulo="Sistemas y especialidades" fase={2} />} />}
+        {esAdmin && <Route path="/equipos" element={<Equipos />} />}
+        {esAdmin && <Route path="/catalogos" element={<Catalogos />} />}
+        {esAdmin && <Route path="/plazos" element={<Parametros />} />}
         {esAdmin && <Route path="/capacidad" element={<Capacidad />} />}
         {esAdmin && <Route path="/usuarios" element={<Usuarios />} />}
         <Route path="*" element={<Navigate to="/flota" replace />} />

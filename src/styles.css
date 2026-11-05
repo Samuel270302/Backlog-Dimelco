@@ -919,3 +919,10 @@ dialog.dialogo-foto img { display: block; max-width: 88vw; max-height: 80vh; }
 .lista-archivos li { display: flex; gap: 8px; align-items: center; padding: 3px 0; font-size: 13px; }
 .tk-fotos { display: flex; gap: 6px; margin-top: 8px; align-items: center; }
 .tk-fotos img { width: 72px; height: 54px; object-fit: cover; border-radius: 4px; border: 1px solid var(--borde); }
+
+/* ===== Administración (fase 8) ===== */
+.tabla-edicion tr.fila-inactiva td { color: var(--gris-letra); }
+.tabla-edicion tr.fila-inactiva input:not([type="checkbox"]) { color: var(--gris-letra); background: var(--panel-2); }
+.rejilla-catalogos { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+@media (max-width: 1100px) { .rejilla-catalogos { grid-template-columns: 1fr; } }
+.rejilla-catalogos td.num input { width: 70px; }

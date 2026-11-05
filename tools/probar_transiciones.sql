@@ -176,6 +176,18 @@ select set_config('request.jwt.claims', '{"sub":"00000000-0000-0000-0000-0000000
 delete from backlog_fotos where id = '40000000-0000-0000-0000-000000000001';
 select pruebas.igual((select count(*)::int from backlog_fotos), 0, 'admin borra fotos');
 
+-- Plazos (012): el admin recalcula las fechas límite de los abiertos; el capturador no puede.
+update parametros set valor = 10 where clave = 'plazo_p4_dias';
+select pruebas.igual(recalcular_fechas_limite(), 1, 'recalcula el P4 abierto');
+select pruebas.igual((select fecha_limite from backlogs where id = '20000000-0000-0000-0000-000000000003'),
+  (select fecha_deteccion + 10 from backlogs where id = '20000000-0000-0000-0000-000000000003'), 'nuevo límite P4');
+select pruebas.igual(recalcular_fechas_limite(), 0, 'sin cambios la segunda vez');
+update parametros set valor = 90 where clave = 'plazo_p4_dias';
+select recalcular_fechas_limite();
+select set_config('request.jwt.claims', '{"sub":"00000000-0000-0000-0000-00000000000c"}', false);
+select pruebas.espera_error($$select recalcular_fechas_limite()$$, 'Solo el administrador');
+select set_config('request.jwt.claims', '{"sub":"00000000-0000-0000-0000-00000000000a"}', false);
+
 -- Formato del backlog (008): ítem correlativo, identificación del repuesto, horómetro y tipo de pedido.
 select pruebas.igual((select string_agg(item::text, ',' order by item) from backlog_repuestos
   where backlog_id = '20000000-0000-0000-0000-000000000001'), '1,2', 'ítems correlativos');
