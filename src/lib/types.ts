@@ -48,7 +48,7 @@ export const ESTADOS = [
   "Listo para programar",
   "Programado",
   "Ejecutado",
-  "Cerrado",
+  "Validado",
   "Rechazado",
   "Anulado",
 ] as const;
@@ -60,6 +60,18 @@ export const ESTADOS_ABIERTOS: Estado[] = [
   "Listo para programar",
   "Programado",
 ];
+
+// Etapas visibles del flujo (Kanban y barra de avance). «Planeado» agrupa los tres
+// pasos de planificación que la base sigue distinguiendo.
+export const ETAPAS = ["Identificado", "Planeado", "Programado", "Ejecutado", "Validado"] as const;
+export type Etapa = (typeof ETAPAS)[number];
+export const ESTADOS_PLANEADO: Estado[] = ["En planificación", "Esperando repuestos", "Listo para programar"];
+
+export function etapaDe(estado: Estado): Etapa | null {
+  if (estado === "Rechazado" || estado === "Anulado") return null;
+  if (ESTADOS_PLANEADO.includes(estado)) return "Planeado";
+  return estado as Etapa;
+}
 
 export const PRIORIDADES = ["P1", "P2", "P3", "P4"] as const;
 export type Prioridad = (typeof PRIORIDADES)[number];

@@ -8,6 +8,7 @@ import { ESTADOS_FINALES, useBacklog, useEventosBacklog, useHhBacklog, useRepues
 import { useCambioEstado, useTransicionesPermitidas } from "../components/CambioEstado";
 import { EtiquetaEstado, EtiquetaPrioridad } from "../components/Etiquetas";
 import DatosBacklog from "../components/ficha/DatosBacklog";
+import BarraAvance from "../components/BarraAvance";
 import TablaHh from "../components/ficha/TablaHh";
 import TablaRepuestos from "../components/ficha/TablaRepuestos";
 import Bitacora from "../components/ficha/Bitacora";
@@ -97,6 +98,7 @@ export default function FichaBacklog() {
             {b.componente ? ` · ${b.componente}` : ""}
           </h1>
           <p className="subtitulo">{b.descripcion}</p>
+          <BarraAvance b={b} eventos={eventos ?? []} detallada />
         </div>
         <div className="ficha-acciones">
           <button className="boton-plano" disabled={imprimiendo} onClick={imprimir}>

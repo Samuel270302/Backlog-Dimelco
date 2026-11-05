@@ -210,24 +210,32 @@ try {
   // 3. Kanban: la tarjeta se despliega con repuestos, especialidades y HH; se programa arrastrándola.
   await adm.goto(base + "#/kanban");
   const tarjeta = adm.getByRole("article", { name: `${folio} PS011` });
-  await adm.locator('section[aria-label="Listo para programar"]').getByRole("article", { name: `${folio} PS011` }).waitFor();
+  await adm.locator('section[aria-label="Planeado"]').getByRole("article", { name: `${folio} PS011` }).waitFor();
+  const nombresColumnas = await adm.locator(".columna-cabecera > span:first-child").allTextContents();
+  if (nombresColumnas.join("|") !== "1. Identificado|2. Planeado|3. Programado|4. Ejecutado|5. Validado (7 días)")
+    throw new Error(`Columnas del Kanban: ${nombresColumnas.join(" | ")}`);
+  await tarjeta.getByLabel("Avance: paso 2 de 5, Planeado").waitFor();
+  await tarjeta.locator(".tk-subestado", { hasText: "Listo para programar" }).waitFor();
+  ok("Kanban con 5 etapas; la tarjeta muestra la barra 2 de 5 y el subestado «Listo para programar»");
   await tarjeta.locator(".tk-cabecera").click();
+  await tarjeta.locator(".tk-detalle .barra-avance.detallada li.actual", { hasText: "Planeado" }).waitFor();
   for (const texto of ["6060003007", "Juego de cierres EOD", "Mecánico", "2 × 4 = 8", "Fugas de aceite en el block"]) {
     await tarjeta.locator(".tk-detalle", { hasText: texto }).waitFor();
   }
   ok("la tarjeta del Kanban se despliega con repuestos, especialidades × horas y justificación");
-  if (await adm.locator(`section[aria-label="Listo para programar"] .tarjeta-kanban`, { hasText: "PS090" }).count())
+  if (await adm.locator(`section[aria-label="Planeado"] .tarjeta-kanban`, { hasText: "PS090" }).count())
     throw new Error("Kanban mezcla unidades con filtro de unidad");
   await adm.locator(".kanban").evaluate((k) => (k.scrollLeft = 0));
   await adm.screenshot({ path: join(SALIDA, "kanban.png") });
   await tarjeta.locator(".tk-cabecera").click(); // se cierra
-  // Arrastre en Kanban: PS012 (En planificación, con repuestos sin recibir) a «Esperando repuestos».
-  const ps012 = adm.getByRole("article", { name: "BL-HEM-000002 PS012" });
-  await ps012.dragTo(adm.locator('section[aria-label="Esperando repuestos"] .columna-cabecera'), { sourcePosition: { x: 40, y: 12 } });
+  // Arrastre en Kanban: JU005 (Identificado, con HH) a «Planeado» = aprobar y planificar.
+  const ju005 = adm.getByRole("article", { name: "BL-HEM-000004 JU005" });
+  await ju005.dragTo(adm.locator('section[aria-label="Planeado"] .columna-cabecera'), { sourcePosition: { x: 40, y: 12 } });
   const dlgK = adm.getByRole("dialog");
   await dlgK.waitFor();
-  await dlgK.getByRole("button", { name: "Pasar a esperar repuestos", exact: true }).click();
-  await adm.locator('section[aria-label="Esperando repuestos"]').getByRole("article", { name: "BL-HEM-000002 PS012" }).waitFor();
+  await dlgK.getByRole("button", { name: "Aprobar y planificar", exact: true }).click();
+  const ju005Planeado = adm.locator('section[aria-label="Planeado"]').getByRole("article", { name: "BL-HEM-000004 JU005" });
+  await ju005Planeado.locator(".tk-subestado", { hasText: "En planificación" }).waitFor();
   ok("arrastrar una tarjeta en el Kanban abre el diálogo de la transición y la mueve de columna");
 
   // 3b. Capacidad: el admin carga Mecánico de HEMCO con la calculadora (2 personas × 10 h × 2 turnos = 40 HH).
@@ -321,8 +329,9 @@ try {
   await adm.goto(base + `#/backlog/${id}`);
   await adm.reload();
   await esperarEstado(adm, "Ejecutado");
-  await transicion(adm, "Cerrar");
-  await esperarEstado(adm, "Cerrado");
+  await transicion(adm, "Validar");
+  await esperarEstado(adm, "Validado");
+  await adm.getByLabel("Avance: paso 5 de 5, Validado").waitFor();
   if (await adm.locator(".ficha-acciones button", { hasNotText: "Imprimir formato" }).count())
     throw new Error("Quedan acciones en un backlog cerrado");
   await adm.getByRole("tab", { name: "Datos" }).click();
@@ -330,7 +339,7 @@ try {
     throw new Error("Datos editables en un backlog cerrado");
   const deteccion = await adm.locator("label.campo", { hasText: "Fecha de detección" }).locator("input").inputValue();
   if (!/^\d{4}-\d{2}-\d{2}$/.test(deteccion)) throw new Error(`Fecha de detección vacía o mal formada: «${deteccion}»`);
-  ok("admin cierra y la ficha queda de solo lectura");
+  ok("admin valida (paso 5 de 5) y la ficha queda de solo lectura");
 
   await adm.getByRole("tab", { name: /^Bitácora/ }).click();
   const eventos = await adm.locator(".bitacora .evento").count();
@@ -345,7 +354,7 @@ try {
   // 6. Vista de celular.
   const movil = await abrir("cap", 390, 844);
   await movil.goto(base + `#/backlog/${id}`);
-  await esperarEstado(movil, "Cerrado");
+  await esperarEstado(movil, "Validado");
   await movil.screenshot({ path: join(SALIDA, "ficha-390.png"), fullPage: true });
   await movil.goto(base + "#/nuevo");
   await movil.getByRole("heading", { name: "Nuevo backlog" }).waitFor();

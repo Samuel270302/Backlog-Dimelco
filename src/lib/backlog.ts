@@ -38,7 +38,7 @@ export const useEventosBacklog = (id: string) =>
     queryFn: () => filas<BacklogEvento>("backlog_eventos", "backlog_id", id, "creado_en"),
   });
 
-export const ESTADOS_FINALES: Estado[] = ["Cerrado", "Rechazado", "Anulado"];
+export const ESTADOS_FINALES: Estado[] = ["Validado", "Rechazado", "Anulado"];
 
 // Datos que pide cada transición; la base vuelve a validar todo en cambiar_estado_backlog().
 export type CampoTransicion = "prioridad" | "fecha_programada" | "ot_sap" | "aprovechar_pm" | "fecha_ejecucion" | "motivo";
@@ -86,7 +86,7 @@ export function transiciones(estado: Estado): Transicion[] {
         anular,
       ];
     case "Ejecutado":
-      return [{ destino: "Cerrado", etiqueta: "Cerrar", soloAdmin: true, campos: [] }];
+      return [{ destino: "Validado", etiqueta: "Validar", soloAdmin: true, campos: [] }];
     default:
       return [];
   }
@@ -146,11 +146,13 @@ export function useDetalleBacklogs(ids: string[]) {
     queryKey: ["detalle-backlogs", clave],
     enabled: ids.length > 0,
     queryFn: async () => {
-      const [repuestos, hh] = await Promise.all([
+      const [repuestos, hh, eventos] = await Promise.all([
         porIds<BacklogRepuesto>("backlog_repuestos", ids),
         porIds<BacklogHh>("backlog_hh", ids),
+        porIds<BacklogEvento>("backlog_eventos", ids),
       ]);
-      return { repuestos: agrupar(repuestos), hh: agrupar(hh) };
+      eventos.sort((a, b) => a.creado_en.localeCompare(b.creado_en));
+      return { repuestos: agrupar(repuestos), hh: agrupar(hh), eventos: agrupar(eventos.filter((e) => e.tipo !== "comentario")) };
     },
   });
 }

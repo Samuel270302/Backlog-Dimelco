@@ -32,6 +32,11 @@ grant execute on all functions in schema pruebas to authenticated;
 
 -- Datos: fecha fija, usuarios por rol y unidad, equipos, capacidad.
 update parametros set valor_texto = '2026-11-02' where clave = 'fecha_referencia';  -- lunes
+
+-- 010: no queda el estado «Cerrado» en funciones ni vistas.
+select pruebas.igual((select count(*)::int from pg_proc p join pg_namespace n on n.oid = p.pronamespace
+  where n.nspname = 'public' and p.prokind = 'f' and case when p.prokind = 'f' then pg_get_functiondef(p.oid) end like '%''Cerrado''%'), 0, 'funciones sin Cerrado');
+select pruebas.igual((select count(*)::int from pg_views where schemaname = 'public' and definition like '%''Cerrado''%'), 0, 'vistas sin Cerrado');
 insert into auth.users (id, email, raw_user_meta_data) values
   ('00000000-0000-0000-0000-00000000000a', 'admin@prueba', '{"nombre":"Admin"}'),
   ('00000000-0000-0000-0000-00000000000c', 'cap.hem@prueba', '{"nombre":"Capturador HEMCO"}'),
@@ -129,11 +134,11 @@ insert into backlog_hh (backlog_id, especialidad_id, tipo, personas, horas)
 values ('20000000-0000-0000-0000-000000000001', (select id from especialidades where nombre = 'Mecánico'), 'real', 2, 5);
 select pruebas.espera_error($$select cambiar_estado_backlog('20000000-0000-0000-0000-000000000001', 'Ejecutado', '{"fecha_ejecucion":"2026-11-20"}')$$, 'futura');
 select cambiar_estado_backlog('20000000-0000-0000-0000-000000000001', 'Ejecutado', '{"fecha_ejecucion":"2026-11-02","comentario":"Se cambiaron sellos"}');
-select pruebas.espera_error($$select cambiar_estado_backlog('20000000-0000-0000-0000-000000000001', 'Cerrado')$$, 'Solo el administrador');
+select pruebas.espera_error($$select cambiar_estado_backlog('20000000-0000-0000-0000-000000000001', 'Validado')$$, 'Solo el administrador');
 insert into backlog_eventos (backlog_id, tipo, texto) values ('20000000-0000-0000-0000-000000000001', 'comentario', 'Equipo probado OK');
 
 select set_config('request.jwt.claims', '{"sub":"00000000-0000-0000-0000-00000000000a"}', false);
-select cambiar_estado_backlog('20000000-0000-0000-0000-000000000001', 'Cerrado');
+select cambiar_estado_backlog('20000000-0000-0000-0000-000000000001', 'Validado');
 select pruebas.espera_error($$update backlogs set descripcion = 'cambio tardío' where id = '20000000-0000-0000-0000-000000000001'$$, 'no se edita');
 select pruebas.espera_error($$delete from backlog_hh where backlog_id = '20000000-0000-0000-0000-000000000001'$$, 'no se edita');
 select pruebas.igual((select hh_reales from v_backlog where id = '20000000-0000-0000-0000-000000000001'), 10::numeric, 'HH reales');

@@ -1,23 +1,25 @@
 import { useMemo, useState } from "react";
 import { useBacklogs, useEspecialidades } from "../lib/queries";
-import { useDetalleBacklogs, claseEstado } from "../lib/backlog";
+import { useDetalleBacklogs } from "../lib/backlog";
 import { useCambioEstado, useTransicionesPermitidas } from "../components/CambioEstado";
 import TarjetaBacklog from "../components/TarjetaBacklog";
-import { PRIORIDADES, TIPOS_PEDIDO, type BacklogFila, type Estado } from "../lib/types";
+import { ESTADOS_PLANEADO, PRIORIDADES, TIPOS_PEDIDO, type BacklogFila, type Estado, type Etapa } from "../lib/types";
 import { fNum } from "../lib/fmt";
 
-const COLUMNAS: Estado[] = [
-  "Identificado",
-  "En planificación",
-  "Esperando repuestos",
-  "Listo para programar",
-  "Programado",
-  "Ejecutado",
-  "Cerrado",
+// Kanban por etapa: Identificado, Planeado (planificación, esperando repuestos y
+// listo para programar), Programado, Ejecutado y Validado (últimos 7 días).
+const COLUMNAS: { etapa: Etapa; estados: Estado[] }[] = [
+  { etapa: "Identificado", estados: ["Identificado"] },
+  { etapa: "Planeado", estados: ESTADOS_PLANEADO },
+  { etapa: "Programado", estados: ["Programado"] },
+  { etapa: "Ejecutado", estados: ["Ejecutado"] },
+  { etapa: "Validado", estados: ["Validado"] },
 ];
-const DIAS_CERRADOS = 7;
+const DIAS_VALIDADOS = 7;
+const TODOS = COLUMNAS.flatMap((c) => c.estados);
 
 const ordenTarjetas = (a: BacklogFila, b: BacklogFila) =>
+  TODOS.indexOf(b.estado) - TODOS.indexOf(a.estado) || // en Planeado, primero los más avanzados
   Number(b.tipo_pedido === "Urgente") - Number(a.tipo_pedido === "Urgente") ||
   a.prioridad.localeCompare(b.prioridad) ||
   (a.dias_para_limite ?? 9999) - (b.dias_para_limite ?? 9999) ||
@@ -34,7 +36,7 @@ export default function Kanban() {
   const [tipoPedido, setTipoPedido] = useState("");
   const [abiertas, setAbiertas] = useState<Set<string>>(new Set());
   const [arrastrando, setArrastrando] = useState<BacklogFila | null>(null);
-  const [sobre, setSobre] = useState<Estado | null>(null);
+  const [sobre, setSobre] = useState<Etapa | null>(null);
 
   const flotas = useMemo(
     () => [...new Set((backlogs ?? []).map((b) => b.flota).filter((f): f is string => !!f))].sort(),
@@ -42,11 +44,11 @@ export default function Kanban() {
   );
 
   const visibles = useMemo(() => {
-    const limiteCerrados = Date.now() - DIAS_CERRADOS * 86400000;
+    const limiteValidados = Date.now() - DIAS_VALIDADOS * 86400000;
     const t = buscar.trim().toLowerCase();
     return (backlogs ?? [])
-      .filter((b) => COLUMNAS.includes(b.estado))
-      .filter((b) => b.estado !== "Cerrado" || new Date(b.actualizado_en).getTime() >= limiteCerrados)
+      .filter((b) => TODOS.includes(b.estado))
+      .filter((b) => b.estado !== "Validado" || new Date(b.actualizado_en).getTime() >= limiteValidados)
       .filter((b) => !flota || b.flota === flota)
       .filter((b) => !prioridad || b.prioridad === prioridad)
       .filter((b) => !tipoPedido || b.tipo_pedido === tipoPedido)
@@ -59,8 +61,9 @@ export default function Kanban() {
 
   const { data: detalle } = useDetalleBacklogs(visibles.map((b) => b.id));
 
-  const transicionHacia = (b: BacklogFila, destino: Estado) =>
-    b.estado === destino ? undefined : permitidas(b.estado).find((t) => t.destino === destino);
+  // Transición al soltar en una columna: la que lleva a uno de sus estados.
+  const transicionHacia = (b: BacklogFila, col: (typeof COLUMNAS)[number]) =>
+    col.estados.includes(b.estado) ? undefined : permitidas(b.estado).find((t) => col.estados.includes(t.destino));
 
   function alternar(id: string) {
     setAbiertas((s) => {
@@ -110,21 +113,22 @@ export default function Kanban() {
         <p className="nota">Cargando…</p>
       ) : (
         <div className="kanban">
-          {COLUMNAS.map((col) => {
-            const tarjetas = visibles.filter((b) => b.estado === col).sort(ordenTarjetas);
+          {COLUMNAS.map((col, i) => {
+            const tarjetas = visibles.filter((b) => col.estados.includes(b.estado)).sort(ordenTarjetas);
             const hh = tarjetas.reduce((s, b) => s + Number(b.hh_estimadas), 0);
             const admite = arrastrando ? !!transicionHacia(arrastrando, col) : false;
+            const propia = arrastrando ? col.estados.includes(arrastrando.estado) : false;
             return (
               <section
-                key={col}
-                className={`columna-kanban${arrastrando && admite ? " admite" : ""}${sobre === col && admite ? " sobre" : ""}${arrastrando && !admite && arrastrando.estado !== col ? " no-admite" : ""}`}
-                aria-label={col}
+                key={col.etapa}
+                className={`columna-kanban${arrastrando && admite ? " admite" : ""}${sobre === col.etapa && admite ? " sobre" : ""}${arrastrando && !admite && !propia ? " no-admite" : ""}`}
+                aria-label={col.etapa}
                 onDragOver={(e) => {
                   if (!admite) return;
                   e.preventDefault();
-                  setSobre(col);
+                  setSobre(col.etapa);
                 }}
-                onDragLeave={() => setSobre((s) => (s === col ? null : s))}
+                onDragLeave={() => setSobre((s) => (s === col.etapa ? null : s))}
                 onDrop={(e) => {
                   e.preventDefault();
                   const b = arrastrando;
@@ -135,8 +139,11 @@ export default function Kanban() {
                   if (t) cambio.abrir(b, t);
                 }}
               >
-                <header className={`columna-cabecera ${claseEstado(col)}`}>
-                  <span>{col === "Cerrado" ? `Cerrado (${DIAS_CERRADOS} días)` : col}</span>
+                <header className={`columna-cabecera est-${col.etapa.toLowerCase()}`}>
+                  <span>
+                    {i + 1}. {col.etapa}
+                    {col.etapa === "Validado" && <span className="columna-nota"> ({DIAS_VALIDADOS} días)</span>}
+                  </span>
                   <span className="columna-cuenta">
                     {tarjetas.length} · {fNum(hh)} HH
                   </span>
@@ -154,6 +161,7 @@ export default function Kanban() {
                       b={b}
                       repuestos={detalle?.repuestos.get(b.id) ?? []}
                       hh={detalle?.hh.get(b.id) ?? []}
+                      eventos={detalle?.eventos.get(b.id) ?? []}
                       especialidades={especialidades ?? []}
                       abierta={abiertas.has(b.id)}
                       onAlternar={() => alternar(b.id)}

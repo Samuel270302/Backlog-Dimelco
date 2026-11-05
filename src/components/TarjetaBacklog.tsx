@@ -1,8 +1,9 @@
 import { Link } from "react-router-dom";
 import { fFecha, fNum } from "../lib/fmt";
 import type { Transicion } from "../lib/backlog";
-import type { BacklogFila, BacklogHh, BacklogRepuesto, Catalogo } from "../lib/types";
+import type { BacklogEvento, BacklogFila, BacklogHh, BacklogRepuesto, Catalogo } from "../lib/types";
 import { EtiquetaPrioridad } from "./Etiquetas";
+import BarraAvance, { subestadoPlaneado } from "./BarraAvance";
 
 // Tarjeta del Kanban. Cerrada: lo necesario para decidir. Abierta (clic): el detalle del
 // formato (equipo, componente, repuestos, especialidades con HH, justificación) y las
@@ -11,6 +12,7 @@ export default function TarjetaBacklog({
   b,
   repuestos,
   hh,
+  eventos = [],
   especialidades,
   abierta,
   onAlternar,
@@ -22,6 +24,7 @@ export default function TarjetaBacklog({
   b: BacklogFila;
   repuestos: BacklogRepuesto[];
   hh: BacklogHh[];
+  eventos?: BacklogEvento[];
   especialidades: Catalogo[];
   abierta: boolean;
   onAlternar: () => void;
@@ -53,6 +56,8 @@ export default function TarjetaBacklog({
           {b.tipo_pedido === "Urgente" && <span className="etiqueta-urgente">Urgente</span>}
           <EtiquetaPrioridad prioridad={b.prioridad} />
         </span>
+        <BarraAvance b={b} />
+        {subestadoPlaneado(b) && <span className="tk-subestado">{subestadoPlaneado(b)}</span>}
         <span className="tk-equipo">{b.cod_interno}{b.componente ? ` · ${b.componente}` : ""}</span>
         <span className="tk-descripcion">{b.descripcion}</span>
         <span className="tk-datos">
@@ -78,6 +83,7 @@ export default function TarjetaBacklog({
             e.stopPropagation();
           }}
         >
+          <BarraAvance b={b} eventos={eventos} detallada />
           <dl className="tk-ficha">
             <div><dt>Equipo</dt><dd>{[b.flota, b.marca, b.modelo].filter(Boolean).join(" · ")}</dd></div>
             <div><dt>Sistema</dt><dd>{b.sistema}</dd></div>

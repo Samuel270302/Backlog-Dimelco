@@ -11,7 +11,7 @@ import type { BacklogFila } from "../lib/types";
 // Programa semanal: backlogs programados por equipo y día, panel de listos para
 // programar y carga de HH por especialidad contra la capacidad del taller.
 const DIAS = ["Lun", "Mar", "Mié", "Jue", "Vie", "Sáb", "Dom"];
-const EN_CALENDARIO = ["Programado", "Ejecutado", "Cerrado"];
+const EN_CALENDARIO = ["Programado", "Ejecutado", "Validado"];
 
 const ordenListos = (a: BacklogFila, b: BacklogFila) =>
   Number(b.tipo_pedido === "Urgente") - Number(a.tipo_pedido === "Urgente") ||
