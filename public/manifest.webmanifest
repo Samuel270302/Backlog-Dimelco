@@ -1,0 +1,15 @@
+{
+  "name": "Control de Backlog - Dimelco",
+  "short_name": "Backlog",
+  "description": "Backlog de mantenimiento: Kanban, equipos, calendario e indicadores",
+  "lang": "es",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#f4f4f2",
+  "theme_color": "#252525",
+  "icons": [
+    { "src": "icono.png", "sizes": "256x256", "type": "image/png" },
+    { "src": "icono-512.png", "sizes": "512x512", "type": "image/png" }
+  ]
+}

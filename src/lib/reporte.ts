@@ -2,7 +2,7 @@
 // Mismos cálculos que la pantalla Indicadores (src/lib/indicadores.ts).
 import logoDimelco from "../assets/logo-dimelco.png";
 import { fFecha, fNum, sumarDiasISO } from "./fmt";
-import { comoDataUrl } from "./formato";
+import { abrirVentanaImpresion, comoDataUrl, escribirParaImprimir } from "./formato";
 import { etapaDe, type BacklogFila } from "./types";
 import { antiguedad, esAbierto, resumen, semanal, vencidosPorPrioridad, type SemanasEspecialidad } from "./indicadores";
 
@@ -165,13 +165,17 @@ interface AppInfo {
 }
 
 export async function reporteSemanal(d: DatosReporte): Promise<string | null> {
-  const html = armarReporte(d, await comoDataUrl(logoDimelco));
-  const nombre = `Reporte semanal backlog ${d.unidad} ${d.hoy}.pdf`;
-  const escritorio = (window as unknown as { appInfo?: AppInfo }).appInfo;
-  if (escritorio?.guardarPdf) return escritorio.guardarPdf(html, nombre);
-  const v = window.open("", "_blank");
-  if (!v) return null;
-  v.document.write(html.replace("</body>", "<script>window.onload = () => setTimeout(() => window.print(), 300);</script></body>"));
-  v.document.close();
-  return null;
+  const ventana = abrirVentanaImpresion();
+  try {
+    const html = armarReporte(d, await comoDataUrl(logoDimelco));
+    if (ventana) {
+      escribirParaImprimir(ventana, html);
+      return null;
+    }
+    const nombre = `Reporte semanal backlog ${d.unidad} ${d.hoy}.pdf`;
+    return (window as unknown as { appInfo: Required<AppInfo> }).appInfo.guardarPdf(html, nombre);
+  } catch (e) {
+    ventana?.close();
+    throw e;
+  }
 }

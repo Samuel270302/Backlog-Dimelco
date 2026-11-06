@@ -1,7 +1,7 @@
 // Lectura de backlogs desde el formato Excel "Mantenimiento correctivo programado".
 // Sin React: lo usa la pantalla Importar y se puede probar aparte. Los datos se ubican
 // por sus etiquetas (no por celda fija), así toleran filas o columnas corridas.
-import ExcelJS from "exceljs";
+import type ExcelJS from "exceljs";
 
 export interface RepuestoImportado {
   item: number;
@@ -208,7 +208,8 @@ function leerHoja(hoja: ExcelJS.Worksheet, libro: ExcelJS.Workbook, archivo: str
 
 // Lee todas las hojas con el formato; las demás se ignoran.
 export async function leerLibro(buffer: ArrayBuffer, archivo: string): Promise<BacklogImportado[]> {
-  const libro = new ExcelJS.Workbook();
+  const { default: Excel } = await import("exceljs"); // se carga solo al importar
+  const libro = new Excel.Workbook();
   await libro.xlsx.load(buffer);
   const salida: BacklogImportado[] = [];
   for (const hoja of libro.worksheets) {

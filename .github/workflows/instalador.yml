@@ -5,7 +5,7 @@ on:
   push:
     branches: [main]
     # La guía, las herramientas y las pruebas no cambian el instalador.
-    paths-ignore: ['docs/**', 'tools/**', 'tests/**', 'supabase/**', '**.md', '.github/workflows/instalador.yml', '.github/workflows/mantenimiento.yml', '.github/workflows/pruebas.yml']
+    paths-ignore: ['docs/**', 'tools/**', 'tests/**', 'supabase/**', '**.md', '.github/workflows/instalador.yml', '.github/workflows/mantenimiento.yml', '.github/workflows/pruebas.yml', '.github/workflows/web.yml']
 
 permissions:
   contents: write

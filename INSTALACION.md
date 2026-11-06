@@ -43,6 +43,19 @@ Con un backlog de prueba (se anula al final):
 5. Indicadores: generar el reporte semanal PDF y el Excel.
 6. En la ficha, "Anular" con motivo "Prueba de puesta en marcha".
 
+## Versión web para celular
+
+Dirección: https://samuel270302.github.io/Backlog-Hemco/ (mismo usuario y contraseña que la app de escritorio). Se publica sola con cada cambio en `main` (flujo "Web para celular").
+
+Activación, una sola vez, en GitHub (Samuel270302/Backlog-Hemco):
+1. Settings > Pages > Build and deployment > Source: **GitHub Actions**.
+2. Settings > Secrets and variables > Actions > pestaña **Variables** > New repository variable:
+   - `SUPABASE_URL` = `https://sfrelyrpnnvqjpzkznnu.supabase.co`
+   - `SUPABASE_ANON_KEY` = la llave anon (Supabase, Project Settings, API Keys). Es pública: sin usuario y contraseña no da acceso a datos.
+3. Actions > "Web para celular" > Run workflow. Al terminar en verde, abrir la dirección en el celular. En Android (Chrome) y en iPhone (Safari, Compartir) se puede "Agregar a pantalla de inicio" para abrirla como una app.
+
+En el celular: barra inferior con Por equipo, Kanban, Calendario (Nuevo para capturadores) y Más (resto del menú, unidad, contraseña y cerrar sesión). El Kanban se desliza por etapas y se avanza con los botones de cada tarjeta (no se arrastra). El calendario se ve por día; programar y reprogramar se hacen desde la ficha. El formato y el reporte se imprimen con "Guardar como PDF" del navegador.
+
 ## Roles
 
 | Rol | Puede |

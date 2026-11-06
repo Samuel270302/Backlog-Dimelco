@@ -192,7 +192,7 @@ try {
 
   // Formato imprimible: en el navegador se abre en una ventana nueva.
   const [ventana] = await Promise.all([cap.context().waitForEvent("page"), cap.getByRole("button", { name: "Imprimir formato" }).click()]);
-  await ventana.waitForLoadState();
+  await ventana.waitForFunction(() => document.title && !document.title.startsWith("Generando"));
   const htmlFormato = await ventana.content();
   for (const [parte, , , desc] of REPUESTOS) {
     if (!htmlFormato.includes(parte) || !htmlFormato.includes(desc.replace("(", "(")))
@@ -355,7 +355,7 @@ try {
   ok("indicadores: 0,85 semanas Mecánico, 0,6 total, 6 abiertos, 1 vencido, 38 % programado");
 
   const [rep] = await Promise.all([adm.context().waitForEvent("page"), adm.getByRole("button", { name: "Reporte semanal PDF" }).click()]);
-  await rep.waitForLoadState();
+  await rep.waitForFunction(() => document.title && !document.title.startsWith("Generando"));
   const htmlRep = await rep.content();
   for (const t of ["Reporte semanal de backlog", "Vencidos (1)", "BL-HEM-000001", "Programados para los próximos 7 días (2)", folio, "data:image/png"]) {
     if (!htmlRep.includes(t)) throw new Error(`El reporte no tiene «${t}»`);

@@ -1,0 +1,64 @@
+name: Web para celular
+
+# Publica la app como sitio web en GitHub Pages (https://samuel270302.github.io/Backlog-Hemco/).
+# La conexión a Supabase va fija en la compilación, desde dos variables del repositorio
+# (Settings > Secrets and variables > Actions > Variables): SUPABASE_URL y SUPABASE_ANON_KEY.
+# La llave anon es pública: sin usuario y contraseña no da acceso a datos.
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths-ignore: ['docs/**', 'tools/**', 'tests/**', 'supabase/**', '**.md', '.github/workflows/instalador.yml', '.github/workflows/mantenimiento.yml', '.github/workflows/pruebas.yml']
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  publicar:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.despliegue.outputs.page_url }}
+    steps:
+      # Mientras no estén las variables, el flujo avisa y no publica (no marca error).
+      - name: Verificar variables
+        id: config
+        env:
+          URL_SB: ${{ vars.SUPABASE_URL }}
+          LLAVE_SB: ${{ vars.SUPABASE_ANON_KEY }}
+        run: |
+          if [ -z "$URL_SB" ] || [ -z "$LLAVE_SB" ]; then
+            echo "::warning::No se publica: faltan las variables SUPABASE_URL y SUPABASE_ANON_KEY en Settings > Secrets and variables > Actions > Variables"
+            echo "listo=no" >> "$GITHUB_OUTPUT"
+          else
+            echo "listo=si" >> "$GITHUB_OUTPUT"
+          fi
+      - if: steps.config.outputs.listo == 'si'
+        uses: actions/checkout@v4
+      - if: steps.config.outputs.listo == 'si'
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - if: steps.config.outputs.listo == 'si'
+        run: npm ci --no-audit --no-fund
+      - name: Compilar sitio
+        if: steps.config.outputs.listo == 'si'
+        env:
+          VITE_SUPABASE_URL: ${{ vars.SUPABASE_URL }}
+          VITE_SUPABASE_ANON_KEY: ${{ vars.SUPABASE_ANON_KEY }}
+        run: npm run build:web
+      - if: steps.config.outputs.listo == 'si'
+        uses: actions/configure-pages@v5
+      - if: steps.config.outputs.listo == 'si'
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: dist-web
+      - id: despliegue
+        if: steps.config.outputs.listo == 'si'
+        uses: actions/deploy-pages@v4

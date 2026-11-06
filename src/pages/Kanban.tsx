@@ -1,4 +1,5 @@
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
+import { useEsMovil } from "../lib/movil";
 import { useBacklogs, useEspecialidades } from "../lib/queries";
 import { useDetalleBacklogs } from "../lib/backlog";
 import { useCambioEstado, useTransicionesPermitidas } from "../components/CambioEstado";
@@ -37,6 +38,16 @@ export default function Kanban() {
   const [abiertas, setAbiertas] = useState<Set<string>>(new Set());
   const [arrastrando, setArrastrando] = useState<BacklogFila | null>(null);
   const [sobre, setSobre] = useState<Etapa | null>(null);
+  const esMovil = useEsMovil();
+  const tablero = useRef<HTMLDivElement>(null);
+  const [etapaVisible, setEtapaVisible] = useState(0);
+  // En el celular las columnas se deslizan; las pestañas saltan a cada etapa.
+  function irA(i: number) {
+    const t = tablero.current;
+    const col = t?.children[i] as HTMLElement | undefined;
+    if (t && col) t.scrollTo({ left: col.offsetLeft, behavior: "smooth" }); // .kanban es position: relative
+    setEtapaVisible(i);
+  }
 
   const flotas = useMemo(
     () => [...new Set((backlogs ?? []).map((b) => b.flota).filter((f): f is string => !!f))].sort(),
@@ -109,10 +120,34 @@ export default function Kanban() {
         </button>
       </div>
 
+      {esMovil && (
+        <div className="etapas-movil" role="tablist" aria-label="Etapas">
+          {COLUMNAS.map((c, i) => (
+            <button
+              key={c.etapa}
+              role="tab"
+              aria-selected={etapaVisible === i}
+              className={etapaVisible === i ? "activa" : undefined}
+              onClick={() => irA(i)}
+            >
+              {i + 1}. {c.etapa} ({visibles.filter((b) => c.estados.includes(b.estado)).length})
+            </button>
+          ))}
+        </div>
+      )}
       {isLoading ? (
         <p className="nota">Cargando…</p>
       ) : (
-        <div className="kanban">
+        <div
+          className="kanban"
+          ref={tablero}
+          onScroll={(e) => {
+            if (!esMovil) return;
+            const t = e.currentTarget;
+            const ancho = (t.children[0] as HTMLElement | undefined)?.offsetWidth ?? t.clientWidth;
+            setEtapaVisible(Math.min(COLUMNAS.length - 1, Math.round(t.scrollLeft / (ancho + 8))));
+          }}
+        >
           {COLUMNAS.map((col, i) => {
             const tarjetas = visibles.filter((b) => col.estados.includes(b.estado)).sort(ordenTarjetas);
             const hh = tarjetas.reduce((s, b) => s + Number(b.hh_estimadas), 0);
@@ -167,7 +202,7 @@ export default function Kanban() {
                       onAlternar={() => alternar(b.id)}
                       acciones={permitidas(b.estado)}
                       onAccion={(t) => cambio.abrir(b, t)}
-                      arrastrable={permitidas(b.estado).length > 0}
+                      arrastrable={!esMovil && permitidas(b.estado).length > 0}
                       onArrastrar={() => setArrastrando(b)}
                     />
                   ))}

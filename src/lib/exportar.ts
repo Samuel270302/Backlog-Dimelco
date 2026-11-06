@@ -1,4 +1,4 @@
-import ExcelJS from "exceljs";
+import type ExcelJS from "exceljs";
 import type { BacklogFila } from "./types";
 import { etapaDe } from "./types";
 import { esAbierto, type SemanasEspecialidad } from "./indicadores";
@@ -38,7 +38,8 @@ export async function exportarAbiertos(
   unidades: Map<string, string>,
   titulo: string
 ): Promise<string | null> {
-  const libro = new ExcelJS.Workbook();
+  const { default: Excel } = await import("exceljs"); // se carga solo al exportar
+  const libro = new Excel.Workbook();
   libro.creator = "Control de Backlog - Dimelco";
   const hoja = libro.addWorksheet("Backlogs abiertos");
   hoja.columns = [

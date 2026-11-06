@@ -3,6 +3,7 @@
 # app construida y navegador (Playwright) recorriendo el flujo con dos usuarios.
 # Uso: tests/e2e.sh                 flujo completo en Chromium
 #      tests/e2e.sh electron.mjs    la app de escritorio (Electron) con PDF, Excel y fotos
+#      tests/e2e.sh movil.mjs       el sitio web en pantalla de celular
 set -euo pipefail
 RAIZ="$(cd "$(dirname "$0")/.." && pwd)"
 PGBIN="${PGBIN:-$(ls -d /usr/lib/postgresql/*/bin | sort -V | tail -1)}"
@@ -20,7 +21,12 @@ for f in "$RAIZ"/supabase/migrations/*.sql; do "${PSQL[@]}" -f "$f"; done
 "${PSQL[@]}" -f "$RAIZ/tests/semilla_e2e.sql"
 GUION="${1:-flujo_backlog.mjs}"
 if [ "${SIN_BUILD:-}" != "1" ]; then
-  if [ "$GUION" = "electron.mjs" ]; then (cd "$RAIZ" && npm run build >/dev/null); else (cd "$RAIZ" && npx vite build --logLevel warn); fi
+  case "$GUION" in
+    electron.mjs) (cd "$RAIZ" && npm run build >/dev/null) ;;
+    # Sitio web con la conexión fija hacia el servidor REST de prueba (como en GitHub Pages).
+    movil.mjs) (cd "$RAIZ" && VITE_SUPABASE_URL=http://localhost:5192 VITE_SUPABASE_ANON_KEY=llave-anon-de-prueba-0123456789 npx vite build --mode web --logLevel warn) ;;
+    *) (cd "$RAIZ" && npx vite build --logLevel warn) ;;
+  esac
 fi
 if [ "$GUION" = "electron.mjs" ]; then
   PGOPTIONS="" xvfb-run -a node "$RAIZ/tests/$GUION"

@@ -268,6 +268,66 @@ export default function Calendario() {
           </table>
         </div>
       </div>
+      {/* Celular: lista por día (el CSS oculta la grilla y muestra esto). Se programa desde la ficha. */}
+      <div className="dias-movil">
+        {listos.length > 0 && (
+          <details className="listos-movil">
+            <summary>Listos para programar ({listos.length})</summary>
+            <div className="lista-dia">
+              {listos.map((b) => (
+                <Link key={b.id} to={`/backlog/${b.id}`} className={`tarjeta-cal listo${b.vencido ? " vencida" : ""}`}>
+                  <div className="tc-linea1">
+                    <span className="tc-folio">{b.folio}</span>
+                    {b.tipo_pedido === "Urgente" && <span className="etiqueta-urgente">Urgente</span>}
+                    <EtiquetaPrioridad prioridad={b.prioridad} />
+                  </div>
+                  <div className="tc-equipo">{b.cod_interno}</div>
+                  <div className="tc-trabajo">{b.descripcion}</div>
+                  <div className="tc-datos">
+                    <span>{fNum(b.hh_estimadas)} HH</span>
+                    <span className={b.vencido ? "texto-vencido" : undefined}>límite {fFecha(b.fecha_limite)}</span>
+                  </div>
+                </Link>
+              ))}
+            </div>
+          </details>
+        )}
+        {dias.map((d, i) => {
+          const del_dia = semana.filter((b) => b.fecha_programada === d).sort((a, b) => a.cod_interno.localeCompare(b.cod_interno));
+          return (
+            <section key={d} className={`dia-movil${d === hoy ? " hoy" : ""}${d < hoy ? " pasado" : ""}`} aria-label={`Día ${fFecha(d)}`}>
+              <header>
+                <span>
+                  {DIAS[i]} {fFecha(d)}
+                </span>
+                <span>{del_dia.length ? `${fNum(totalDia(d))} HH` : ""}</span>
+              </header>
+              <div className="lista-dia">
+                {del_dia.length === 0 && <span className="nota">Sin trabajos</span>}
+                {del_dia.map((b) => (
+                  <Link
+                    key={b.id}
+                    to={`/backlog/${b.id}`}
+                    className={`tarjeta-cal${b.estado !== "Programado" ? " hecha" : ""}${b.tipo_pedido === "Urgente" ? " urgente" : ""}`}
+                  >
+                    <div className="tc-linea1">
+                      <span className="tc-folio">{b.folio}</span>
+                      <b>{b.cod_interno}</b>
+                    </div>
+                    <div className="tc-trabajo">{b.descripcion}</div>
+                    <div className="tc-datos">
+                      <span>{fNum(b.hh_estimadas)} HH</span>
+                      {b.ot_sap && <span>OT {b.ot_sap}</span>}
+                      {b.aprovechar_pm && <span className="tc-pm">con PM</span>}
+                      {b.estado !== "Programado" && <span>{b.estado}</span>}
+                    </div>
+                  </Link>
+                ))}
+              </div>
+            </section>
+          );
+        })}
+      </div>
       {isLoading && <p className="nota">Cargando…</p>}
       {cambio.dialogo}
     </div>

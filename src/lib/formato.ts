@@ -182,21 +182,41 @@ interface AppInfo {
   guardarPdf?: (html: string, nombre: string, vertical?: boolean) => Promise<string | null>;
 }
 
-export async function imprimirFormato(d: DatosFormato): Promise<string | null> {
-  const imagenes = new Map<string, string>();
-  for (const f of d.fotos ?? []) {
-    if (!f.url) continue;
-    const dataUrl = await comoDataUrl(f.url);
-    if (dataUrl) imagenes.set(f.id, dataUrl);
-  }
-  const html = armarFormato(d, await comoDataUrl(logoDimelco), imagenes);
-  const nombreArchivo = `${d.b.folio} ${d.b.cod_interno} ${d.b.descripcion}`.replace(/[\\/:*?"<>|]+/g, " ").slice(0, 120) + ".pdf";
+// En el navegador la ventana de impresión se abre en el mismo clic, antes de cualquier
+// espera: los navegadores del celular bloquean las que se abren después.
+export function abrirVentanaImpresion(): Window | null {
   const escritorio = (window as unknown as { appInfo?: AppInfo }).appInfo;
-  if (escritorio?.guardarPdf) return escritorio.guardarPdf(html, nombreArchivo, true);
-  // Navegador: ventana nueva con el diálogo de impresión ("Guardar como PDF").
+  if (escritorio?.guardarPdf) return null;
   const v = window.open("", "_blank");
-  if (!v) return null;
+  if (!v) throw new Error("El navegador bloqueó la ventana: permita ventanas emergentes para esta página");
+  v.document.write('<!doctype html><title>Generando…</title><p style="font-family:sans-serif;padding:20px">Generando…</p>');
+  return v;
+}
+
+export function escribirParaImprimir(v: Window, html: string) {
+  v.document.open();
   v.document.write(html.replace("</body>", "<script>window.onload = () => setTimeout(() => window.print(), 300);</script></body>"));
   v.document.close();
-  return null;
+}
+
+export async function imprimirFormato(d: DatosFormato): Promise<string | null> {
+  const ventana = abrirVentanaImpresion();
+  try {
+    const imagenes = new Map<string, string>();
+    for (const f of d.fotos ?? []) {
+      if (!f.url) continue;
+      const dataUrl = await comoDataUrl(f.url);
+      if (dataUrl) imagenes.set(f.id, dataUrl);
+    }
+    const html = armarFormato(d, await comoDataUrl(logoDimelco), imagenes);
+    if (ventana) {
+      escribirParaImprimir(ventana, html); // navegador: diálogo de impresión ("Guardar como PDF")
+      return null;
+    }
+    const nombreArchivo = `${d.b.folio} ${d.b.cod_interno} ${d.b.descripcion}`.replace(/[\\/:*?"<>|]+/g, " ").slice(0, 120) + ".pdf";
+    return (window as unknown as { appInfo: Required<AppInfo> }).appInfo.guardarPdf(html, nombreArchivo, true);
+  } catch (e) {
+    ventana?.close();
+    throw e;
+  }
 }
