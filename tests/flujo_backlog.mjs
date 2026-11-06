@@ -554,6 +554,36 @@ try {
   await adm.locator(".evento-texto", { hasText: "Restaurado" }).waitFor();
   ok("el admin ve el motivo y quién lo borró, lo restaura y la bitácora lo registra");
 
+  // Usuarios: invitado con dos unidades al crearlo; luego se agrega Explotec y se quita Veta Nueva.
+  await adm.goto(base + "#/usuarios");
+  await adm.reload();
+  await adm.getByRole("heading", { name: "Usuarios" }).waitFor();
+  await adm.getByLabel("Nuevo usuario: nombre").fill("Invitado multi");
+  await adm.getByLabel("Correo (usuario de acceso)").fill("invitado.multi@prueba.com");
+  await adm.getByLabel("Rol").first().selectOption("invitado");
+  if (!(await adm.getByRole("button", { name: "Crear usuario" }).isDisabled())) throw new Error("Deja crear sin unidades");
+  await adm.getByLabel("HEMCO usuario nuevo").check();
+  await adm.getByLabel("Veta Nueva usuario nuevo").check();
+  await adm.getByLabel("Contraseña inicial").fill("ClaveSegura1");
+  await adm.getByRole("button", { name: "Crear usuario" }).click();
+  await aviso(adm, "Usuario Invitado multi creado");
+  const casillas = adm.getByRole("group", { name: "Unidades de Invitado multi" });
+  await casillas.getByLabel("Veta Nueva Invitado multi").waitFor();
+  await adm.waitForFunction(() => {
+    const g = document.querySelector('[aria-label="Unidades de Invitado multi"]');
+    return g && [...g.querySelectorAll("input")].filter((i) => i.checked).length === 2;
+  });
+  await casillas.getByLabel("Explotec Invitado multi").click();
+  await adm.waitForFunction(() => [...document.querySelectorAll('[aria-label="Unidades de Invitado multi"] input')].filter((i) => i.checked).length === 3);
+  await casillas.getByLabel("Veta Nueva Invitado multi").click();
+  await adm.waitForFunction(() => [...document.querySelectorAll('[aria-label="Unidades de Invitado multi"] input')].filter((i) => i.checked).length === 2);
+  const unidadesBd = (await (await fetch(`http://localhost:${PUERTO_REST}/rest/v1/perfiles?select=unidades&correo=eq.invitado.multi@prueba.com`, {
+    headers: { authorization: `Bearer ${token(USUARIOS.admin)}` },
+  })).json())[0].unidades.length;
+  if (unidadesBd !== 2) throw new Error(`El invitado debía quedar con 2 unidades, tiene ${unidadesBd}`);
+  await adm.screenshot({ path: join(SALIDA, "usuarios.png"), fullPage: true });
+  ok("usuario creado con dos unidades marcadas; se agrega Explotec y se quita Veta Nueva en la tabla");
+
   // 6. Vista de celular.
   const movil = await abrir("cap", 390, 844);
   await movil.goto(base + `#/backlog/${id}`);

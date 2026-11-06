@@ -14,6 +14,7 @@ export interface Perfil {
   rol: "admin" | "capturador" | "invitado";
   activo: boolean;
   unidad_id: string | null;
+  unidades: string[];
 }
 
 export interface Equipo {

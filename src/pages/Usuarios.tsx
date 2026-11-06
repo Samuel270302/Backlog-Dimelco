@@ -9,7 +9,44 @@ import DialogoContrasena, { MIN_CONTRASENA } from "../components/DialogoContrase
 import type { Perfil } from "../lib/types";
 import { useUnidades } from "../lib/unidad";
 
-const NUEVO = { nombre: "", correo: "", rol: "capturador", unidad_id: "", contrasena: "" };
+const NUEVO = { nombre: "", correo: "", rol: "capturador", unidades: [] as string[], contrasena: "" };
+
+// Casillas de unidades: capturador e invitado ven solo las marcadas; el admin, todas.
+function CasillasUnidades({
+  unidades,
+  marcadas,
+  onCambio,
+  compacto,
+  deshabilitado,
+  quien,
+}: {
+  unidades: { id: string; nombre: string; sigla: string }[];
+  marcadas: string[];
+  onCambio: (lista: string[]) => void;
+  compacto?: boolean;
+  deshabilitado?: boolean;
+  quien: string;
+}) {
+  return (
+    <div className={`casillas-unidades${compacto ? " compacto" : ""}`} role="group" aria-label={`Unidades de ${quien}`}>
+      {unidades.map((u) => {
+        const si = marcadas.includes(u.id);
+        return (
+          <label key={u.id} className="campo-check" title={u.nombre}>
+            <input
+              type="checkbox"
+              checked={si}
+              disabled={deshabilitado}
+              aria-label={`${u.nombre} ${quien}`}
+              onChange={() => onCambio(si ? marcadas.filter((x) => x !== u.id) : unidades.filter((x) => x.id === u.id || marcadas.includes(x.id)).map((x) => x.id))}
+            />
+            {compacto ? u.sigla : u.nombre}
+          </label>
+        );
+      })}
+    </div>
+  );
+}
 
 export default function Usuarios() {
   const qc = useQueryClient();
@@ -21,7 +58,21 @@ export default function Usuarios() {
   const [restableciendo, setRestableciendo] = useState<Perfil | null>(null);
 
   const crear = useMutation({
-    mutationFn: () => gestionarUsuario({ accion: "crear", ...nuevo }),
+    // La función crea el usuario con la primera unidad; las demás se graban después.
+    mutationFn: async () => {
+      const r = await gestionarUsuario({
+        accion: "crear",
+        nombre: nuevo.nombre,
+        correo: nuevo.correo,
+        rol: nuevo.rol,
+        contrasena: nuevo.contrasena,
+        unidad_id: nuevo.rol === "admin" ? null : nuevo.unidades[0],
+      });
+      if (nuevo.rol !== "admin" && nuevo.unidades.length > 1 && r.user_id) {
+        const { error } = await supabase().from("perfiles").update({ unidades: nuevo.unidades }).eq("user_id", r.user_id);
+        if (error) throw new Error(`Usuario creado, pero no se grabaron todas sus unidades: ${error.message}`);
+      }
+    },
     onSuccess: () => {
       avisar(`Usuario ${nuevo.nombre} creado. Entregue la contraseña por un medio privado.`);
       setNuevo(NUEVO);
@@ -47,8 +98,8 @@ export default function Usuarios() {
       valor,
     }: {
       user_id: string;
-      campo: "rol" | "activo" | "nombre" | "unidad_id";
-      valor: string | boolean | null;
+      campo: "rol" | "activo" | "nombre" | "unidades";
+      valor: string | boolean | string[] | null;
     }) => {
       const { error } = await supabase()
         .from("perfiles")
@@ -60,7 +111,7 @@ export default function Usuarios() {
     onError: (e: Error) =>
       avisar(
         e.message.includes("perfiles_unidad_requerida")
-          ? "Asigne una unidad antes de activar a un capturador o invitado"
+          ? "Un capturador o invitado activo necesita al menos una unidad"
           : e.message,
         "error"
       ),
@@ -68,7 +119,8 @@ export default function Usuarios() {
 
   const nuevoValido =
     nuevo.nombre.trim() !== "" && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(nuevo.correo.trim()) && nuevo.contrasena.length >= MIN_CONTRASENA &&
-    (nuevo.rol === "admin" || nuevo.unidad_id !== "");
+    (nuevo.rol === "admin" || nuevo.unidades.length > 0);
+  const listaUnidades = (unidades ?? []).filter((u) => u.activo);
 
   return (
     <>
@@ -104,19 +156,19 @@ export default function Usuarios() {
               <option value="admin">Administrador</option>
             </select>
           </label>
-          <label className="campo" style={{ maxWidth: 170 }}>
-            <span>Unidad</span>
-            <select
-              value={nuevo.rol === "admin" ? "" : nuevo.unidad_id}
-              disabled={nuevo.rol === "admin"}
-              onChange={(e) => setNuevo({ ...nuevo, unidad_id: e.target.value })}
-            >
-              <option value="">{nuevo.rol === "admin" ? "Todas" : "Seleccione"}</option>
-              {(unidades ?? []).map((u) => (
-                <option key={u.id} value={u.id}>{u.nombre}</option>
-              ))}
-            </select>
-          </label>
+          <div className="campo" style={{ maxWidth: 300 }}>
+            <span className="etiqueta-campo">Unidades que puede ver</span>
+            {nuevo.rol === "admin" ? (
+              <span className="nota" style={{ paddingTop: 10 }}>Todas (administrador)</span>
+            ) : (
+              <CasillasUnidades
+                unidades={listaUnidades}
+                marcadas={nuevo.unidades}
+                onCambio={(l) => setNuevo({ ...nuevo, unidades: l })}
+                quien="usuario nuevo"
+              />
+            )}
+          </div>
           <label className="campo" style={{ maxWidth: 180 }}>
             <span>Contraseña inicial</span>
             <input
@@ -141,7 +193,7 @@ export default function Usuarios() {
               <th>Nombre</th>
               <th>Correo</th>
               <th>Rol</th>
-              <th>Unidad</th>
+              <th>Unidades</th>
               <th>Activo</th>
               <th></th>
             </tr>
@@ -174,16 +226,24 @@ export default function Usuarios() {
                   </select>
                 </td>
                 <td>
-                  <select
-                    value={p.unidad_id ?? ""}
-                    disabled={p.rol === "admin"}
-                    onChange={(e) => actualizar.mutate({ user_id: p.user_id, campo: "unidad_id", valor: e.target.value || null })}
-                  >
-                    <option value="">{p.rol === "admin" ? "Todas" : "Sin unidad"}</option>
-                    {(unidades ?? []).map((u) => (
-                      <option key={u.id} value={u.id}>{u.nombre}</option>
-                    ))}
-                  </select>
+                  {p.rol === "admin" ? (
+                    <span className="nota">Todas</span>
+                  ) : (
+                    <CasillasUnidades
+                      compacto
+                      unidades={listaUnidades}
+                      marcadas={p.unidades?.length ? p.unidades : p.unidad_id ? [p.unidad_id] : []}
+                      deshabilitado={actualizar.isPending}
+                      quien={p.nombre}
+                      onCambio={(l) => {
+                        if (l.length === 0 && p.activo) {
+                          avisar("Un capturador o invitado activo necesita al menos una unidad", "error");
+                          return;
+                        }
+                        actualizar.mutate({ user_id: p.user_id, campo: "unidades", valor: l });
+                      }}
+                    />
+                  )}
                 </td>
                 <td>
                   <button

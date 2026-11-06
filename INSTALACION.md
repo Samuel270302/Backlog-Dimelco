@@ -17,7 +17,7 @@ Guía para dejar la app Control de Backlog en uso. Proyecto Supabase: `backlog-h
 | Equipos | Revisar los equipos copiados de preventivos; asignar la familia y completar la marca. Crear los que falten. |
 | Capacidad del taller | HH por semana de cada especialidad en cada unidad: personas × horas efectivas por turno × turnos por semana. |
 | Plazos por prioridad | Niveles de criticidad de la OT de Dimelco: 1 Urgente (1 día, 24 horas), 2 Alto (3 días), 3 Medio (14 días), 4 Bajo (40 días). Si cambian, "Recalcular abiertos". |
-| Usuarios | Una cuenta por persona. Capturador e invitado llevan unidad; el administrador ve todas. |
+| Usuarios | Una cuenta por persona. Capturador e invitado ven las unidades que se les marquen (una o varias); el administrador ve todas. |
 
 Al terminar, `tools/verificar_instalacion.sql` debe dar OK en los 14 puntos.
 
@@ -97,8 +97,8 @@ Solo HEMCO usa SAP (`unidades.usa_sap`). En Veta Nueva, Mina La India y Explotec
 | Rol | Puede |
 |---|---|
 | Administrador | Todo, en todas las unidades: aprobar, planificar, programar, reprogramar, validar, anular, borrar y restaurar backlogs, borrar fotos y administrar familias, sistemas, equipos, capacidad, plazos y usuarios. |
-| Capturador | En su unidad: registrar backlogs, cargar HH, repuestos y fotos, comentar, editar mientras está Identificado, marcar Ejecutado, editar la capacidad del taller y borrar backlogs (cualquier estado, con motivo). |
-| Invitado | Consultar su unidad, imprimir y exportar. La base rechaza cualquier escritura. |
+| Capturador | En sus unidades (las marcadas en Usuarios): registrar backlogs, cargar HH, repuestos y fotos, comentar, editar mientras está Identificado, marcar Ejecutado, editar la capacidad del taller y borrar backlogs (cualquier estado, con motivo). |
+| Invitado | Consultar sus unidades (las marcadas en Usuarios), imprimir y exportar. La base rechaza cualquier escritura. |
 
 ## Actualizaciones
 

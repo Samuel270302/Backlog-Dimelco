@@ -13,9 +13,11 @@ interface ContextoUnidad {
   unidadId: string | null;
   setUnidadId: (id: string | null) => void;
   puedeElegir: boolean;
+  // Unidades que el usuario puede ver; null = todas (admin).
+  permitidas: string[] | null;
 }
 
-const Contexto = createContext<ContextoUnidad>({ unidadId: null, setUnidadId: () => {}, puedeElegir: false });
+const Contexto = createContext<ContextoUnidad>({ unidadId: null, setUnidadId: () => {}, puedeElegir: false, permitidas: null });
 
 function leer(): string | null {
   try {
@@ -28,20 +30,30 @@ function leer(): string | null {
 export function UnidadProvider({ children }: { children: React.ReactNode }) {
   const { perfil, esAdmin } = useAuth();
   const [elegida, setElegida] = useState<string | null>(leer);
-  const unidadId = esAdmin ? elegida : (perfil?.unidad_id ?? null);
+  // Capturador o invitado: sus unidades (perfiles.unidades). Con una sola queda fija;
+  // con varias elige una o "Todas mis unidades" (null, la base ya limita lo que recibe).
+  const propias = esAdmin ? null : perfil?.unidades?.length ? perfil.unidades : perfil?.unidad_id ? [perfil.unidad_id] : [];
+  const puedeElegir = esAdmin || (propias?.length ?? 0) > 1;
+  const unidadId = esAdmin
+    ? elegida
+    : propias && propias.length === 1
+      ? propias[0]
+      : elegida && propias?.includes(elegida)
+        ? elegida
+        : null;
 
   useEffect(() => {
-    if (!esAdmin) return;
+    if (!puedeElegir) return;
     try {
       if (elegida) localStorage.setItem(CLAVE, elegida);
       else localStorage.removeItem(CLAVE);
     } catch {
       // sin almacenamiento: la elección dura la sesión
     }
-  }, [elegida, esAdmin]);
+  }, [elegida, puedeElegir]);
 
   return (
-    <Contexto.Provider value={{ unidadId, setUnidadId: setElegida, puedeElegir: esAdmin }}>
+    <Contexto.Provider value={{ unidadId, setUnidadId: setElegida, puedeElegir, permitidas: propias }}>
       {children}
     </Contexto.Provider>
   );
@@ -75,7 +87,7 @@ export function useNombreUnidad(): string | null {
 }
 
 export function SelectorUnidad() {
-  const { unidadId, setUnidadId, puedeElegir } = useUnidad();
+  const { unidadId, setUnidadId, puedeElegir, permitidas } = useUnidad();
   const { data: unidades } = useUnidades();
   const nombre = useNombreUnidad();
   if (!puedeElegir) return nombre ? <div className="unidad-fija">Unidad {nombre}</div> : null;
@@ -83,8 +95,8 @@ export function SelectorUnidad() {
     <label className="selector-unidad">
       <span>Unidad</span>
       <select value={unidadId ?? ""} onChange={(e) => setUnidadId(e.target.value || null)}>
-        <option value="">Todas las unidades</option>
-        {(unidades ?? []).filter((u) => u.activo).map((u) => (
+        <option value="">{permitidas ? "Todas mis unidades" : "Todas las unidades"}</option>
+        {(unidades ?? []).filter((u) => u.activo && (!permitidas || permitidas.includes(u.id))).map((u) => (
           <option key={u.id} value={u.id}>
             {u.nombre}
           </option>

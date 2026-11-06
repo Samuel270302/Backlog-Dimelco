@@ -284,6 +284,29 @@ select pruebas.igual((select string_agg(s.nombre, ',' order by s.orden) from fam
   where f.nombre = 'Ground Force AT18E'), 'Motor diésel,Sistema de enfriamiento,Tren de potencia,Frenos,Dirección,Sistema hidráulico,Sistema eléctrico,Cabina y entorno del operador,Bastidor y chasis,Caja de carga', 'sistemas del AT18E');
 select pruebas.igual((select count(*)::int from sistemas where nombre in ('Motor','Transmisión','Neumáticos','Empernadora')), 0, 'nombres viejos renombrados');
 
+
+-- Varias unidades (017): capturador HEMCO + Veta Nueva.
+reset role;
+update perfiles set unidades = array[(select id from unidades where sigla = 'HEM'), (select id from unidades where sigla = 'VTN')]
+ where correo = 'cap.hem@prueba';
+select pruebas.igual((select unidad_id = (select id from unidades where sigla = 'HEM') from perfiles where correo = 'cap.hem@prueba'), true, 'unidad_id es la primera');
+set role authenticated;
+select set_config('request.jwt.claims', '{"sub":"00000000-0000-0000-0000-00000000000c"}', false);
+select pruebas.igual((select count(distinct unidad_id)::int from equipos), 2, 've equipos de HEMCO y Veta Nueva');
+insert into backlogs (id, equipo_id, sistema_id, descripcion, origen, prioridad, reportado_por, aprobado_por)
+values ('20000000-0000-0000-0000-00000000000b', '10000000-0000-0000-0000-000000000002', (select id from sistemas where nombre = 'Frenos'), 'Registro en Veta Nueva', 'PM', 'P3', 'A', 'B');
+select pruebas.igual((select folio like 'BL-VTN-%' from v_backlog where id = '20000000-0000-0000-0000-00000000000b'), true, 'registra y ve en su segunda unidad');
+reset role;
+update perfiles set unidades = array[(select id from unidades where sigla = 'HEM')] where correo = 'cap.hem@prueba';
+set role authenticated;
+select pruebas.igual((select count(*)::int from v_backlog where id = '20000000-0000-0000-0000-00000000000b'), 0, 'al quitar Veta Nueva deja de verla');
+reset role;
+select pruebas.espera_error($$update perfiles set unidades = '{}' where correo = 'cap.hem@prueba'$$, 'perfiles_unidad_requerida');
+update perfiles set unidad_id = (select id from unidades where sigla = 'EXP') where correo = 'inv.hem@prueba';
+select pruebas.igual((select unidades = array[(select id from unidades where sigla = 'EXP')] from perfiles where correo = 'inv.hem@prueba'), true, 'cambiar unidad_id reemplaza la lista');
+set role authenticated;
+select set_config('request.jwt.claims', '{"sub":"00000000-0000-0000-0000-00000000000a"}', false);
+
 reset role;
 \o
 select 'Bitácora del BL-HEM-000001:' as titulo;

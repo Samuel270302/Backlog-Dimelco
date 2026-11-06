@@ -21,14 +21,14 @@ interface Edicion {
 export default function Capacidad() {
   const qc = useQueryClient();
   const { avisar } = useAvisos();
-  const { unidadId } = useUnidad();
+  const { unidadId, permitidas } = useUnidad();
   const { data: unidades } = useUnidades();
   const { data: especialidades } = useEspecialidades();
   const { data: vigente } = useCapacidadVigente();
   const { data: historial } = useCapacidad();
   const [ed, setEd] = useState<Edicion | null>(null);
 
-  const unidadesVisibles = (unidades ?? []).filter((u) => u.activo && (!unidadId || u.id === unidadId));
+  const unidadesVisibles = (unidades ?? []).filter((u) => u.activo && (unidadId ? u.id === unidadId : !permitidas || permitidas.includes(u.id)));
   const nombreUnidad = (id: string) => unidades?.find((u) => u.id === id)?.nombre ?? "";
   const nombreEsp = (id: string) => especialidades?.find((e) => e.id === id)?.nombre ?? "";
   const vigenteDe = (u: string, e: string) => vigente?.find((c) => c.unidad_id === u && c.especialidad_id === e);

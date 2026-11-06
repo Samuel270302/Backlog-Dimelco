@@ -168,6 +168,36 @@ export async function iniciarServidorRest({ conexion, puerto }) {
       return res.end("{}");
     }
     if (url.pathname.startsWith("/storage/v1/")) return almacenamiento(req, res, url, cors);
+    // Imitación de la función de borde admin-usuarios (solo el alta): hace lo mismo que
+    // supabase/functions/admin-usuarios con la llave de servicio.
+    if (url.pathname === "/functions/v1/admin-usuarios") {
+      let crudo = "";
+      for await (const trozo of req) crudo += trozo;
+      const responder = (estado, obj) => {
+        res.writeHead(estado, { ...cors, "content-type": "application/json" });
+        res.end(JSON.stringify(obj));
+      };
+      const quien = usuarioDe(req);
+      const c = await pool.connect();
+      try {
+        const { rows } = await c.query("select rol, activo from perfiles where user_id = $1", [quien?.sub ?? null]);
+        if (!rows[0] || rows[0].rol !== "admin" || !rows[0].activo) return responder(403, { error: "Solo un administrador activo puede gestionar usuarios" });
+        const d = JSON.parse(crudo || "{}");
+        if (d.accion !== "crear") return responder(400, { error: "Acción no soportada en la prueba" });
+        const unidad = d.rol === "admin" ? null : d.unidad_id || null;
+        if (d.rol !== "admin" && !unidad) return responder(400, { error: "Elija la unidad del usuario" });
+        const id = (await c.query(
+          "insert into auth.users (id, email, raw_user_meta_data) values (gen_random_uuid(), $1, jsonb_build_object('nombre', $2::text)) returning id",
+          [String(d.correo).toLowerCase(), d.nombre]
+        )).rows[0].id;
+        await c.query("update perfiles set nombre = $1, rol = $2, activo = true, unidad_id = $3 where user_id = $4", [d.nombre, d.rol, unidad, id]);
+        return responder(200, { ok: true, user_id: id });
+      } catch (e) {
+        return responder(400, { error: e.message });
+      } finally {
+        c.release();
+      }
+    }
     if (!url.pathname.startsWith("/rest/v1/")) return res.writeHead(404, cors).end();
 
     let cuerpo = "";
