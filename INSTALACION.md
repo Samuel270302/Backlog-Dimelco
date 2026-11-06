@@ -76,6 +76,15 @@ Prompt para que Claude in Chrome haga los clics (se detiene para que tú pegues 
     5. En https://github.com/Samuel270302/Backlog-Hemco/settings/secrets/actions crea el secreto CORREO_CLAVE_APP y detente para que yo pegue la contraseña.
     6. En https://github.com/Samuel270302/Backlog-Hemco/actions ejecuta "Web para celular" y "Reporte semanal por correo" (Run workflow) y dime si terminan en verde.
 
+## Copiar los usuarios de preventivos
+
+Para tener en backlog las mismas cuentas de preventivos, con la misma contraseña, el mismo rol y la misma unidad:
+1. En el SQL Editor del proyecto de **preventivos** (ltgsfgcmznausdotbyqk) ejecutar `tools/exportar_usuarios_preventivos.sql`. Solo lee. El resultado es una única celda de texto.
+2. Copiar esa celda completa y ejecutarla en el SQL Editor de **backlog-hemco**. Trae las contraseñas cifradas: pegarla solo ahí y no compartirla. Se puede repetir sin duplicar usuarios.
+3. Ejecutar al final de esa misma consulta la tabla que trae (nombre, correo, rol, activo, unidad) y compararla con la pantalla Usuarios de preventivos.
+
+Un usuario nuevo de preventivos que se cree después no pasa solo: se repite el procedimiento o se crea en la pantalla Usuarios de backlog.
+
 ## Roles
 
 | Rol | Puede |
@@ -99,5 +108,6 @@ El flujo "Mantenimiento de la base" (`.github/workflows/mantenimiento.yml`) cons
     tests/e2e.sh electron.mjs      app de escritorio: sesión, foto, formato y reporte en PDF, Excel
     tests/e2e.sh movil.mjs         sitio web en pantalla de celular
     SIN_BUILD=1 tests/e2e.sh reporte_correo.mjs   reporte semanal por correo (sin enviar)
+    tests/copiar_usuarios.sh       copia de usuarios de preventivos con dos bases locales
 
 Las tres levantan un PostgreSQL temporal y no tocan Supabase.
