@@ -13,3 +13,5 @@ SECRETO_GITHUB.txt
 dist-electron/
 *.tsbuildinfo
 tools/dist/
+docs/manual/img/
+docs/manual/manual_capturador.html

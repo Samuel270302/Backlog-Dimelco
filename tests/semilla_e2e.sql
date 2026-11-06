@@ -21,6 +21,7 @@ select id, 'PS090', 'ST7', 'Scoop', 'Epiroc' from unidades where sigla = 'VTN';
 insert into familias (nombre, orden) values ('Scooptram ST1030', 1), ('Jumbo Boomer S1D', 2) on conflict (nombre) do nothing;
 update equipos set familia_id = (select id from familias where nombre = 'Scooptram ST1030') where modelo = 'ST1030';
 update equipos set familia_id = (select id from familias where nombre = 'Jumbo Boomer S1D') where modelo = 'Boomer S1D';
+update equipos e set flota = f.nombre from familias f where f.id = e.familia_id;
 delete from familia_sistemas where familia_id = (select id from familias where nombre = 'Scooptram ST1030');
 insert into familia_sistemas (familia_id, sistema_id)
 select f.id, s.id from familias f, sistemas s
