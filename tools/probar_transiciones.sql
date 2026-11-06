@@ -238,6 +238,45 @@ select pruebas.igual((select count(*)::int from familia_sistemas), 2, 'capturado
 select pruebas.espera_error($$insert into familias (nombre) values ('No puede')$$, 'row-level security');
 select set_config('request.jwt.claims', '{"sub":"00000000-0000-0000-0000-00000000000a"}', false);
 
+
+-- Borrar (015): capturador de la unidad, cualquier estado, con motivo; admin restaura.
+select set_config('request.jwt.claims', '{"sub":"00000000-0000-0000-0000-00000000000c"}', false);
+select pruebas.igual((select estado from v_backlog where id = '20000000-0000-0000-0000-000000000001'), 'Validado', 'BL 1 validado antes de borrar');
+select pruebas.espera_error($$select borrar_backlog('20000000-0000-0000-0000-000000000001', 'no')$$, 'motivo');
+select set_config('request.jwt.claims', '{"sub":"00000000-0000-0000-0000-00000000000e"}', false);
+select pruebas.espera_error($$select borrar_backlog('20000000-0000-0000-0000-000000000001', 'Invitado no puede')$$, 'Solo el administrador o un capturador');
+select set_config('request.jwt.claims', '{"sub":"00000000-0000-0000-0000-00000000000d"}', false);
+select pruebas.espera_error($$select borrar_backlog('20000000-0000-0000-0000-000000000002', 'Otra unidad no puede')$$, 'Solo el administrador o un capturador');
+select set_config('request.jwt.claims', '{"sub":"00000000-0000-0000-0000-00000000000c"}', false);
+select borrar_backlog('20000000-0000-0000-0000-000000000001', 'Registrado dos veces');
+select borrar_backlog('20000000-0000-0000-0000-000000000002', 'Equipo equivocado');
+select pruebas.igual((select count(*)::int from v_backlog where id in ('20000000-0000-0000-0000-000000000001', '20000000-0000-0000-0000-000000000002')), 0, 'borrados fuera de v_backlog');
+select pruebas.igual((select hh_pendientes from v_semanas_backlog where especialidad = 'Mecánico' and unidad_id = (select id from unidades where sigla = 'HEM')), 20::numeric, 'HH pendientes sin el borrado');
+select pruebas.igual((select cierres from v_backlog_semanal where semana = '2026-11-02'), 0::bigint, 'cierre borrado no cuenta');
+select pruebas.igual((select motivo_borrado || ' / ' || estado from v_backlog_borrados where id = '20000000-0000-0000-0000-000000000001'), 'Registrado dos veces / Validado', 'lista de borrados');
+select pruebas.espera_error($$select borrar_backlog('20000000-0000-0000-0000-000000000002', 'Otra vez')$$, 'ya está borrado');
+select set_config('request.jwt.claims', '{"sub":"00000000-0000-0000-0000-00000000000a"}', false);
+select pruebas.espera_error($$update backlogs set descripcion = 'cambio a un borrado' where id = '20000000-0000-0000-0000-000000000002'$$, 'está borrado');
+select pruebas.espera_error($$insert into backlog_hh (backlog_id, especialidad_id, tipo, personas, horas)
+  select '20000000-0000-0000-0000-000000000002', id, 'estimada', 1, 1 from especialidades where nombre = 'Soldador'$$, 'está borrado');
+select pruebas.espera_error($$select cambiar_estado_backlog('20000000-0000-0000-0000-000000000002', 'Anulado', '{"motivo":"x"}')$$, 'está borrado');
+select pruebas.espera_error($$update backlogs set borrado_en = null where id = '20000000-0000-0000-0000-000000000002'$$, 'está borrado');
+select pruebas.espera_error($$update backlogs set borrado_en = now() where id = '20000000-0000-0000-0000-000000000003'$$, 'borrar_backlog');
+update parametros set valor = 20 where clave = 'plazo_p3_dias';
+select recalcular_fechas_limite();
+update parametros set valor = 14 where clave = 'plazo_p3_dias';
+select recalcular_fechas_limite();
+select set_config('request.jwt.claims', '{"sub":"00000000-0000-0000-0000-00000000000c"}', false);
+select pruebas.espera_error($$select restaurar_backlog('20000000-0000-0000-0000-000000000002')$$, 'Solo el administrador');
+select set_config('request.jwt.claims', '{"sub":"00000000-0000-0000-0000-00000000000a"}', false);
+select restaurar_backlog('20000000-0000-0000-0000-000000000002');
+select pruebas.igual((select descripcion from v_backlog where id = '20000000-0000-0000-0000-000000000002'), 'Cambio de alternador', 'restaurado vuelve a v_backlog');
+select pruebas.igual((select string_agg(tipo, ',' order by creado_en, id) from backlog_eventos
+  where backlog_id = '20000000-0000-0000-0000-000000000002' and tipo in ('borrado','restaurado')), 'borrado,restaurado', 'bitácora de borrado y restauración');
+insert into backlogs (id, equipo_id, sistema_id, descripcion, origen, prioridad, reportado_por, aprobado_por)
+values ('20000000-0000-0000-0000-00000000000a', '10000000-0000-0000-0000-000000000001', (select id from sistemas where nombre = 'Motor'), 'Después de borrar', 'PM', 'P3', 'A', 'B');
+select pruebas.igual((select folio from backlogs where id = '20000000-0000-0000-0000-00000000000a'), 'BL-HEM-000006', 'folio no se reutiliza');
+
 reset role;
 \o
 select 'Bitácora del BL-HEM-000001:' as titulo;

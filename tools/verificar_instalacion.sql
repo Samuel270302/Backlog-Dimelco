@@ -24,6 +24,9 @@ with chequeos(orden, punto, ok, si_falta) as (
       to_regclass('public.familia_sistemas') is not null
       and exists (select 1 from information_schema.columns where table_name = 'unidades' and column_name = 'usa_sap'),
       'Ejecutar 014_mejoras.sql'),
+  (6.6, 'Borrar y restaurar backlogs (015)',
+      exists (select 1 from pg_proc where proname = 'restaurar_backlog'),
+      'Ejecutar 015_borrar.sql'),
   (7, 'Bucket privado backlog-fotos',
       exists (select 1 from storage.buckets where id = 'backlog-fotos' and not public),
       'Ejecutar 007_storage.sql (Storage debe estar habilitado en el proyecto)'),

@@ -180,7 +180,7 @@ try {
   if (!folio) throw new Error("La ficha no muestra el folio");
   await cap.getByRole("heading", { name: "PS011 · Sistema hidráulico · Block de implementos" }).waitFor();
   ok(`registro crea ${folio} con componente y abre la ficha`);
-  if (await cap.locator(".ficha-acciones button", { hasNotText: "Imprimir formato" }).count())
+  if (await cap.locator(".ficha-acciones button", { hasNotText: /Imprimir formato|^Borrar$/ }).count())
     throw new Error("El capturador ve acciones de admin en Identificado");
   await cap.getByRole("tab", { name: /^Repuestos/ }).click();
   for (const [parte] of REPUESTOS) await cap.getByRole("cell", { name: parte }).waitFor();
@@ -197,7 +197,7 @@ try {
   await grupoItem1.locator("img").waitFor();
   if ((await cap.locator(".grupo-fotos", { hasText: "Fotos generales" }).locator("img").count()) !== 2) throw new Error("Faltan las 2 fotos generales");
   await cap.waitForFunction(() => [...document.querySelectorAll(".rejilla-fotos img")].every((i) => i.complete && i.naturalWidth > 0));
-  if (await cap.getByRole("button", { name: "Borrar" }).count()) throw new Error("El capturador ve Borrar foto");
+  if (await cap.locator(".rejilla-fotos").getByRole("button", { name: "Borrar" }).count()) throw new Error("El capturador ve Borrar foto");
   await cap.screenshot({ path: join(SALIDA, "fotos.png") });
   ok("3 fotos (2 generales y 1 del ítem 1) se ven en la ficha; el capturador no puede borrar");
 
@@ -442,7 +442,7 @@ try {
   await transicion(adm, "Validar");
   await esperarEstado(adm, "Validado");
   await adm.getByLabel("Avance: paso 5 de 5, Validado").waitFor();
-  if (await adm.locator(".ficha-acciones button", { hasNotText: "Imprimir formato" }).count())
+  if (await adm.locator(".ficha-acciones button", { hasNotText: /Imprimir formato|^Borrar$/ }).count())
     throw new Error("Quedan acciones en un backlog cerrado");
   await adm.getByRole("tab", { name: "Datos" }).click();
   if (!(await adm.locator("label.campo", { hasText: "Descripción del trabajo" }).locator("input").isDisabled()))
@@ -522,6 +522,37 @@ try {
   if (await vtn.getByLabel("Código ítem 1").count()) throw new Error("Veta Nueva ve Código SAP del repuesto");
   if (await vtn.getByRole("columnheader", { name: "Código SAP" }).count()) throw new Error("Veta Nueva ve la columna Código SAP");
   ok("Veta Nueva registra sin Aviso SAP ni Código SAP");
+
+  // Borrar: el capturador borra un backlog con motivo; el admin lo ve en Borrados y lo restaura.
+  await cap.goto(base + "#/backlog/30000000-0000-0000-0000-000000000001");
+  await cap.reload();
+  const folioBorrar = (await cap.locator(".ficha-folio").textContent()).match(/BL-HEM-\d{6}/)[0];
+  await cap.getByRole("button", { name: "Borrar", exact: true }).click();
+  const dlgB = cap.getByRole("dialog");
+  if (!(await dlgB.getByRole("button", { name: "Borrar" }).isDisabled())) throw new Error("Deja borrar sin motivo");
+  await dlgB.getByLabel("Motivo del borrado").fill("Registrado dos veces");
+  await dlgB.getByRole("button", { name: "Borrar" }).click();
+  await aviso(cap, `${folioBorrar} borrado`);
+  await cap.waitForURL(/#\/flota/);
+  await cap.goto(base + "#/kanban");
+  await cap.locator(".tarjeta-kanban").first().waitFor();
+  if (await cap.locator(".tarjeta-kanban", { hasText: folioBorrar }).count()) throw new Error("El borrado sigue en el Kanban");
+  ok(`el capturador borra ${folioBorrar} con motivo y sale del Kanban`);
+  await adm.goto(base + "#/borrados");
+  await adm.reload();
+  const filaB = adm.getByRole("row", { name: new RegExp(folioBorrar) });
+  await filaB.getByRole("cell", { name: "Registrado dos veces" }).waitFor();
+  await filaB.getByRole("cell", { name: "Carlos Capturador" }).waitFor();
+  await adm.screenshot({ path: join(SALIDA, "borrados.png"), fullPage: true });
+  await adm.getByRole("button", { name: `Restaurar ${folioBorrar}` }).click();
+  await adm.getByRole("dialog").getByRole("button", { name: "Restaurar" }).click();
+  await aviso(adm, `${folioBorrar} restaurado`);
+  await adm.getByText("No hay backlogs borrados.").waitFor();
+  await adm.goto(base + "#/backlog/30000000-0000-0000-0000-000000000001");
+  await adm.getByRole("tab", { name: /^Bitácora/ }).click();
+  await adm.locator(".evento-texto", { hasText: "Borrado: Registrado dos veces" }).waitFor();
+  await adm.locator(".evento-texto", { hasText: "Restaurado" }).waitFor();
+  ok("el admin ve el motivo y quién lo borró, lo restaura y la bitácora lo registra");
 
   // 6. Vista de celular.
   const movil = await abrir("cap", 390, 844);

@@ -1,5 +1,8 @@
 import { useState } from "react";
-import { Link, useParams } from "react-router-dom";
+import { Link, useNavigate, useParams } from "react-router-dom";
+import { useQueryClient } from "@tanstack/react-query";
+import { supabase } from "../lib/supabase";
+import { useDialogoMotivo } from "../components/DialogoMotivo";
 import { useAuth } from "../auth";
 import { useEspecialidades, usePerfiles } from "../lib/queries";
 import { useUnidades } from "../lib/unidad";
@@ -36,13 +39,20 @@ export default function FichaBacklog() {
   const [imprimiendo, setImprimiendo] = useState(false);
   const subidaFotos = useSubirFotos({ id, unidad_id: b?.unidad_id ?? "" });
   const [pestania, setPestania] = useState<Pestania>("datos");
+  const [borrando, setBorrando] = useState(false);
+  const { pedirMotivo, dialogo: dialogoBorrar } = useDialogoMotivo();
+  const navegar = useNavigate();
+  const qc = useQueryClient();
 
   if (isLoading) return <div className="nota">Cargando…</div>;
   if (!b)
     return (
       <div>
         <h1>Backlog no encontrado</h1>
-        <p className="nota">No existe o es de otra unidad. <Link to="/flota">Volver</Link></p>
+        <p className="nota">
+          No existe, es de otra unidad o fue borrado.{esAdmin && <> Los borrados están en <Link to="/borrados">Backlogs borrados</Link>.</>}{" "}
+          <Link to="/flota">Volver</Link>
+        </p>
       </div>
     );
 
@@ -77,6 +87,28 @@ export default function FichaBacklog() {
     }
   }
 
+  // Borrar: admin o capturador de la unidad, en cualquier estado, con motivo. El backlog
+  // se oculta de todas las pantallas; el admin lo restaura desde Backlogs borrados.
+  async function borrar() {
+    if (!b) return;
+    const motivo = await pedirMotivo(
+      `Borrar ${b.folio}`,
+      "El backlog deja de verse en todas las pantallas, indicadores y reportes. El administrador puede restaurarlo.",
+      { etiqueta: "Motivo del borrado", boton: "Borrar", ejemplo: "Ej.: registrado dos veces, equipo equivocado" }
+    );
+    if (!motivo) return;
+    setBorrando(true);
+    const { error } = await supabase().rpc("borrar_backlog", { p_id: b.id, p_motivo: motivo });
+    setBorrando(false);
+    if (error) {
+      avisar(error.message, "error");
+      return;
+    }
+    avisar(`${b.folio} borrado`);
+    qc.invalidateQueries();
+    navegar("/flota");
+  }
+
   const pestanias: [Pestania, string][] = [
     ["datos", "Datos"],
     ["hh", `HH (${fNum(b.hh_estimadas)} est. / ${fNum(b.hh_reales)} real)`],
@@ -109,6 +141,11 @@ export default function FichaBacklog() {
           <button className="boton-plano" disabled={imprimiendo} onClick={imprimir}>
             {imprimiendo ? "Generando…" : "Imprimir formato"}
           </button>
+          {puedeCapturar && (
+            <button className="boton-plano boton-peligro-plano" disabled={borrando} onClick={borrar}>
+              {borrando ? "Borrando…" : "Borrar"}
+            </button>
+          )}
           {acciones.map((t) => (
             <button
               key={t.destino}
@@ -171,6 +208,7 @@ export default function FichaBacklog() {
       {pestania === "bitacora" && <Bitacora backlogId={b.id} eventos={eventos ?? []} puedeComentar={puedeCapturar} />}
 
       {cambio.dialogo}
+      {dialogoBorrar}
     </div>
   );
 }

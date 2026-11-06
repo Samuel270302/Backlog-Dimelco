@@ -16,6 +16,7 @@ import Kanban from "./pages/Kanban";
 import PorEquipo from "./pages/PorEquipo";
 import FichaEquipo from "./pages/FichaEquipo";
 import Calendario from "./pages/Calendario";
+import Borrados from "./pages/Borrados";
 import Capacidad from "./pages/Capacidad";
 import Indicadores from "./pages/Indicadores";
 import Equipos from "./pages/Equipos";
@@ -69,6 +70,7 @@ function ConRealtime({ esAdmin, puedeCapturar }: { esAdmin: boolean; puedeCaptur
         {esAdmin && <Route path="/catalogos" element={<Catalogos />} />}
         {esAdmin && <Route path="/plazos" element={<Parametros />} />}
         {puedeCapturar && <Route path="/capacidad" element={<Capacidad />} />}
+        {esAdmin && <Route path="/borrados" element={<Borrados />} />}
         {esAdmin && <Route path="/usuarios" element={<Usuarios />} />}
         <Route path="*" element={<Navigate to="/flota" replace />} />
       </Routes>

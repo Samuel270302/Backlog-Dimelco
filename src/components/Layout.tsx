@@ -14,6 +14,7 @@ import {
   IconoAjustes,
   IconoCalendario,
   IconoCamion,
+  IconoHistorial,
   IconoIndicadores,
   IconoKanban,
   IconoLlave,
@@ -48,6 +49,7 @@ const enlacesAdmin = [
   { a: "/equipos", texto: "Equipos", icono: <IconoPrograma /> },
   { a: "/catalogos", texto: "Familias y sistemas", icono: <IconoLlave /> },
   { a: "/plazos", texto: "Plazos por prioridad", icono: <IconoCalendario /> },
+  { a: "/borrados", texto: "Backlogs borrados", icono: <IconoHistorial /> },
   { a: "/usuarios", texto: "Usuarios", icono: <IconoUsuarios /> },
 ];
 
