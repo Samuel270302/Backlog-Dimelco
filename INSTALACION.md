@@ -4,10 +4,10 @@ Guía para dejar la app Control de Backlog en uso. Proyecto Supabase: `backlog-h
 
 ## 1. Base de datos
 
-1. En el SQL Editor de backlog-hemco, pegar y ejecutar `tools/verificar_instalacion.sql`. Muestra 13 puntos con OK o FALTA y qué hacer en cada uno.
-2. Si la base es nueva, ejecutar `supabase/instalar_todo.sql` completo. Si ya tenía las migraciones 001 a 007, ejecutar en orden solo las que la verificación marque: `008_formato_backlog.sql`, `009_reprogramar.sql`, `010_validado.sql`, `011_fotos.sql`, `012_recalcular_limites.sql` (carpeta `supabase/migrations`). Todas se pueden repetir sin daño.
+1. En el SQL Editor de backlog-hemco, pegar y ejecutar `tools/verificar_instalacion.sql`. Muestra 14 puntos con OK o FALTA y qué hacer en cada uno.
+2. Si la base es nueva, ejecutar `supabase/instalar_todo.sql` completo. Si ya tenía las migraciones 001 a 007, ejecutar en orden solo las que la verificación marque: `008_formato_backlog.sql`, `009_reprogramar.sql`, `010_validado.sql`, `011_fotos.sql`, `012_recalcular_limites.sql`, `013_numero_formato.sql` (carpeta `supabase/migrations`). Todas se pueden repetir sin daño.
 3. Edge Functions: la función `admin-usuarios` publicada (código en `supabase/functions/admin-usuarios/index.ts`). Sin ella la pantalla Usuarios no crea cuentas.
-4. Volver a ejecutar `tools/verificar_instalacion.sql`: los puntos 1 a 8 deben quedar en OK.
+4. Volver a ejecutar `tools/verificar_instalacion.sql`: los puntos 1 a 9 deben quedar en OK.
 
 ## 2. Datos de arranque (en la app, con el usuario administrador)
 
@@ -18,8 +18,9 @@ Guía para dejar la app Control de Backlog en uso. Proyecto Supabase: `backlog-h
 | Capacidad del taller | HH por semana de cada especialidad en cada unidad: personas × horas efectivas por turno × turnos por semana. |
 | Plazos por prioridad | Días de atención de P1 a P4 (los iniciales son provisionales: 2, 7, 30 y 90). Después, "Recalcular abiertos". |
 | Usuarios | Una cuenta por persona. Capturador e invitado llevan unidad; el administrador ve todas. |
+| Importar backlogs | Backlogs que ya existen en el formato Excel "Mantenimiento correctivo programado": se eligen los archivos, se revisa la vista previa (equipo encontrado, repuestos, fotos), se elige el sistema y se importan como Identificado. El N° del formato queda como referencia y no se puede importar dos veces. |
 
-Al terminar, `tools/verificar_instalacion.sql` debe dar OK en los 13 puntos.
+Al terminar, `tools/verificar_instalacion.sql` debe dar OK en los 14 puntos.
 
 ## 3. Instalación en cada PC
 

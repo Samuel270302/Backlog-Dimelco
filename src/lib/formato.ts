@@ -105,7 +105,7 @@ export function armarFormato(d: DatosFormato, logo: string, imagenes: Map<string
 <table class="enc"><tr>
   <td class="logo">${logo ? `<img src="${logo}" alt="Dimelco">` : "Dimelco"}</td>
   <td class="titulo">MANTENIMIENTO CORRECTIVO PROGRAMADO</td>
-  <td class="datos"><span class="et">N°</span><b>${esc(b.folio)}</b><br><span class="et">Fecha</span>${fFecha(b.fecha_deteccion)}<br><span class="et">Unidad</span>${esc(d.unidad)}</td>
+  <td class="datos"><span class="et">N°</span><b>${esc(b.folio)}</b>${b.numero_formato ? `<br><span class="et">N° formato</span>${esc(b.numero_formato)}` : ""}<br><span class="et">Fecha</span>${fFecha(b.fecha_deteccion)}<br><span class="et">Unidad</span>${esc(d.unidad)}</td>
 </tr></table>
 
 <table class="bloque"><tr>

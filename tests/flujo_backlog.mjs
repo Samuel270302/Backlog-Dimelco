@@ -7,7 +7,7 @@ import { createServer } from "node:http";
 import { existsSync, mkdirSync, readFileSync } from "node:fs";
 import { extname, join } from "node:path";
 import { iniciarServidorRest } from "./servidor_rest.mjs";
-import { png, token } from "./utilidades.mjs";
+import { libroFormato, png, token } from "./utilidades.mjs";
 
 const require = createRequire(import.meta.url);
 let playwright;
@@ -485,6 +485,52 @@ try {
   await adm.getByRole("dialog").getByRole("button", { name: "Recalcular" }).click();
   await aviso(adm, "1 backlog(s) abiertos con fecha límite nueva");
   ok("plazo P4 a 10 días y recálculo de 1 backlog abierto");
+
+  // 8. Importar backlogs desde el formato Excel (libro generado con la disposición del N° 105).
+  const libroXlsx = await libroFormato(require("exceljs"));
+  const archivoXlsx = { name: "formatos-octubre.xlsx", mimeType: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", buffer: libroXlsx };
+  await adm.goto(base + "#/importar");
+  await adm.reload();
+  await adm.getByRole("heading", { name: "Importar backlogs desde Excel" }).waitFor();
+  await adm.getByLabel("Archivos Excel").setInputFiles([archivoXlsx]);
+  const filaPs011 = adm.getByRole("row", { name: "Importar PS011" });
+  const filaJu999 = adm.getByRole("row", { name: "Importar JU999" });
+  await filaPs011.waitFor();
+  await filaPs011.locator(".celda-revision", { hasText: "Elija el sistema" }).waitFor();
+  await filaJu999.locator(".celda-revision", { hasText: "Equipo JU999 no encontrado" }).waitFor();
+  if (!(await adm.getByRole("button", { name: /^Importar 0 seleccionado/ }).isDisabled())) throw new Error("Deja importar sin sistema");
+  const celdasPs011 = await filaPs011.locator("td").allTextContents();
+  if (celdasPs011[2] !== "105" || celdasPs011[7] !== "4" || celdasPs011[8] !== "1")
+    throw new Error(`Vista previa PS011: N° ${celdasPs011[2]}, repuestos ${celdasPs011[7]}, fotos ${celdasPs011[8]}`);
+  ok("vista previa: PS011 con N° 105, 4 repuestos y 1 foto (logos descartados); JU999 sin equipo; sin sistema no importa");
+  await adm.getByLabel("Sistema para todos").selectOption({ label: "Sistema hidráulico" });
+  await filaPs011.locator(".celda-revision", { hasText: "Lista para importar" }).waitFor();
+  await adm.getByRole("button", { name: "Ver repuestos PS011" }).click();
+  await adm.getByRole("cell", { name: "Juego de cierres EOD", exact: true }).waitFor();
+  await adm.screenshot({ path: join(SALIDA, "importar.png"), fullPage: true });
+  await adm.getByRole("button", { name: "Importar 1 seleccionado(s)" }).click();
+  await aviso(adm, "1 de 1 backlog(s) importado(s)");
+  const enlaceImportado = filaPs011.getByRole("link");
+  const folioImportado = await enlaceImportado.textContent();
+  await enlaceImportado.click();
+  await esperarEstado(adm, "Identificado");
+  await adm.locator(".datos-fijos div", { hasText: "N° formato" }).filter({ hasText: "105" }).waitFor();
+  if ((await adm.locator("label.campo", { hasText: "Justificación" }).locator("textarea").inputValue()) !== "Fugas de aceite en el block; riesgo de dañar la bomba de implementos.")
+    throw new Error("La justificación no se importó");
+  await adm.getByRole("tab", { name: "Fotos (1)" }).waitFor();
+  await adm.getByRole("tab", { name: /^Repuestos \(4/ }).click();
+  const fila1 = adm.locator(".tabla-repuestos-formato tbody tr").first();
+  const c1 = await fila1.locator("td").allTextContents();
+  if (c1[0] !== "1" || c1[1] !== "6060003007" || c1[3] !== "2") throw new Error(`Ítem 1 importado: ${c1.slice(0, 5).join(" | ")}`);
+  const c4 = await adm.locator(".tabla-repuestos-formato tbody tr").nth(3).locator("td").allTextContents();
+  if (c4[1] !== "6060015161" || c4[3] !== "4" || c4[4] !== "1") throw new Error(`Ítem 4 importado: ${c4.slice(0, 5).join(" | ")}`);
+  ok(`importado como ${folioImportado}: Identificado, N° formato 105, justificación, 4 repuestos (ítem 4 con stock 1) y 1 foto`);
+
+  await adm.goto(base + "#/importar");
+  await adm.reload();
+  await adm.getByLabel("Archivos Excel").setInputFiles([archivoXlsx]);
+  await adm.getByRole("row", { name: "Importar PS011" }).locator(".celda-revision", { hasText: `Ya importado como ${folioImportado}` }).waitFor();
+  ok("reimportar el mismo formato lo marca como ya importado");
 
   // 6. Vista de celular.
   const movil = await abrir("cap", 390, 844);

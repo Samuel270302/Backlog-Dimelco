@@ -926,3 +926,23 @@ dialog.dialogo-foto img { display: block; max-width: 88vw; max-height: 80vh; }
 .rejilla-catalogos { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
 @media (max-width: 1100px) { .rejilla-catalogos { grid-template-columns: 1fr; } }
 .rejilla-catalogos td.num input { width: 70px; }
+
+/* ===== Importar backlogs ===== */
+.campo-en-linea { display: flex; align-items: center; gap: 6px; font-size: 13px; color: var(--texto-suave); }
+.campo-en-linea select { width: auto; }
+.tabla-importar { font-size: 12.5px; }
+.tabla-importar th, .tabla-importar td { padding-left: 6px; padding-right: 6px; }
+.tabla-importar td { vertical-align: top; }
+.tabla-importar input[type="date"] { width: 124px; padding-left: 6px; padding-right: 4px; }
+.tabla-importar input:not([type="checkbox"]):not([type="date"]) { min-width: 140px; }
+.tabla-importar .celda-equipo { max-width: 160px; }
+.tabla-importar select { width: auto; padding-right: 22px; }
+.celda-clasificacion select { width: 100%; min-width: 128px; }
+.celda-clasificacion .fila-selects { display: flex; gap: 4px; margin-top: 4px; }
+.celda-clasificacion .fila-selects select { min-width: 0; flex: 1; }
+.nombre-archivo { max-width: 130px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.tabla-importar tr.fila-con-error td { background: #fffaf9; }
+.tabla-importar tr.fila-importada td { background: var(--verde-fondo); }
+.celda-revision { min-width: 140px; max-width: 200px; font-size: 12px; }
+.celda-revision .control-error, .celda-revision .control-aviso { margin-bottom: 2px; }
+.fila-detalle-importar td { background: var(--panel-2) !important; }

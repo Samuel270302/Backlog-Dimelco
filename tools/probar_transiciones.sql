@@ -188,6 +188,11 @@ select set_config('request.jwt.claims', '{"sub":"00000000-0000-0000-0000-0000000
 select pruebas.espera_error($$select recalcular_fechas_limite()$$, 'Solo el administrador');
 select set_config('request.jwt.claims', '{"sub":"00000000-0000-0000-0000-00000000000a"}', false);
 
+-- N° de formato (013): único por unidad.
+update backlogs set numero_formato = '105' where id = '20000000-0000-0000-0000-000000000002';
+select pruebas.espera_error($$update backlogs set numero_formato = '105' where id = '20000000-0000-0000-0000-000000000003'$$, 'backlogs_numero_formato');
+select pruebas.igual((select numero_formato from v_backlog where id = '20000000-0000-0000-0000-000000000002'), '105', 'N° formato en v_backlog');
+
 -- Formato del backlog (008): ítem correlativo, identificación del repuesto, horómetro y tipo de pedido.
 select pruebas.igual((select string_agg(item::text, ',' order by item) from backlog_repuestos
   where backlog_id = '20000000-0000-0000-0000-000000000001'), '1,2', 'ítems correlativos');

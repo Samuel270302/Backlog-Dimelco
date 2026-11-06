@@ -88,6 +88,7 @@ export default function TarjetaBacklog({
           <dl className="tk-ficha">
             <div><dt>Equipo</dt><dd>{[b.flota, b.marca, b.modelo].filter(Boolean).join(" · ")}</dd></div>
             <div><dt>Sistema</dt><dd>{b.sistema}</dd></div>
+            {b.numero_formato && <div><dt>N° formato</dt><dd>{b.numero_formato}</dd></div>}
             {b.horometro !== null && <div><dt>Horómetro</dt><dd>{fNum(b.horometro)} h</dd></div>}
             <div><dt>Solicitado por</dt><dd>{b.reportado_por ?? "—"}</dd></div>
             <div><dt>Fecha límite</dt><dd className={b.vencido ? "texto-vencido" : undefined}>{fFecha(b.fecha_limite)}</dd></div>

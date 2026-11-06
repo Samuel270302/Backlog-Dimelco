@@ -55,7 +55,7 @@ export default function Kanban() {
       .filter(
         (b) =>
           !t ||
-          `${b.folio} ${b.cod_interno} ${b.descripcion} ${b.componente ?? ""} ${b.ot_sap ?? ""}`.toLowerCase().includes(t)
+          `${b.folio} ${b.numero_formato ?? ""} ${b.cod_interno} ${b.descripcion} ${b.componente ?? ""} ${b.ot_sap ?? ""}`.toLowerCase().includes(t)
       );
   }, [backlogs, buscar, flota, prioridad, tipoPedido]);
 

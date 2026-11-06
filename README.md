@@ -39,4 +39,4 @@ Etapas visibles (Kanban y barra de avance): 1. Identificado, 2. Planeado, 3. Pro
 
 ## Puesta en marcha
 
-Ver [INSTALACION.md](INSTALACION.md): base de datos (`supabase/instalar_todo.sql` o migraciones 001 a 012), verificación con `tools/verificar_instalacion.sql`, datos de arranque, instalación en cada PC, primer recorrido, actualizaciones y respaldo.
+Ver [INSTALACION.md](INSTALACION.md): base de datos (`supabase/instalar_todo.sql` o migraciones 001 a 013), verificación con `tools/verificar_instalacion.sql`, datos de arranque, instalación en cada PC, primer recorrido, actualizaciones y respaldo.

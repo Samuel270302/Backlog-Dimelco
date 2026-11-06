@@ -81,6 +81,7 @@ export default function DatosBacklog({ b, editable }: { b: BacklogFila; editable
         <div><dt>Código interno</dt><dd><Link to={`/equipo/${b.equipo_id}`}>{b.cod_interno}</Link></dd></div>
         <div><dt>Equipo</dt><dd>{[b.flota, b.marca, b.modelo].filter(Boolean).join(" · ")}</dd></div>
         <div><dt>Unidad</dt><dd>{unidad}</dd></div>
+        {b.numero_formato && <div><dt>N° formato</dt><dd>{b.numero_formato}</dd></div>}
         <div><dt>Fecha límite</dt><dd className={b.vencido ? "texto-vencido" : undefined}>{fFecha(b.fecha_limite)}{b.vencido && " (vencido)"}</dd></div>
         <div><dt>Antigüedad</dt><dd>{b.antiguedad_dias} días</dd></div>
         {b.fecha_programada && <div><dt>Programado para</dt><dd>{fFecha(b.fecha_programada)}{b.aprovechar_pm && " · con PM"}</dd></div>}

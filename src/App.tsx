@@ -21,6 +21,7 @@ import Indicadores from "./pages/Indicadores";
 import Equipos from "./pages/Equipos";
 import Catalogos from "./pages/Catalogos";
 import Parametros from "./pages/Parametros";
+import Importar from "./pages/Importar";
 
 function Interior() {
   const { session, perfil, cargando, esAdmin, puedeCapturar } = useAuth();
@@ -68,6 +69,7 @@ function ConRealtime({ esAdmin, puedeCapturar }: { esAdmin: boolean; puedeCaptur
         {esAdmin && <Route path="/equipos" element={<Equipos />} />}
         {esAdmin && <Route path="/catalogos" element={<Catalogos />} />}
         {esAdmin && <Route path="/plazos" element={<Parametros />} />}
+        {esAdmin && <Route path="/importar" element={<Importar />} />}
         {esAdmin && <Route path="/capacidad" element={<Capacidad />} />}
         {esAdmin && <Route path="/usuarios" element={<Usuarios />} />}
         <Route path="*" element={<Navigate to="/flota" replace />} />

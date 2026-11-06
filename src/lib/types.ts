@@ -93,6 +93,7 @@ export interface Backlog {
   componente: string | null;
   horometro: number | null;
   tipo_pedido: TipoPedido;
+  numero_formato: string | null;
   origen: Origen;
   prioridad: Prioridad;
   estado: Estado;
