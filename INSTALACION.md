@@ -25,7 +25,7 @@ Al terminar, `tools/verificar_instalacion.sql` debe dar OK en los 14 puntos.
 
 Requisitos: Windows 10 u 11 con internet.
 
-1. Descargar `Control-de-Backlog-Dimelco-Setup-x.x.x.exe` de Releases en https://github.com/Samuel270302/Backlog-Hemco/releases y ejecutarlo. Si Windows SmartScreen avisa, "Más información" y "Ejecutar de todas formas": el instalador no está firmado con certificado comercial.
+1. Descargar `Control-de-Backlog-Dimelco-Setup-x.x.x.exe` de Releases en https://github.com/Samuel270302/Backlog-Dimelco/releases y ejecutarlo. Si Windows SmartScreen avisa, "Más información" y "Ejecutar de todas formas": el instalador no está firmado con certificado comercial.
 2. La primera vez pide la URL del proyecto (`https://sfrelyrpnnvqjpzkznnu.supabase.co`) y la llave anon (Supabase, Project Settings, API Keys; es la llave pública, sin usuario y contraseña no da acceso a datos).
 3. Entrar con correo y contraseña. Cada usuario cambia su contraseña inicial con "Cambiar contraseña" en el menú.
 
@@ -44,7 +44,7 @@ Con un backlog de prueba (se anula al final):
 
 ## Versión web para celular
 
-Dirección: https://samuel270302.github.io/Backlog-Hemco/ (mismo usuario y contraseña que la app de escritorio). Se publica sola con cada cambio en `main` (flujo "Web para celular"). La URL del proyecto ya está en el flujo; solo falta la llave anon.
+Dirección: https://samuel270302.github.io/Backlog-Dimelco/ (mismo usuario y contraseña que la app de escritorio). Se publica sola con cada cambio en `main` (flujo "Web para celular"). La URL del proyecto ya está en el flujo; solo falta la llave anon.
 
 En el celular: barra inferior con Por equipo, Kanban, Calendario (Nuevo para capturadores) y Más (resto del menú, unidad, contraseña y cerrar sesión). El Kanban se desliza por etapas y se avanza con los botones de cada tarjeta (no se arrastra). El calendario se ve por día; programar y reprogramar se hacen desde la ficha. El formato y el reporte se imprimen con "Guardar como PDF" del navegador. En Android (Chrome) y en iPhone (Safari, Compartir) se puede "Agregar a pantalla de inicio": es un acceso directo a la misma página, siempre en línea.
 
@@ -58,7 +58,7 @@ El flujo "Actualizar base de datos" aplica en Supabase las migraciones del repos
 
 ## Lo único que queda por hacer a mano (una vez)
 
-En GitHub, repositorio Samuel270302/Backlog-Hemco:
+En GitHub, repositorio Samuel270302/Backlog-Dimelco:
 1. Settings > Pages > Build and deployment > Source: **GitHub Actions**.
 2. Settings > Secrets and variables > Actions > pestaña **Variables** > New repository variable: `SUPABASE_ANON_KEY` = la llave anon (Supabase > Project Settings > API Keys; la "anon public" o la "publishable"). Nunca la service_role ni la secret.
 3. En Gmail (samuel.e.zapata.t@gmail.com): con la verificación en dos pasos activa, crear una contraseña de aplicación en https://myaccount.google.com/apppasswords (nombre: "Backlog"). Son 16 letras.
@@ -68,12 +68,12 @@ En GitHub, repositorio Samuel270302/Backlog-Hemco:
 Prompt para que Claude in Chrome haga los clics (se detiene para que tú pegues la llave y la contraseña):
 
     Haz en el navegador, en orden, y confírmame cada paso. Nunca escribas llaves ni contraseñas: detente y déjame pegarlas.
-    1. En https://github.com/Samuel270302/Backlog-Hemco/settings/pages pon "Source" en "GitHub Actions".
+    1. En https://github.com/Samuel270302/Backlog-Dimelco/settings/pages pon "Source" en "GitHub Actions".
     2. En https://supabase.com/dashboard abre el proyecto backlog-hemco > Project Settings > API Keys y muéstrame dónde está la llave "anon public" (o "publishable"). No la copies.
-    3. En https://github.com/Samuel270302/Backlog-Hemco/settings/variables/actions crea la variable SUPABASE_ANON_KEY y detente para que yo pegue el valor.
+    3. En https://github.com/Samuel270302/Backlog-Dimelco/settings/variables/actions crea la variable SUPABASE_ANON_KEY y detente para que yo pegue el valor.
     4. Abre https://myaccount.google.com/apppasswords con la cuenta samuel.e.zapata.t@gmail.com, crea una contraseña de aplicación llamada "Backlog" y detente: yo la copio.
-    5. En https://github.com/Samuel270302/Backlog-Hemco/settings/secrets/actions crea el secreto CORREO_CLAVE_APP y detente para que yo pegue la contraseña.
-    6. En https://github.com/Samuel270302/Backlog-Hemco/actions ejecuta "Web para celular" y "Reporte semanal por correo" (Run workflow) y dime si terminan en verde.
+    5. En https://github.com/Samuel270302/Backlog-Dimelco/settings/secrets/actions crea el secreto CORREO_CLAVE_APP y detente para que yo pegue la contraseña.
+    6. En https://github.com/Samuel270302/Backlog-Dimelco/actions ejecuta "Web para celular" y "Reporte semanal por correo" (Run workflow) y dime si terminan en verde.
 
 ## Copiar los usuarios de preventivos
 

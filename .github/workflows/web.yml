@@ -1,6 +1,6 @@
 name: Web para celular
 
-# Publica la app como sitio web en GitHub Pages (https://samuel270302.github.io/Backlog-Hemco/).
+# Publica la app como sitio web en GitHub Pages (https://samuel270302.github.io/Backlog-Dimelco/).
 # La conexión a Supabase va fija en la compilación: la URL del proyecto está aquí (es
 # pública) y la llave anon sale de la variable del repositorio SUPABASE_ANON_KEY
 # (Settings > Secrets and variables > Actions > Variables). La llave anon es pública:
