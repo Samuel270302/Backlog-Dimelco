@@ -20,6 +20,7 @@ concurrency:
 jobs:
   migrar:
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     env:
       DB_URL: ${{ secrets.SUPABASE_DB_URL }}
     steps:
@@ -31,6 +32,7 @@ jobs:
           fi
       - uses: actions/checkout@v4
       - name: Instalar cliente de PostgreSQL 17
+        timeout-minutes: 6
         run: |
           sudo install -d /usr/share/postgresql-common/pgdg
           sudo curl -fsSL -o /usr/share/postgresql-common/pgdg/apt.postgresql.org.asc https://www.postgresql.org/media/keys/ACCC4CF8.asc
