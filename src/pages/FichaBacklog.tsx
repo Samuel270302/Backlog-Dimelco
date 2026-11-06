@@ -159,6 +159,7 @@ export default function FichaBacklog() {
       {pestania === "repuestos" && (
         <TablaRepuestos
           backlogId={b.id}
+          sap={b.usa_sap}
           filas={repuestos ?? []}
           editable={detalleEditable}
           fotosPorItem={new Map((repuestos ?? []).map((r) => [r.id, (fotos ?? []).filter((f) => f.repuesto_id === r.id).length]))}

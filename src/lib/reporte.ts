@@ -3,7 +3,7 @@
 import logoDimelco from "../assets/logo-dimelco.png";
 import { fFecha, fNum, sumarDiasISO } from "./fmt";
 import { abrirVentanaImpresion, comoDataUrl, escribirParaImprimir } from "./formato";
-import { etapaDe, type BacklogFila } from "./types";
+import { etapaDe, nombrePrioridad, type BacklogFila } from "./types";
 import { antiguedad, esAbierto, resumen, semanal, vencidosPorPrioridad, type SemanasEspecialidad } from "./indicadores";
 
 const esc = (v: unknown) =>
@@ -27,7 +27,7 @@ export function armarReporte(d: DatosReporte, logo: string): string {
   const ant = antiguedad(d.filas);
   const venc = vencidosPorPrioridad(d.filas);
   const sems = semanal(d.filas, d.hoy, 8);
-  const maxSem = Math.max(1, ...d.semanas.lista.map((s) => s.semanas ?? 0));
+  const maxHh = Math.max(1, ...d.semanas.lista.map((s) => s.hhPendientes));
   const en7 = sumarDiasISO(d.hoy, 7);
   const hace7 = sumarDiasISO(d.hoy, -7);
 
@@ -79,7 +79,7 @@ export function armarReporte(d: DatosReporte, logo: string): string {
 
 <div class="kpis">
   ${kpi(String(r.abiertos), "backlogs abiertos")}
-  ${kpi(fNum(r.hhPendientes), "HH pendientes")}
+  ${kpi(fNum(r.hhPendientes), "HH acumuladas pendientes")}
   ${kpi(sem(d.semanas.total.semanas), "semanas de backlog")}
   ${kpi(`${r.vencidos}`, "vencidos")}
   ${kpi(pct(r.pctProgramado), "de las HH pendientes ya programadas")}
@@ -88,17 +88,17 @@ export function armarReporte(d: DatosReporte, logo: string): string {
 
 <div class="cols">
   <div>
-    <h2>Semanas de backlog por especialidad</h2>
+    <h2>HH acumuladas por especialidad</h2>
     <table><thead><tr><th>Especialidad</th><th class="n">HH pend.</th><th class="n">HH/semana</th><th class="n">Semanas</th><th style="width:30%"></th></tr></thead><tbody>
     ${
       d.semanas.lista
         .map(
           (s) => `<tr><td>${esc(s.especialidad)}</td><td class="n">${fNum(s.hhPendientes)}</td><td class="n">${s.hhSemana ? fNum(s.hhSemana) : "—"}</td>
-          <td class="n">${sem(s.semanas)}</td><td>${s.semanas ? `<span class="barra" style="width:${(s.semanas / maxSem) * 100}%"></span>` : ""}</td></tr>`
+          <td class="n">${sem(s.semanas)}</td><td>${s.hhPendientes ? `<span class="barra" style="width:${(s.hhPendientes / maxHh) * 100}%"></span>` : ""}</td></tr>`
         )
         .join("") || vacio(5, "Sin HH pendientes")
     }
-    <tr><th>Total</th><th class="n">${fNum(d.semanas.total.hhPendientes)}</th><th class="n">${fNum(d.semanas.total.hhSemana)}</th><th class="n">${sem(d.semanas.total.semanas)}</th><th></th></tr>
+    <tr><th>Total</th><th class="n">${fNum(d.semanas.lista.reduce((t, s) => t + s.hhPendientes, 0))}</th><th class="n">${fNum(d.semanas.total.hhSemana)}</th><th class="n">${sem(d.semanas.total.semanas)}</th><th></th></tr>
     </tbody></table>
     ${r.sinHh ? `<p class="gris">${r.sinHh} backlog(s) abiertos sin HH estimadas no entran en el cálculo.</p>` : ""}
   </div>
@@ -109,7 +109,7 @@ export function armarReporte(d: DatosReporte, logo: string): string {
     </tbody></table>
     <h2>Vencidos por prioridad</h2>
     <table><thead><tr><th>Prioridad</th><th class="n">Abiertos</th><th class="n">Vencidos</th></tr></thead><tbody>
-    ${venc.map((v) => `<tr><td>${v.prioridad}</td><td class="n">${v.abiertos}</td><td class="n${v.vencidos ? " rojo" : ""}">${v.vencidos}</td></tr>`).join("")}
+    ${venc.map((v) => `<tr><td>${nombrePrioridad(v.prioridad)}</td><td class="n">${v.abiertos}</td><td class="n${v.vencidos ? " rojo" : ""}">${v.vencidos}</td></tr>`).join("")}
     </tbody></table>
   </div>
   <div>
@@ -125,7 +125,7 @@ export function armarReporte(d: DatosReporte, logo: string): string {
 ${
   vencidos
     .map(
-      (b) => `<tr><td>${esc(b.folio)}</td><td>${esc(b.cod_interno)}</td><td>${esc(b.descripcion)}</td><td>${b.prioridad}${b.tipo_pedido === "Urgente" ? " · Urgente" : ""}</td>
+      (b) => `<tr><td>${esc(b.folio)}</td><td>${esc(b.cod_interno)}</td><td>${esc(b.descripcion)}</td><td>${nombrePrioridad(b.prioridad)}${b.tipo_pedido === "Urgente" ? " · Urgente" : ""}</td>
       <td>${esc(etapaDe(b.estado))}${etapaDe(b.estado) !== b.estado ? ` (${esc(b.estado)})` : ""}</td><td>${fFecha(b.fecha_limite)}</td><td class="n rojo">${-(b.dias_para_limite ?? 0)}</td><td class="n">${fNum(b.hh_estimadas)}</td></tr>`
     )
     .join("") || vacio(8, "Sin vencidos")
@@ -133,7 +133,7 @@ ${
 </tbody></table>
 
 <h2>Programados para los próximos 7 días (${programados.length})</h2>
-<table><thead><tr><th>Fecha</th><th>Equipo</th><th>Folio</th><th>Trabajo</th><th>OT SAP</th><th class="n">HH</th><th>Con PM</th></tr></thead><tbody>
+<table><thead><tr><th>Fecha</th><th>Equipo</th><th>Folio</th><th>Trabajo</th><th>N° OT</th><th class="n">HH</th><th>Con PM</th></tr></thead><tbody>
 ${
   programados
     .map(

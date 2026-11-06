@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { PRIORIDADES, type Prioridad } from "../lib/types";
+import { PRIORIDADES, nombrePrioridad, type Prioridad } from "../lib/types";
 import type { Transicion } from "../lib/backlog";
 import { hoyISO } from "../lib/fmt";
 
@@ -10,6 +10,7 @@ export default function DialogoTransicion({
   transicion,
   prioridadActual,
   otActual,
+  usaSap = true,
   fechaInicial,
   ocupado,
   onAceptar,
@@ -19,6 +20,7 @@ export default function DialogoTransicion({
   transicion: Transicion;
   prioridadActual: Prioridad;
   otActual: string | null;
+  usaSap?: boolean;
   fechaInicial?: string;
   ocupado: boolean;
   onAceptar: (datos: Record<string, unknown>) => void;
@@ -41,7 +43,7 @@ export default function DialogoTransicion({
 
   const faltantes: string[] = [];
   if (pide("fecha_programada") && !fechaProg) faltantes.push("fecha programada");
-  if (pide("ot_sap") && !ot.trim()) faltantes.push("OT SAP");
+  if (pide("ot_sap") && !ot.trim()) faltantes.push(usaSap ? "OT SAP" : "N° OT");
   if (pide("fecha_ejecucion") && !fechaEjec) faltantes.push("fecha de ejecución");
   if (pide("motivo") && motivo.trim().length < 3) faltantes.push("motivo");
 
@@ -79,7 +81,7 @@ export default function DialogoTransicion({
           <span>Prioridad confirmada</span>
           <select value={prioridad} onChange={(e) => setPrioridad(e.target.value as Prioridad)}>
             {PRIORIDADES.map((p) => (
-              <option key={p}>{p}</option>
+              <option key={p} value={p}>{nombrePrioridad(p)}</option>
             ))}
           </select>
         </label>
@@ -92,7 +94,7 @@ export default function DialogoTransicion({
       )}
       {pide("ot_sap") && (
         <label className="campo">
-          <span>OT SAP</span>
+          <span>{usaSap ? "OT SAP" : "N° OT"}</span>
           <input value={ot} onChange={(e) => setOt(e.target.value)} placeholder="Número de orden de trabajo" />
         </label>
       )}

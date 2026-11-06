@@ -1,13 +1,13 @@
 import { useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "../lib/supabase";
-import { useEspecialidades, useSistemas } from "../lib/queries";
+import { useEspecialidades, useFamilias, useFamiliaSistemas, useSistemas } from "../lib/queries";
 import { useAvisos } from "../components/Avisos";
 import type { Catalogo } from "../lib/types";
 
 // Sistemas y especialidades (admin). No se borran porque los usan backlogs y HH:
 // se desactivan y dejan de aparecer en los formularios.
-function TablaCatalogo({ tabla, titulo, filas, ayuda }: { tabla: "sistemas" | "especialidades"; titulo: string; filas: Catalogo[]; ayuda: string }) {
+function TablaCatalogo({ tabla, titulo, filas, ayuda }: { tabla: "sistemas" | "especialidades" | "familias"; titulo: string; filas: Catalogo[]; ayuda: string }) {
   const qc = useQueryClient();
   const { avisar } = useAvisos();
   const [nuevo, setNuevo] = useState("");
@@ -109,14 +109,88 @@ function TablaCatalogo({ tabla, titulo, filas, ayuda }: { tabla: "sistemas" | "e
   );
 }
 
+// Sistemas de cada familia: los que se ofrecen al registrar un backlog de un equipo de
+// esa familia. "Otro" se ofrece siempre y no se marca aquí.
+function SistemasPorFamilia({ familias, sistemas }: { familias: Catalogo[]; sistemas: Catalogo[] }) {
+  const qc = useQueryClient();
+  const { avisar } = useAvisos();
+  const { data: relaciones } = useFamiliaSistemas();
+  const activas = familias.filter((f) => f.activo).sort((a, b) => a.orden - b.orden || a.nombre.localeCompare(b.nombre));
+  const [familiaId, setFamiliaId] = useState("");
+  const elegida = activas.find((f) => f.id === familiaId) ?? activas[0];
+  const marcados = new Set((relaciones ?? []).filter((r) => r.familia_id === elegida?.id).map((r) => r.sistema_id));
+  const lista = sistemas.filter((s) => s.activo && s.nombre !== "Otro").sort((a, b) => a.orden - b.orden || a.nombre.localeCompare(b.nombre));
+
+  const marcar = useMutation({
+    mutationFn: async ({ sistemaId, si }: { sistemaId: string; si: boolean }) => {
+      const t = supabase().from("familia_sistemas");
+      const { error } = si
+        ? await t.insert({ familia_id: elegida!.id, sistema_id: sistemaId })
+        : await t.delete().eq("familia_id", elegida!.id).eq("sistema_id", sistemaId);
+      if (error) throw error;
+    },
+    onSuccess: () => qc.invalidateQueries(),
+    onError: (e: Error) => {
+      avisar(e.message, "error");
+      qc.invalidateQueries();
+    },
+  });
+
+  return (
+    <section className="bloque-ficha" aria-label="Sistemas por familia">
+      <h2>Sistemas por familia</h2>
+      <p className="nota">
+        Al registrar un backlog solo aparecen los sistemas marcados para la familia del equipo, más «Otro». Una familia sin
+        sistemas marcados muestra todos.
+      </p>
+      {activas.length === 0 ? (
+        <p className="nota">Primero cree las familias.</p>
+      ) : (
+        <>
+          <label className="campo" style={{ maxWidth: 320 }}>
+            <span>Familia</span>
+            <select value={elegida?.id ?? ""} onChange={(e) => setFamiliaId(e.target.value)}>
+              {activas.map((f) => (
+                <option key={f.id} value={f.id}>{f.nombre}</option>
+              ))}
+            </select>
+          </label>
+          <div className="lista-casillas">
+            {lista.map((s) => (
+              <label key={s.id} className="campo-check">
+                <input
+                  type="checkbox"
+                  checked={marcados.has(s.id)}
+                  disabled={marcar.isPending}
+                  onChange={(e) => marcar.mutate({ sistemaId: s.id, si: e.target.checked })}
+                />
+                {s.nombre}
+              </label>
+            ))}
+          </div>
+          <p className="nota">{marcados.size} sistema(s) marcados para {elegida?.nombre}.</p>
+        </>
+      )}
+    </section>
+  );
+}
+
 export default function Catalogos() {
   const { data: sistemas } = useSistemas();
   const { data: especialidades } = useEspecialidades();
+  const { data: familias } = useFamilias();
   return (
     <div className="pagina-formulario">
-      <h1>Sistemas y especialidades</h1>
+      <h1>Familias, sistemas y especialidades</h1>
       <p className="subtitulo">Los cambios se graban al salir de cada celda. Desactivar no afecta a los backlogs que ya los usan.</p>
       <div className="rejilla-catalogos">
+        <TablaCatalogo
+          tabla="familias"
+          titulo="Familias de equipo"
+          filas={familias ?? []}
+          ayuda="Grupo de equipos con los mismos sistemas (Scooptram ST1030, PowerROC T35…). Cada equipo se asigna a su familia en Equipos."
+        />
+        <SistemasPorFamilia familias={familias ?? []} sistemas={sistemas ?? []} />
         <TablaCatalogo tabla="sistemas" titulo="Sistemas" filas={sistemas ?? []} ayuda="Sistema del equipo donde está el trabajo (motor, hidráulico, frenos…)." />
         <TablaCatalogo
           tabla="especialidades"

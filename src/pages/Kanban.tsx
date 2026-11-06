@@ -4,7 +4,7 @@ import { useBacklogs, useEspecialidades } from "../lib/queries";
 import { useDetalleBacklogs } from "../lib/backlog";
 import { useCambioEstado, useTransicionesPermitidas } from "../components/CambioEstado";
 import TarjetaBacklog from "../components/TarjetaBacklog";
-import { ESTADOS_PLANEADO, PRIORIDADES, TIPOS_PEDIDO, type BacklogFila, type Estado, type Etapa } from "../lib/types";
+import { ESTADOS_PLANEADO, PRIORIDADES, nombrePrioridad, TIPOS_PEDIDO, type BacklogFila, type Estado, type Etapa } from "../lib/types";
 import { fNum } from "../lib/fmt";
 
 // Kanban por etapa: Identificado, Planeado (planificación, esperando repuestos y
@@ -66,7 +66,7 @@ export default function Kanban() {
       .filter(
         (b) =>
           !t ||
-          `${b.folio} ${b.numero_formato ?? ""} ${b.cod_interno} ${b.descripcion} ${b.componente ?? ""} ${b.ot_sap ?? ""}`.toLowerCase().includes(t)
+          `${b.folio} ${b.cod_interno} ${b.descripcion} ${b.componente ?? ""} ${b.ot_sap ?? ""}`.toLowerCase().includes(t)
       );
   }, [backlogs, buscar, flota, prioridad, tipoPedido]);
 
@@ -106,7 +106,7 @@ export default function Kanban() {
         <select value={prioridad} onChange={(e) => setPrioridad(e.target.value)} aria-label="Prioridad">
           <option value="">Toda prioridad</option>
           {PRIORIDADES.map((p) => (
-            <option key={p}>{p}</option>
+            <option key={p} value={p}>{nombrePrioridad(p)}</option>
           ))}
         </select>
         <select value={tipoPedido} onChange={(e) => setTipoPedido(e.target.value)} aria-label="Tipo de pedido">

@@ -1,6 +1,6 @@
 import type ExcelJS from "exceljs";
 import type { BacklogFila } from "./types";
-import { etapaDe } from "./types";
+import { etapaDe, nombrePrioridad } from "./types";
 import { esAbierto, type SemanasEspecialidad } from "./indicadores";
 import { hoyISO, sumarDiasISO } from "./fmt";
 
@@ -75,9 +75,10 @@ export async function armarLibroBacklog(
     { header: "HH estimadas", key: "hh", width: 10 },
     { header: "Repuestos sin recibir", key: "rep_pend", width: 10 },
     { header: "Repuestos", key: "rep", width: 9 },
-    { header: "OT SAP", key: "ot", width: 11 },
+    { header: "N° OT", key: "ot", width: 11 },
     { header: "Fecha programada", key: "programada", width: 11, style: { numFmt: "dd/mm/yyyy" } },
-    { header: "Solicitado por", key: "solicitado", width: 18 },
+    { header: "Reportado por", key: "solicitado", width: 18 },
+    { header: "Aprobado por", key: "aprobado", width: 18 },
   ];
   const abiertos = filas.filter(esAbierto).sort((a, b) => a.folio.localeCompare(b.folio));
   for (const b of abiertos) {
@@ -92,7 +93,7 @@ export async function armarLibroBacklog(
       componente: b.componente,
       descripcion: b.descripcion,
       tipo: b.tipo_pedido,
-      prioridad: b.prioridad,
+      prioridad: nombrePrioridad(b.prioridad),
       etapa: etapaDe(b.estado),
       estado: b.estado,
       deteccion: fecha(b.fecha_deteccion),
@@ -105,6 +106,7 @@ export async function armarLibroBacklog(
       ot: b.ot_sap,
       programada: fecha(b.fecha_programada),
       solicitado: b.reportado_por,
+      aprobado: b.aprobado_por,
     });
     if (b.vencido) fila.getCell("vencido").font = { bold: true, color: { argb: "FF9C0006" } };
   }
@@ -124,7 +126,7 @@ export async function armarLibroBacklog(
     { header: "HH estimadas", key: "hh_est", width: 10 },
     { header: "HH reales", key: "hh_real", width: 10 },
     { header: "Diferencia HH", key: "dif", width: 11 },
-    { header: "OT SAP", key: "ot", width: 11 },
+    { header: "N° OT", key: "ot", width: 11 },
   ];
   for (const b of cerradosUltimos7(filas, hoy)) {
     hc.addRow({

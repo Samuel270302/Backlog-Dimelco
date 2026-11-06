@@ -5,7 +5,7 @@ Guía para dejar la app Control de Backlog en uso. Proyecto Supabase: `backlog-h
 ## 1. Base de datos
 
 1. En el SQL Editor de backlog-hemco, pegar y ejecutar `tools/verificar_instalacion.sql`. Muestra 14 puntos con OK o FALTA y qué hacer en cada uno.
-2. Si la base es nueva, ejecutar `supabase/instalar_todo.sql` completo. Si ya tenía las migraciones 001 a 007, ejecutar en orden solo las que la verificación marque: `008_formato_backlog.sql`, `009_reprogramar.sql`, `010_validado.sql`, `011_fotos.sql`, `012_recalcular_limites.sql`, `013_numero_formato.sql` (carpeta `supabase/migrations`). Todas se pueden repetir sin daño.
+2. Si la base es nueva, ejecutar `supabase/instalar_todo.sql` completo. Si ya tenía las migraciones 001 a 007, ejecutar en orden solo las que la verificación marque: `008_formato_backlog.sql`, `009_reprogramar.sql`, `010_validado.sql`, `011_fotos.sql`, `012_recalcular_limites.sql`, `013_numero_formato.sql`, `014_mejoras.sql` (carpeta `supabase/migrations`). Todas se pueden repetir sin daño.
 3. Edge Functions: la función `admin-usuarios` publicada (código en `supabase/functions/admin-usuarios/index.ts`). Sin ella la pantalla Usuarios no crea cuentas.
 4. Volver a ejecutar `tools/verificar_instalacion.sql`: los puntos 1 a 9 deben quedar en OK.
 
@@ -13,12 +13,11 @@ Guía para dejar la app Control de Backlog en uso. Proyecto Supabase: `backlog-h
 
 | Pantalla | Qué cargar |
 |---|---|
-| Equipos | Revisar los equipos copiados de preventivos; completar la marca y la flota (Scoop, Jumbo, Camión...). Crear los que falten. |
-| Sistemas y especialidades | Ajustar la lista a la de HEMCO. Lo que no se use se desactiva; no se borra. |
+| Familias y sistemas | Familias de equipo (Scooptram ST1030, PowerROC T35...) y, para cada una, los sistemas que se ofrecen al registrar un backlog. «Otro» se ofrece siempre y pide escribir cuál. Especialidades (incluye Electromecánico). Lo que no se use se desactiva; no se borra. |
+| Equipos | Revisar los equipos copiados de preventivos; asignar la familia y completar la marca. Crear los que falten. |
 | Capacidad del taller | HH por semana de cada especialidad en cada unidad: personas × horas efectivas por turno × turnos por semana. |
-| Plazos por prioridad | Días de atención de P1 a P4 (los iniciales son provisionales: 2, 7, 30 y 90). Después, "Recalcular abiertos". |
+| Plazos por prioridad | Niveles de criticidad de la OT de Dimelco: 1 Urgente (1 día, 24 horas), 2 Alto (3 días), 3 Medio (14 días), 4 Bajo (40 días). Si cambian, "Recalcular abiertos". |
 | Usuarios | Una cuenta por persona. Capturador e invitado llevan unidad; el administrador ve todas. |
-| Importar backlogs | Backlogs que ya existen en el formato Excel "Mantenimiento correctivo programado": se eligen los archivos, se revisa la vista previa (equipo encontrado, repuestos, fotos), se elige el sistema y se importan como Identificado. El N° del formato queda como referencia y no se puede importar dos veces. |
 
 Al terminar, `tools/verificar_instalacion.sql` debe dar OK en los 14 puntos.
 
@@ -36,7 +35,7 @@ La app guarda sus datos locales en la carpeta "Backlog HEMCO"; puede convivir en
 
 Con un backlog de prueba (se anula al final):
 
-1. Nuevo backlog: equipo, descripción, un repuesto, una especialidad con HH y una foto. Imprimir formato: el PDF sale en A4 vertical con la foto en la hoja 2.
+1. Nuevo backlog: equipo (lista por familia), sistema, quién reporta y quién aprueba, descripción, un repuesto, una especialidad con HH y una foto (archivo o Ctrl+V). Imprimir formato: el PDF sale en A4 vertical con la foto en la hoja 2.
 2. Kanban: arrastrar la tarjeta a Planeado (pide prioridad). Marcar el repuesto como recibido en la ficha: pasa solo a Listo para programar.
 3. Calendario: arrastrar el backlog a un día; pide la OT. Revisar la barra de HH de la especialidad contra la capacidad.
 4. Desde otro PC con otro usuario, comprobar que el cambio se ve en segundos (tiempo real).
@@ -85,12 +84,16 @@ Para tener en backlog las mismas cuentas de preventivos, con la misma contraseñ
 
 Un usuario nuevo de preventivos que se cree después no pasa solo: se repite el procedimiento o se crea en la pantalla Usuarios de backlog.
 
+## SAP
+
+Solo HEMCO usa SAP (`unidades.usa_sap`). En Veta Nueva, Mina La India y Explotec no aparecen Aviso SAP, Código SAP ni SolPed, y la orden se pide como "N° OT".
+
 ## Roles
 
 | Rol | Puede |
 |---|---|
-| Administrador | Todo, en todas las unidades: aprobar, planificar, programar, reprogramar, validar, anular, borrar fotos y administrar catálogos, capacidad, plazos y usuarios. |
-| Capturador | En su unidad: registrar backlogs, cargar HH, repuestos y fotos, comentar, editar mientras está Identificado y marcar Ejecutado. |
+| Administrador | Todo, en todas las unidades: aprobar, planificar, programar, reprogramar, validar, anular, borrar fotos y administrar familias, sistemas, equipos, capacidad, plazos y usuarios. |
+| Capturador | En su unidad: registrar backlogs, cargar HH, repuestos y fotos, comentar, editar mientras está Identificado, marcar Ejecutado y editar la capacidad del taller. |
 | Invitado | Consultar su unidad, imprimir y exportar. La base rechaza cualquier escritura. |
 
 ## Actualizaciones

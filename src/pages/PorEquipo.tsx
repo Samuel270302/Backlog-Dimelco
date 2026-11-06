@@ -63,7 +63,7 @@ export default function PorEquipo() {
       (r) =>
         !t ||
         `${r.equipo.cod_interno} ${r.equipo.modelo} ${r.equipo.marca ?? ""}`.toLowerCase().includes(t) ||
-        r.abiertos.some((b) => `${b.folio} ${b.numero_formato ?? ""} ${b.descripcion}`.toLowerCase().includes(t))
+        r.abiertos.some((b) => `${b.folio} ${b.descripcion}`.toLowerCase().includes(t))
     );
   const grupos = flotas
     .map((f) => ({

@@ -58,22 +58,22 @@ set role authenticated;
 
 -- Capturador HEMCO registra un backlog.
 select set_config('request.jwt.claims', '{"sub":"00000000-0000-0000-0000-00000000000c"}', false);
-insert into backlogs (id, equipo_id, sistema_id, descripcion, origen, prioridad, fecha_deteccion, reportado_por)
+insert into backlogs (id, equipo_id, sistema_id, descripcion, origen, prioridad, fecha_deteccion, reportado_por, aprobado_por)
 values ('20000000-0000-0000-0000-000000000001', '10000000-0000-0000-0000-000000000001',
         (select id from sistemas where nombre = 'Sistema hidráulico'),
-        'Fuga en cilindro de levante lado izquierdo', 'Inspección', 'P2', '2026-10-30', 'J. Pérez');
+        'Fuga en cilindro de levante lado izquierdo', 'Inspección', 'P2', '2026-10-30', 'J. Pérez', 'M. López');
 select pruebas.igual((select folio from backlogs where id = '20000000-0000-0000-0000-000000000001'), 'BL-HEM-000001', 'folio');
-select pruebas.igual((select fecha_limite from backlogs where id = '20000000-0000-0000-0000-000000000001'), date '2026-11-06', 'fecha límite P2');
+select pruebas.igual((select fecha_limite from backlogs where id = '20000000-0000-0000-0000-000000000001'), date '2026-11-02', 'fecha límite P2 (3 días)');
 select pruebas.igual((select count(*) from backlog_eventos)::int, 1, 'evento de registro');
 insert into backlog_hh (backlog_id, especialidad_id, tipo, personas, horas)
 values ('20000000-0000-0000-0000-000000000001', (select id from especialidades where nombre = 'Mecánico'), 'estimada', 2, 4);
 update backlogs set descripcion = 'Fuga en cilindro de levante izquierdo, sello dañado' where id = '20000000-0000-0000-0000-000000000001';
 select pruebas.espera_error($$update backlogs set estado = 'Programado' where id = '20000000-0000-0000-0000-000000000001'$$, 'cambiar_estado_backlog');
 select pruebas.espera_error($$select cambiar_estado_backlog('20000000-0000-0000-0000-000000000001', 'En planificación')$$, 'Solo el administrador');
-select pruebas.espera_error($$insert into backlogs (equipo_id, sistema_id, descripcion, origen, prioridad)
-  values ('10000000-0000-0000-0000-000000000002', (select id from sistemas limit 1), 'Equipo de otra unidad', 'PM', 'P3')$$, 'row-level security');
-select pruebas.espera_error($$insert into backlogs (equipo_id, sistema_id, descripcion, origen, prioridad, fecha_deteccion)
-  values ('10000000-0000-0000-0000-000000000001', (select id from sistemas limit 1), 'Detección futura', 'PM', 'P3', '2026-12-01')$$, 'futura');
+select pruebas.espera_error($$insert into backlogs (equipo_id, sistema_id, descripcion, origen, prioridad, reportado_por, aprobado_por)
+  values ('10000000-0000-0000-0000-000000000002', (select id from sistemas limit 1), 'Equipo de otra unidad', 'PM', 'P3', 'A', 'B')$$, 'row-level security');
+select pruebas.espera_error($$insert into backlogs (equipo_id, sistema_id, descripcion, origen, prioridad, fecha_deteccion, reportado_por, aprobado_por)
+  values ('10000000-0000-0000-0000-000000000001', (select id from sistemas limit 1), 'Detección futura', 'PM', 'P3', '2026-12-01', 'A', 'B')$$, 'futura');
 
 -- Capturador Veta Nueva no ve el backlog de HEMCO.
 select set_config('request.jwt.claims', '{"sub":"00000000-0000-0000-0000-00000000000d"}', false);
@@ -90,7 +90,7 @@ select pruebas.espera_error($$select cambiar_estado_backlog('20000000-0000-0000-
 -- Admin planifica, carga repuestos y espera.
 select set_config('request.jwt.claims', '{"sub":"00000000-0000-0000-0000-00000000000a"}', false);
 select cambiar_estado_backlog('20000000-0000-0000-0000-000000000001', 'En planificación', '{"prioridad":"P1"}');
-select pruebas.igual((select fecha_limite from backlogs where id = '20000000-0000-0000-0000-000000000001'), date '2026-11-01', 'límite recalculado a P1');
+select pruebas.igual((select fecha_limite from backlogs where id = '20000000-0000-0000-0000-000000000001'), date '2026-10-31', 'límite recalculado a P1 (24 horas)');
 select pruebas.igual((select vencido from v_backlog where id = '20000000-0000-0000-0000-000000000001'), true, 'P1 vencido');
 select pruebas.espera_error($$select cambiar_estado_backlog('20000000-0000-0000-0000-000000000001', 'Esperando repuestos')$$, 'No hay repuestos');
 insert into backlog_repuestos (id, backlog_id, cod_sap, descripcion, cantidad) values
@@ -106,7 +106,7 @@ select pruebas.igual((select estado from backlogs where id = '20000000-0000-0000
 select pruebas.igual((select fecha_recibido from backlog_repuestos where id = '30000000-0000-0000-0000-000000000002'), current_date, 'fecha recibido');
 
 -- Programar, reprogramar y volver a programar.
-select pruebas.espera_error($$select cambiar_estado_backlog('20000000-0000-0000-0000-000000000001', 'Programado', '{"fecha_programada":"2026-11-04"}')$$, 'OT SAP');
+select pruebas.espera_error($$select cambiar_estado_backlog('20000000-0000-0000-0000-000000000001', 'Programado', '{"fecha_programada":"2026-11-04"}')$$, 'N° de OT');
 select pruebas.espera_error($$select cambiar_estado_backlog('20000000-0000-0000-0000-000000000001', 'Programado', '{"fecha_programada":"2026-10-28","ot_sap":"4001"}')$$, 'pasada');
 select cambiar_estado_backlog('20000000-0000-0000-0000-000000000001', 'Programado', '{"fecha_programada":"2026-11-04","ot_sap":"4001234"}');
 select pruebas.igual((select semana_programada from backlogs where id = '20000000-0000-0000-0000-000000000001'), date '2026-11-02', 'semana lunes');
@@ -146,10 +146,10 @@ select pruebas.igual((select antiguedad_dias from v_backlog where id = '20000000
 select pruebas.igual((select cierres from v_backlog_semanal where semana = '2026-11-02'), 1::bigint, 'cierre semanal');
 
 -- Semanas de backlog: 3 backlogs abiertos de HEMCO con 30 + 20 + 50 HH mecánicas = 100 HH / 100 HH semana.
-insert into backlogs (id, equipo_id, sistema_id, descripcion, origen, prioridad) values
-  ('20000000-0000-0000-0000-000000000002', '10000000-0000-0000-0000-000000000001', (select id from sistemas where nombre = 'Motor'), 'Cambio de alternador', 'Falla', 'P3'),
-  ('20000000-0000-0000-0000-000000000003', '10000000-0000-0000-0000-000000000001', (select id from sistemas where nombre = 'Frenos'), 'Regular frenos de servicio', 'PM', 'P4'),
-  ('20000000-0000-0000-0000-000000000004', '10000000-0000-0000-0000-000000000001', (select id from sistemas where nombre = 'Neumáticos'), 'Rotación de llantas', 'Operador', 'P4');
+insert into backlogs (id, equipo_id, sistema_id, descripcion, origen, prioridad, reportado_por, aprobado_por) values
+  ('20000000-0000-0000-0000-000000000002', '10000000-0000-0000-0000-000000000001', (select id from sistemas where nombre = 'Motor'), 'Cambio de alternador', 'Falla', 'P3', 'A', 'B'),
+  ('20000000-0000-0000-0000-000000000003', '10000000-0000-0000-0000-000000000001', (select id from sistemas where nombre = 'Frenos'), 'Regular frenos de servicio', 'PM', 'P4', 'A', 'B'),
+  ('20000000-0000-0000-0000-000000000004', '10000000-0000-0000-0000-000000000001', (select id from sistemas where nombre = 'Neumáticos'), 'Rotación de llantas', 'Operador', 'P4', 'A', 'B');
 insert into backlog_hh (backlog_id, especialidad_id, tipo, personas, horas)
 select v.b::uuid, e.id, 'estimada', v.p, v.h
 from (values ('20000000-0000-0000-0000-000000000002', 'Mecánico', 3, 10),
@@ -182,7 +182,7 @@ select pruebas.igual(recalcular_fechas_limite(), 1, 'recalcula el P4 abierto');
 select pruebas.igual((select fecha_limite from backlogs where id = '20000000-0000-0000-0000-000000000003'),
   (select fecha_deteccion + 10 from backlogs where id = '20000000-0000-0000-0000-000000000003'), 'nuevo límite P4');
 select pruebas.igual(recalcular_fechas_limite(), 0, 'sin cambios la segunda vez');
-update parametros set valor = 90 where clave = 'plazo_p4_dias';
+update parametros set valor = 40 where clave = 'plazo_p4_dias';
 select recalcular_fechas_limite();
 select set_config('request.jwt.claims', '{"sub":"00000000-0000-0000-0000-00000000000c"}', false);
 select pruebas.espera_error($$select recalcular_fechas_limite()$$, 'Solo el administrador');
@@ -207,6 +207,36 @@ update backlogs set tipo_pedido = 'Urgente', horometro = 12450.5, componente = '
   justificacion = 'Fugas de aceite en block' where id = '20000000-0000-0000-0000-000000000002';
 select pruebas.igual((select tipo_pedido || ' ' || horometro || ' ' || componente from v_backlog
   where id = '20000000-0000-0000-0000-000000000002'), 'Urgente 12450.5 Block de implementos', 'campos del formato en v_backlog');
+
+-- Mejoras (014): Otro con texto, reportado y aprobado, capacidad del capturador, SAP, plazos Dimelco.
+select pruebas.igual((select string_agg(valor::text, ',' order by clave) from parametros where clave like 'plazo_p%'), '1,3,14,40', 'plazos Dimelco');
+select pruebas.igual((select count(*)::int from especialidades where nombre = 'Electromecánico'), 1, 'Electromecánico');
+select pruebas.igual((select usa_sap from v_backlog where id = '20000000-0000-0000-0000-000000000002'), true, 'HEMCO usa SAP');
+select pruebas.igual((select count(*)::int from unidades where usa_sap), 1, 'solo una unidad con SAP');
+select pruebas.igual((select flota from v_backlog where id = '20000000-0000-0000-0000-000000000002'), 'Scooptram', 'familia como flota');
+select set_config('request.jwt.claims', '{"sub":"00000000-0000-0000-0000-00000000000c"}', false);
+select pruebas.espera_error($$insert into backlogs (equipo_id, sistema_id, descripcion, origen, prioridad, reportado_por)
+  values ('10000000-0000-0000-0000-000000000001', (select id from sistemas where nombre = 'Motor'), 'Sin aprobador', 'PM', 'P3', 'A')$$, 'quién la aprueba');
+select pruebas.espera_error($$insert into backlogs (equipo_id, sistema_id, descripcion, origen, prioridad, reportado_por, aprobado_por)
+  values ('10000000-0000-0000-0000-000000000001', (select id from sistemas where nombre = 'Otro'), 'Otro sin texto', 'PM', 'P3', 'A', 'B')$$, 'cuál es el sistema');
+insert into backlogs (id, equipo_id, sistema_id, sistema_otro, descripcion, origen, prioridad, reportado_por, aprobado_por)
+values ('20000000-0000-0000-0000-000000000009', '10000000-0000-0000-0000-000000000001', (select id from sistemas where nombre = 'Otro'),
+        'Sistema de supresión de incendios', 'Revisar boquillas', 'Inspección', 'P1', 'A', 'B');
+select pruebas.igual((select fecha_limite - fecha_deteccion from backlogs where id = '20000000-0000-0000-0000-000000000009'), 1, 'P1 Urgente = 24 horas');
+insert into capacidad_taller (unidad_id, especialidad_id, hh_semana, vigente_desde)
+select u.id, e.id, 60, '2026-11-01' from unidades u, especialidades e where u.sigla = 'HEM' and e.nombre = 'Electromecánico';
+select pruebas.espera_error($$insert into capacidad_taller (unidad_id, especialidad_id, hh_semana)
+  select u.id, e.id, 60 from unidades u, especialidades e where u.sigla = 'VTN' and e.nombre = 'Mecánico'$$, 'row-level security');
+select set_config('request.jwt.claims', '{"sub":"00000000-0000-0000-0000-00000000000e"}', false);
+select pruebas.espera_error($$insert into capacidad_taller (unidad_id, especialidad_id, hh_semana, vigente_desde)
+  select u.id, e.id, 60, '2026-10-01' from unidades u, especialidades e where u.sigla = 'HEM' and e.nombre = 'Mecánico'$$, 'row-level security');
+select set_config('request.jwt.claims', '{"sub":"00000000-0000-0000-0000-00000000000a"}', false);
+insert into familias (id, nombre) values ('50000000-0000-0000-0000-000000000001', 'PowerROC T35');
+insert into familia_sistemas (familia_id, sistema_id) select '50000000-0000-0000-0000-000000000001', id from sistemas where nombre in ('Motor', 'Perforadora');
+select set_config('request.jwt.claims', '{"sub":"00000000-0000-0000-0000-00000000000c"}', false);
+select pruebas.igual((select count(*)::int from familia_sistemas), 2, 'capturador lee sistemas por familia');
+select pruebas.espera_error($$insert into familias (nombre) values ('No puede')$$, 'row-level security');
+select set_config('request.jwt.claims', '{"sub":"00000000-0000-0000-0000-00000000000a"}', false);
 
 reset role;
 \o

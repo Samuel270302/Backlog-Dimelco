@@ -20,9 +20,10 @@ with chequeos(orden, punto, ok, si_falta) as (
   (6, 'Recalcular fechas límite (012)',
       exists (select 1 from pg_proc where proname = 'recalcular_fechas_limite'),
       'Ejecutar 012_recalcular_limites.sql'),
-  (6.5, 'N° de formato para importar Excel (013)',
-      exists (select 1 from information_schema.columns where table_name = 'backlogs' and column_name = 'numero_formato'),
-      'Ejecutar 013_numero_formato.sql'),
+  (6.5, 'Familias, SAP por unidad y plazos de Dimelco (014)',
+      to_regclass('public.familia_sistemas') is not null
+      and exists (select 1 from information_schema.columns where table_name = 'unidades' and column_name = 'usa_sap'),
+      'Ejecutar 014_mejoras.sql'),
   (7, 'Bucket privado backlog-fotos',
       exists (select 1 from storage.buckets where id = 'backlog-fotos' and not public),
       'Ejecutar 007_storage.sql (Storage debe estar habilitado en el proyecto)'),

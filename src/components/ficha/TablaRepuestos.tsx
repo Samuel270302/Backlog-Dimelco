@@ -28,8 +28,10 @@ export default function TablaRepuestos({
   fotosPorItem,
   onFotos,
   subiendo,
+  sap = true,
 }: {
   backlogId: string;
+  sap?: boolean;
   filas: BacklogRepuesto[];
   editable: boolean;
   fotosPorItem?: Map<string, number>;
@@ -113,13 +115,13 @@ export default function TablaRepuestos({
             <tr>
               <th className="num">Ítem</th>
               <th>Número de parte</th>
-              <th>Código</th>
+              {sap && <th>Código SAP</th>}
               <th className="num">Cant/Req</th>
               <th className="num">Stock</th>
               <th>Descripción del repuesto</th>
               <th>Componente/Sistema</th>
               <th>Observaciones</th>
-              <th>SolPed / reserva</th>
+              {sap && <th>SolPed / reserva</th>}
               <th>Fecha estimada</th>
               <th>Estado</th>
               <th>Recibido</th>
@@ -132,13 +134,13 @@ export default function TablaRepuestos({
               <tr key={f.id} className={f.estado === "Recibido" ? "fila-recibida" : undefined}>
                 <td className="num">{f.item}</td>
                 <td>{f.numero_parte}</td>
-                <td>{f.cod_sap}</td>
+                {sap && <td>{f.cod_sap}</td>}
                 <td className="num">{fNum(f.cantidad, 2)}</td>
                 <td className="num">{fNum(f.stock, 2)}</td>
                 <td>{f.descripcion}</td>
                 <td>{f.componente}</td>
                 <td>{textoEditable(f, "observaciones", "Observaciones")}</td>
-                <td>{textoEditable(f, "solicitud_sap", "Solicitud")}</td>
+                {sap && <td>{textoEditable(f, "solicitud_sap", "Solicitud")}</td>}
                 <td>
                   {editable ? (
                     <input
@@ -192,13 +194,13 @@ export default function TablaRepuestos({
               <tr className="fila-nueva">
                 <td className="num">{(ordenadas.at(-1)?.item ?? 0) + 1}</td>
                 <td><input value={nuevo.numero_parte} onChange={n("numero_parte")} placeholder="N° de parte" aria-label="Número de parte nuevo" /></td>
-                <td><input value={nuevo.cod_sap} onChange={n("cod_sap")} placeholder="Código" aria-label="Código nuevo" /></td>
+                {sap && <td><input value={nuevo.cod_sap} onChange={n("cod_sap")} placeholder="Código" aria-label="Código nuevo" /></td>}
                 <td className="num"><input type="number" min={0.01} step="any" value={nuevo.cantidad} onChange={n("cantidad")} aria-label="Cantidad nueva" /></td>
                 <td className="num"><input type="number" min={0} step="any" value={nuevo.stock} onChange={n("stock")} aria-label="Stock nuevo" /></td>
                 <td><input value={nuevo.descripcion} onChange={n("descripcion")} placeholder="Descripción" aria-label="Descripción nueva" /></td>
                 <td><input value={nuevo.componente} onChange={n("componente")} aria-label="Componente nuevo" /></td>
                 <td><input value={nuevo.observaciones} onChange={n("observaciones")} aria-label="Observaciones nuevas" /></td>
-                <td><input value={nuevo.solicitud_sap} onChange={n("solicitud_sap")} aria-label="Solicitud nueva" /></td>
+                {sap && <td><input value={nuevo.solicitud_sap} onChange={n("solicitud_sap")} aria-label="Solicitud nueva" /></td>}
                 <td><input type="date" value={nuevo.fecha_estimada} onChange={n("fecha_estimada")} aria-label="Fecha estimada nueva" /></td>
                 <td>Por pedir</td>
                 <td />

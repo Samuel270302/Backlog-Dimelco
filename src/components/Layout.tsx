@@ -29,6 +29,7 @@ const enlaces = [
   { a: "/kanban", texto: "Kanban", icono: <IconoKanban />, captura: false },
   { a: "/calendario", texto: "Calendario", icono: <IconoCalendario />, captura: false },
   { a: "/indicadores", texto: "Indicadores", icono: <IconoIndicadores />, captura: false },
+  { a: "/capacidad", texto: "Capacidad del taller", icono: <IconoAjustes />, captura: true },
 ];
 
 // Nombre de la pantalla para el encabezado del celular.
@@ -45,10 +46,8 @@ const NOMBRE_ROL = { admin: "Administrador", capturador: "Capturador", invitado:
 
 const enlacesAdmin = [
   { a: "/equipos", texto: "Equipos", icono: <IconoPrograma /> },
-  { a: "/catalogos", texto: "Sistemas y especialidades", icono: <IconoLlave /> },
-  { a: "/capacidad", texto: "Capacidad del taller", icono: <IconoAjustes /> },
+  { a: "/catalogos", texto: "Familias y sistemas", icono: <IconoLlave /> },
   { a: "/plazos", texto: "Plazos por prioridad", icono: <IconoCalendario /> },
-  { a: "/importar", texto: "Importar backlogs", icono: <IconoMas /> },
   { a: "/usuarios", texto: "Usuarios", icono: <IconoUsuarios /> },
 ];
 

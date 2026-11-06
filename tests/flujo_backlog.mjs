@@ -7,7 +7,7 @@ import { createServer } from "node:http";
 import { existsSync, mkdirSync, readFileSync } from "node:fs";
 import { extname, join } from "node:path";
 import { iniciarServidorRest } from "./servidor_rest.mjs";
-import { libroFormato, png, token } from "./utilidades.mjs";
+import { png, token } from "./utilidades.mjs";
 
 const require = createRequire(import.meta.url);
 let playwright;
@@ -117,16 +117,28 @@ try {
   const cap = await abrir("cap");
   await cap.goto(base + "#/nuevo");
   await cap.getByRole("heading", { name: "Nuevo backlog" }).waitFor();
-  await cap.getByLabel("Equipo", { exact: true }).fill("scoop");
-  const equipoElegido = cap.getByLabel("Equipo elegido");
-  await cap.waitForFunction(() => document.querySelectorAll("select[size] option").length === 2);
+  const equipoElegido = cap.getByLabel("Equipo", { exact: true });
+
+  await equipoElegido.locator("option", { hasText: "PS011" }).waitFor({ state: "attached" });
+  const grupos = await equipoElegido.locator("optgroup").evaluateAll((g) => g.map((x) => x.label));
+  if (grupos.join("|") !== "Jumbo Boomer S1D|Scooptram ST1030") throw new Error(`Grupos de la lista de equipos: ${grupos.join("|")}`);
   const opciones = await equipoElegido.locator("option").allTextContents();
   if (opciones.some((t) => t.includes("PS090"))) throw new Error("El capturador de HEMCO ve equipos de Veta Nueva");
-  ok("el buscador filtra por flota y el capturador solo ve su unidad");
+  ok("el equipo se elige en una lista desplegable agrupada por familia, solo de su unidad");
   await equipoElegido.selectOption({ label: "PS011 · ST1030" });
   await cap.locator(".datos-equipo", { hasText: "Epiroc" }).waitFor();
-  if ((await cap.getByLabel("Solicitado por").inputValue()) !== "Carlos Capturador") throw new Error("Solicitado por no toma el usuario");
-  await cap.getByLabel("Sistema").selectOption({ label: "Sistema hidráulico" });
+  const sistemasOfrecidos = (await cap.getByLabel("Sistema", { exact: true }).locator("option").allTextContents()).slice(1);
+  if (sistemasOfrecidos.join("|") !== "Motor|Sistema hidráulico|Frenos|Otro") throw new Error(`Sistemas de la familia: ${sistemasOfrecidos.join("|")}`);
+  await cap.getByLabel("Sistema", { exact: true }).selectOption({ label: "Otro" });
+  await cap.getByLabel("¿Cuál sistema?").waitFor();
+  if (!(await cap.locator(".barra-acciones .nota", { hasText: "cuál es el sistema" }).count())) throw new Error("Otro sin texto no pide cuál");
+  ok("el Scoop ofrece solo Motor, Sistema hidráulico, Frenos y Otro; Otro pide cuál");
+  await cap.getByLabel("Sistema", { exact: true }).selectOption({ label: "Sistema hidráulico" });
+  if (await cap.getByLabel("¿Cuál sistema?").count()) throw new Error("Queda el campo de Otro");
+  if ((await cap.getByLabel("Reportado por").inputValue()) !== "") throw new Error("Reportado por debe empezar vacío");
+  await cap.getByLabel("Reportado por").fill("Xavier Araica");
+  await cap.getByLabel("Aprobado por").fill("Luis Mena");
+  if (!(await cap.getByLabel("Aviso SAP (si existe)").count())) throw new Error("HEMCO debe pedir Aviso SAP");
   await cap.getByLabel("Descripción del trabajo").fill("Reempaque de block de implementos por fugas de aceite");
   await cap.getByLabel("Componente", { exact: true }).fill("Block de implementos");
   await cap.getByLabel("Horómetro (h)").fill("12450");
@@ -143,8 +155,21 @@ try {
   await cap.locator(".fila-hh").getByLabel("Personas").fill("2");
   await cap.locator(".fila-hh").getByLabel("Horas").fill("4");
   await cap.getByPlaceholder("Por qué hay que hacer el trabajo").fill("Fugas de aceite en el block de implementos; riesgo de daño a bombas.");
-  await cap.getByLabel("Archivos de fotos").setInputFiles([FOTO("fuga-block.png", [180, 40, 40]), FOTO("vista-general.png", [40, 90, 160])]);
+  await cap.getByLabel("Archivos de fotos").setInputFiles([FOTO("fuga-block.png", [180, 40, 40])]);
+  await cap.locator(".lista-archivos li").first().waitFor();
+  // La segunda foto se pega con Ctrl+V (evento de pegado con una imagen en el portapapeles).
+  const vistaGeneral = FOTO("vista-general.png", [40, 90, 160]);
+  await cap.evaluate(
+    ({ nombre, b64 }) => {
+      const bytes = Uint8Array.from(atob(b64), (c) => c.charCodeAt(0));
+      const dt = new DataTransfer();
+      dt.items.add(new File([bytes], nombre, { type: "image/png" }));
+      document.body.dispatchEvent(new ClipboardEvent("paste", { clipboardData: dt, bubbles: true }));
+    },
+    { nombre: vistaGeneral.name, b64: vistaGeneral.buffer.toString("base64") }
+  );
   await cap.locator(".lista-archivos li").nth(1).waitFor();
+  ok("una foto desde archivo y otra pegada con Ctrl+V");
   await cap.setViewportSize({ width: 1366, height: 1500 });
   await cap.screenshot({ path: join(SALIDA, "nuevo-backlog.png") });
   await cap.setViewportSize({ width: 1366, height: 860 });
@@ -201,6 +226,8 @@ try {
   if (!htmlFormato.includes("data:image/png")) throw new Error("El formato no lleva el logo Dimelco incrustado");
   if (htmlFormato.includes("TMSA")) throw new Error("El formato tiene datos del cliente");
   if (!htmlFormato.includes("Reempaque de block de implementos")) throw new Error("Falta la descripción del trabajo");
+  if (!/Xavier Araica<\/div><div class="linea">Reportado por/.test(htmlFormato) || !/Luis Mena<\/div><div class="linea">Aprobado por/.test(htmlFormato))
+    throw new Error("Las firmas no llevan quién reporta y quién aprueba");
   await ventana.setViewportSize({ width: 900, height: 1270 });
   await ventana.screenshot({ path: join(SALIDA, "formato.png"), fullPage: true });
   if (!htmlFormato.includes("IMÁGENES") || !htmlFormato.includes("<b>Ítem 1</b> · N° de parte 6060003007"))
@@ -216,8 +243,8 @@ try {
   await esperarEstado(adm, "Identificado");
   await transicion(adm, "Aprobar y planificar", (d) => d.getByLabel("Prioridad confirmada").selectOption("P2"));
   await esperarEstado(adm, "En planificación");
-  await adm.locator(".etiqueta-prioridad", { hasText: "P2" }).waitFor();
-  ok("admin aprueba con prioridad P2");
+  await adm.locator(".etiqueta-prioridad", { hasText: "2 Alto" }).waitFor();
+  ok("admin aprueba con prioridad 2 Alto");
   await adm.getByRole("tab", { name: "Fotos (3)" }).click();
   await adm.locator(".grupo-fotos", { hasText: "Fotos generales" }).getByRole("button", { name: "Borrar" }).first().click();
   await adm.getByRole("dialog").getByRole("button", { name: "Borrar", exact: true }).click();
@@ -276,18 +303,19 @@ try {
   await ju005Planeado.locator(".tk-subestado", { hasText: "En planificación" }).waitFor();
   ok("arrastrar una tarjeta en el Kanban abre el diálogo de la transición y la mueve de columna");
 
-  // 3b. Capacidad: el admin carga Mecánico de HEMCO con la calculadora (2 personas × 10 h × 2 turnos = 40 HH).
-  await adm.goto(base + "#/capacidad");
-  await adm.getByRole("button", { name: "Cambiar Mecánico HEMCO" }).click();
-  await adm.getByLabel("Personas Mecánico").fill("2");
-  await adm.getByLabel("Horas por turno Mecánico").fill("10");
-  await adm.getByLabel("Turnos Mecánico").fill("2");
-  if ((await adm.getByLabel("HH por semana Mecánico").inputValue()) !== "40") throw new Error("La calculadora no da 40 HH");
-  await adm.getByRole("button", { name: "Grabar" }).click();
-  await aviso(adm, "Capacidad grabada");
-  await adm.locator("section", { has: adm.getByRole("heading", { name: "HEMCO" }) }).getByRole("row", { name: /Mecánico 40/ }).waitFor();
-  await adm.screenshot({ path: join(SALIDA, "capacidad.png"), fullPage: true });
-  ok("capacidad de Mecánico cargada con la calculadora: 40 HH por semana");
+  // 3b. Capacidad: el capturador carga Mecánico de HEMCO con la calculadora (2 personas × 10 h × 2 turnos = 40 HH).
+  await cap.goto(base + "#/capacidad");
+  await cap.getByRole("link", { name: "Capacidad del taller" }).waitFor();
+  await cap.getByRole("button", { name: "Cambiar Mecánico HEMCO" }).click();
+  await cap.getByLabel("Personas Mecánico").fill("2");
+  await cap.getByLabel("Horas por turno Mecánico").fill("10");
+  await cap.getByLabel("Turnos Mecánico").fill("2");
+  if ((await cap.getByLabel("HH por semana Mecánico").inputValue()) !== "40") throw new Error("La calculadora no da 40 HH");
+  await cap.getByRole("button", { name: "Grabar" }).click();
+  await aviso(cap, "Capacidad grabada");
+  await cap.locator("section", { has: cap.getByRole("heading", { name: "HEMCO" }) }).getByRole("row", { name: /Mecánico 40/ }).waitFor();
+  await cap.screenshot({ path: join(SALIDA, "capacidad.png"), fullPage: true });
+  ok("el capturador carga la capacidad de Mecánico de su unidad con la calculadora: 40 HH por semana");
 
   // 3c. Calendario: arrastrar el backlog listo a mañana, completar la OT y reprogramarlo.
   const lunesIso = (iso) => {
@@ -340,19 +368,19 @@ try {
   await adm.reload();
   await adm.getByRole("heading", { name: "Indicadores" }).waitFor();
   const tile = (etiqueta) => adm.locator(".tile", { has: adm.locator(".tile-etiqueta", { hasText: etiqueta }) }).locator(".tile-valor");
-  const esperado = { "Backlogs abiertos": "6", "Semanas de backlog": "0.6", Vencidos: "1", "HH pendientes ya programadas": "38 %" };
+  const esperado = { "Backlogs abiertos": "6", "HH acumuladas pendientes": "42", "Semanas de backlog": "0.6", Vencidos: "1", "HH pendientes ya programadas": "38 %" };
   for (const [et, v] of Object.entries(esperado)) {
     const real = await tile(et).textContent();
     if (real !== v) throw new Error(`Indicador «${et}»: esperado ${v}, obtenido ${real}`);
   }
   const barra = (esp) => adm.locator(".bh-fila", { hasText: esp }).first().locator(".bh-valor").textContent();
-  for (const [esp, v] of [["Mecánico", "0.85"], ["Hidráulico", "0.6"], ["Eléctrico", "0.1"]]) {
-    if ((await barra(esp)) !== v) throw new Error(`Semanas ${esp}: esperado ${v}, obtenido ${await barra(esp)}`);
+  for (const [esp, v] of [["Mecánico", "34 HH"], ["Hidráulico", "6 HH"], ["Eléctrico", "2 HH"]]) {
+    if ((await barra(esp)) !== v) throw new Error(`HH acumuladas ${esp}: esperado ${v}, obtenido ${await barra(esp)}`);
   }
   if ((await adm.locator(".bh-fila", { hasText: "0-15 días" }).locator(".bh-valor").textContent()) !== "5 · 36 HH")
     throw new Error("Antigüedad 0-15 días no da 5 backlogs y 36 HH");
   await adm.screenshot({ path: join(SALIDA, "indicadores.png"), fullPage: true });
-  ok("indicadores: 0,85 semanas Mecánico, 0,6 total, 6 abiertos, 1 vencido, 38 % programado");
+  ok("indicadores: 42 HH acumuladas (Mecánico 34), 0,6 semanas, 6 abiertos, 1 vencido, 38 % programado");
 
   const [rep] = await Promise.all([adm.context().waitForEvent("page"), adm.getByRole("button", { name: "Reporte semanal PDF" }).click()]);
   await rep.waitForFunction(() => document.title && !document.title.startsWith("Generando"));
@@ -439,7 +467,7 @@ try {
   const nuevoEq = adm.locator(".panel-formulario");
   await nuevoEq.getByLabel("Unidad").selectOption({ label: "HEMCO" });
   await nuevoEq.getByLabel("Código interno").fill("PS013");
-  await nuevoEq.getByLabel("Equipo (flota)").fill("Scoop");
+  await nuevoEq.getByLabel("Familia").selectOption({ label: "Scooptram ST1030" });
   await nuevoEq.getByLabel("Marca").fill("Epiroc");
   await nuevoEq.getByLabel("Modelo").fill("ST14");
   await nuevoEq.getByRole("button", { name: "Crear" }).click();
@@ -450,16 +478,14 @@ try {
   await aviso(adm, "Ya existe un equipo con ese código interno en la unidad");
   await adm.screenshot({ path: join(SALIDA, "equipos.png") });
   await adm.goto(base + "#/nuevo");
-  await adm.getByLabel("Equipo", { exact: true }).fill("PS013");
-  await adm.getByLabel("Equipo elegido").locator("option", { hasText: "PS013" }).waitFor();
+  await adm.getByLabel("Equipo", { exact: true }).locator("optgroup[label='Scooptram ST1030'] option", { hasText: "PS013" }).waitFor({ state: "attached" });
   await adm.goto(base + "#/equipos");
   await adm.getByLabel("Activo PS013").click();
   await adm.getByLabel("Activo PS013").waitFor({ state: "detached" }); // sin «Mostrar inactivos» sale de la lista
   await adm.goto(base + "#/nuevo");
   await adm.reload();
-  await adm.getByLabel("Equipo", { exact: true }).fill("PS013");
-  await adm.waitForTimeout(500);
-  if (await adm.getByLabel("Equipo elegido").locator("option", { hasText: "PS013" }).count())
+  await adm.getByLabel("Equipo", { exact: true }).locator("option", { hasText: "PS011" }).first().waitFor({ state: "attached" });
+  if (await adm.getByLabel("Equipo", { exact: true }).locator("option", { hasText: "PS013" }).count())
     throw new Error("Un equipo inactivo sigue apareciendo al registrar");
   ok("equipo PS013 creado (código repetido rechazado), aparece al registrar y al desactivarlo deja de aparecer");
 
@@ -477,7 +503,7 @@ try {
   ok("especialidad Lubricador agregada y Llantero desactivada (sale de Capacidad)");
 
   await adm.goto(base + "#/plazos");
-  await adm.waitForFunction(() => document.querySelector('[aria-label="Plazo P4"]')?.value === "90");
+  await adm.waitForFunction(() => document.querySelector('[aria-label="Plazo P4"]')?.value === "40");
   await adm.getByLabel("Plazo P4").fill("10");
   await adm.getByLabel("Plazo P4").blur();
   await aviso(adm, "Plazo grabado");
@@ -486,51 +512,16 @@ try {
   await aviso(adm, "1 backlog(s) abiertos con fecha límite nueva");
   ok("plazo P4 a 10 días y recálculo de 1 backlog abierto");
 
-  // 8. Importar backlogs desde el formato Excel (libro generado con la disposición del N° 105).
-  const libroXlsx = await libroFormato(require("exceljs"));
-  const archivoXlsx = { name: "formatos-octubre.xlsx", mimeType: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", buffer: libroXlsx };
-  await adm.goto(base + "#/importar");
-  await adm.reload();
-  await adm.getByRole("heading", { name: "Importar backlogs desde Excel" }).waitFor();
-  await adm.getByLabel("Archivos Excel").setInputFiles([archivoXlsx]);
-  const filaPs011 = adm.getByRole("row", { name: "Importar PS011" });
-  const filaJu999 = adm.getByRole("row", { name: "Importar JU999" });
-  await filaPs011.waitFor();
-  await filaPs011.locator(".celda-revision", { hasText: "Elija el sistema" }).waitFor();
-  await filaJu999.locator(".celda-revision", { hasText: "Equipo JU999 no encontrado" }).waitFor();
-  if (!(await adm.getByRole("button", { name: /^Importar 0 seleccionado/ }).isDisabled())) throw new Error("Deja importar sin sistema");
-  const celdasPs011 = await filaPs011.locator("td").allTextContents();
-  if (celdasPs011[2] !== "105" || celdasPs011[7] !== "4" || celdasPs011[8] !== "1")
-    throw new Error(`Vista previa PS011: N° ${celdasPs011[2]}, repuestos ${celdasPs011[7]}, fotos ${celdasPs011[8]}`);
-  ok("vista previa: PS011 con N° 105, 4 repuestos y 1 foto (logos descartados); JU999 sin equipo; sin sistema no importa");
-  await adm.getByLabel("Sistema para todos").selectOption({ label: "Sistema hidráulico" });
-  await filaPs011.locator(".celda-revision", { hasText: "Lista para importar" }).waitFor();
-  await adm.getByRole("button", { name: "Ver repuestos PS011" }).click();
-  await adm.getByRole("cell", { name: "Juego de cierres EOD", exact: true }).waitFor();
-  await adm.screenshot({ path: join(SALIDA, "importar.png"), fullPage: true });
-  await adm.getByRole("button", { name: "Importar 1 seleccionado(s)" }).click();
-  await aviso(adm, "1 de 1 backlog(s) importado(s)");
-  const enlaceImportado = filaPs011.getByRole("link");
-  const folioImportado = await enlaceImportado.textContent();
-  await enlaceImportado.click();
-  await esperarEstado(adm, "Identificado");
-  await adm.locator(".datos-fijos div", { hasText: "N° formato" }).filter({ hasText: "105" }).waitFor();
-  if ((await adm.locator("label.campo", { hasText: "Justificación" }).locator("textarea").inputValue()) !== "Fugas de aceite en el block; riesgo de dañar la bomba de implementos.")
-    throw new Error("La justificación no se importó");
-  await adm.getByRole("tab", { name: "Fotos (1)" }).waitFor();
-  await adm.getByRole("tab", { name: /^Repuestos \(4/ }).click();
-  const fila1 = adm.locator(".tabla-repuestos-formato tbody tr").first();
-  const c1 = await fila1.locator("td").allTextContents();
-  if (c1[0] !== "1" || c1[1] !== "6060003007" || c1[3] !== "2") throw new Error(`Ítem 1 importado: ${c1.slice(0, 5).join(" | ")}`);
-  const c4 = await adm.locator(".tabla-repuestos-formato tbody tr").nth(3).locator("td").allTextContents();
-  if (c4[1] !== "6060015161" || c4[3] !== "4" || c4[4] !== "1") throw new Error(`Ítem 4 importado: ${c4.slice(0, 5).join(" | ")}`);
-  ok(`importado como ${folioImportado}: Identificado, N° formato 105, justificación, 4 repuestos (ítem 4 con stock 1) y 1 foto`);
-
-  await adm.goto(base + "#/importar");
-  await adm.reload();
-  await adm.getByLabel("Archivos Excel").setInputFiles([archivoXlsx]);
-  await adm.getByRole("row", { name: "Importar PS011" }).locator(".celda-revision", { hasText: `Ya importado como ${folioImportado}` }).waitFor();
-  ok("reimportar el mismo formato lo marca como ya importado");
+  // SAP solo en HEMCO: Veta Nueva no ve Aviso SAP ni Código SAP y su OT se llama N° OT.
+  const vtn = await abrir("capVtn");
+  await vtn.goto(base + "#/nuevo");
+  await vtn.getByLabel("Equipo", { exact: true }).selectOption({ label: "PS090 · ST7" });
+  await vtn.getByRole("button", { name: "Agregar repuesto" }).click();
+  await vtn.getByLabel("Número de parte ítem 1").waitFor();
+  if (await vtn.getByLabel("Aviso SAP (si existe)").count()) throw new Error("Veta Nueva ve Aviso SAP");
+  if (await vtn.getByLabel("Código ítem 1").count()) throw new Error("Veta Nueva ve Código SAP del repuesto");
+  if (await vtn.getByRole("columnheader", { name: "Código SAP" }).count()) throw new Error("Veta Nueva ve la columna Código SAP");
+  ok("Veta Nueva registra sin Aviso SAP ni Código SAP");
 
   // 6. Vista de celular.
   const movil = await abrir("cap", 390, 844);

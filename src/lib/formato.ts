@@ -4,6 +4,7 @@
 import logoDimelco from "../assets/logo-dimelco.png";
 import { fFecha, fNum } from "./fmt";
 import type { BacklogEvento, BacklogFila, BacklogHh, BacklogRepuesto, Catalogo, Perfil } from "./types";
+import { nombrePrioridad } from "./types";
 import type { FotoConUrl } from "./fotos";
 
 const FILAS_MINIMAS_REPUESTOS = 8;
@@ -45,18 +46,18 @@ export interface DatosFormato {
 export function armarFormato(d: DatosFormato, logo: string, imagenes: Map<string, string> = new Map()): string {
   const { b } = d;
   const nombre = (id: string | null) => d.perfiles.find((p) => p.user_id === id)?.nombre ?? "";
-  const aprobacion = d.eventos.find((e) => e.tipo === "estado" && e.estado_nuevo === "En planificación");
+  const sap = b.usa_sap;
   const marca = (si: boolean) => (si ? "&#9746;" : "&#9744;");
 
   const repuestos = [...d.repuestos].sort((a, b2) => a.item - b2.item);
   const filasRep = repuestos.map(
     (r) => `<tr>
-      <td class="n">${r.item}</td><td>${esc(r.numero_parte)}</td><td>${esc(r.cod_sap)}</td>
+      <td class="n">${r.item}</td><td>${esc(r.numero_parte)}</td>${sap ? `<td>${esc(r.cod_sap)}</td>` : ""}
       <td class="n">${fNum(r.cantidad, 2)}</td><td class="n">${fNum(r.stock, 2)}</td>
       <td>${esc(r.descripcion)}</td><td>${esc(r.componente)}</td><td>${esc(r.observaciones)}</td></tr>`
   );
   for (let i = repuestos.length; i < FILAS_MINIMAS_REPUESTOS; i++) {
-    filasRep.push(`<tr class="vacia"><td class="n">${i + 1}</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr>`);
+    filasRep.push(`<tr class="vacia"><td class="n">${i + 1}</td>${"<td></td>".repeat(sap ? 7 : 6)}</tr>`);
   }
 
   const estimadas = d.hh.filter((h) => h.tipo === "estimada");
@@ -105,13 +106,13 @@ export function armarFormato(d: DatosFormato, logo: string, imagenes: Map<string
 <table class="enc"><tr>
   <td class="logo">${logo ? `<img src="${logo}" alt="Dimelco">` : "Dimelco"}</td>
   <td class="titulo">MANTENIMIENTO CORRECTIVO PROGRAMADO</td>
-  <td class="datos"><span class="et">N°</span><b>${esc(b.folio)}</b>${b.numero_formato ? `<br><span class="et">N° formato</span>${esc(b.numero_formato)}` : ""}<br><span class="et">Fecha</span>${fFecha(b.fecha_deteccion)}<br><span class="et">Unidad</span>${esc(d.unidad)}</td>
+  <td class="datos"><span class="et">N°</span><b>${esc(b.folio)}</b><br><span class="et">Fecha</span>${fFecha(b.fecha_deteccion)}<br><span class="et">Unidad</span>${esc(d.unidad)}</td>
 </tr></table>
 
 <table class="bloque"><tr>
-  <td style="width:40%"><span class="et">Solicitado por</span>${esc(b.reportado_por)}</td>
+  <td style="width:40%"><span class="et">Reportado por</span>${esc(b.reportado_por)}</td>
   <td><span class="et">Tipo de pedido</span>${marca(b.tipo_pedido === "Normal")} Normal &nbsp;&nbsp; ${marca(b.tipo_pedido === "Urgente")} Urgente</td>
-  <td><span class="et">Prioridad</span>${esc(b.prioridad)}</td>
+  <td><span class="et">Prioridad</span>${esc(nombrePrioridad(b.prioridad))}</td>
   <td><span class="et">Estado</span>${esc(b.estado)}</td>
 </tr><tr>
   <td><span class="et">Equipo</span>${esc(b.flota)}</td>
@@ -124,12 +125,12 @@ export function armarFormato(d: DatosFormato, logo: string, imagenes: Map<string
   <td><span class="et">Componente</span>${esc(b.componente)}</td>
   <td><span class="et">Sistema</span>${esc(b.sistema)}</td>
   <td><span class="et">Horómetro</span>${b.horometro === null ? "" : `${fNum(b.horometro)} h`}</td>
-  <td><span class="et">Aviso / OT SAP</span>${esc([b.aviso_sap, b.ot_sap].filter(Boolean).join(" / "))}</td>
+  <td><span class="et">${sap ? "Aviso / OT SAP" : "N° OT"}</span>${esc((sap ? [b.aviso_sap, b.ot_sap] : [b.ot_sap]).filter(Boolean).join(" / "))}</td>
 </tr></table>
 
 <div class="seccion">Repuestos</div>
 <table><thead><tr>
-  <th class="n" style="width:34px">Ítem</th><th>Número de parte</th><th>Código</th><th class="n">Cant/Req</th><th class="n">Stock</th>
+  <th class="n" style="width:34px">Ítem</th><th>Número de parte</th>${sap ? "<th>Código SAP</th>" : ""}<th class="n">Cant/Req</th><th class="n">Stock</th>
   <th>Descripción del repuesto</th><th>Componente/Sistema</th><th>Observaciones</th>
 </tr></thead><tbody>${filasRep.join("")}</tbody></table>
 
@@ -141,8 +142,8 @@ export function armarFormato(d: DatosFormato, logo: string, imagenes: Map<string
 <table><tr><td class="texto">${esc(b.justificacion)}</td></tr></table>
 
 <div class="firmas">
-  <div class="firma"><div class="quien">${esc(b.reportado_por)}</div><div class="linea">Solicitado por</div></div>
-  <div class="firma"><div class="quien">${aprobacion ? `${esc(nombre(aprobacion.usuario))} · ${fFecha(aprobacion.creado_en.slice(0, 10))}` : ""}</div><div class="linea">Revisado y aprobado por</div></div>
+  <div class="firma"><div class="quien">${esc(b.reportado_por)}</div><div class="linea">Reportado por</div></div>
+  <div class="firma"><div class="quien">${esc(b.aprobado_por)}</div><div class="linea">Aprobado por</div></div>
 </div>
 <div class="pie">Control de Backlog · Dimelco · ${esc(b.folio)}</div>
 ${hojaImagenes(d, logo, imagenes)}

@@ -17,10 +17,18 @@ where u.sigla = 'HEM';
 insert into equipos (unidad_id, cod_interno, modelo, flota, marca)
 select id, 'PS090', 'ST7', 'Scoop', 'Epiroc' from unidades where sigla = 'VTN';
 
+-- Familias: los Scoop de HEMCO tienen 3 sistemas cargados; el Jumbo no tiene (ve todos).
+insert into familias (nombre, orden) values ('Scooptram ST1030', 1), ('Jumbo Boomer S1D', 2) on conflict (nombre) do nothing;
+update equipos set familia_id = (select id from familias where nombre = 'Scooptram ST1030') where modelo = 'ST1030';
+update equipos set familia_id = (select id from familias where nombre = 'Jumbo Boomer S1D') where modelo = 'Boomer S1D';
+insert into familia_sistemas (familia_id, sistema_id)
+select f.id, s.id from familias f, sistemas s
+where f.nombre = 'Scooptram ST1030' and s.nombre in ('Sistema hidráulico', 'Motor', 'Frenos');
+
 -- Backlogs de contexto en varios estados (los mueve el admin con la función real).
 select set_config('request.jwt.claims', '{"sub":"00000000-0000-0000-0000-00000000000a"}', false);
-insert into backlogs (id, equipo_id, sistema_id, descripcion, origen, prioridad, tipo_pedido, componente, fecha_deteccion, reportado_por, justificacion)
-select v.id::uuid, e.id, s.id, v.descr, v.origen, v.pri, v.tipo, v.comp, current_date - v.dias, 'Supervisor turno A', v.just
+insert into backlogs (id, equipo_id, sistema_id, descripcion, origen, prioridad, tipo_pedido, componente, fecha_deteccion, reportado_por, aprobado_por, justificacion)
+select v.id::uuid, e.id, s.id, v.descr, v.origen, v.pri, v.tipo, v.comp, current_date - v.dias, 'Supervisor turno A', 'Jefe de taller', v.just
 from (values
   ('30000000-0000-0000-0000-000000000001', 'PS012', 'Sistema hidráulico', 'Cambio de mangueras de levante por desgaste', 'Inspección', 'P2', 'Urgente', 'Mangueras de levante', 3, 'Mangueras con cordones expuestos'),
   ('30000000-0000-0000-0000-000000000002', 'PS012', 'Frenos', 'Regular frenos de servicio', 'PM', 'P3', 'Normal', 'Frenos de servicio', 40, null),

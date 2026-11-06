@@ -4,6 +4,7 @@ export interface Unidad {
   sigla: string;
   activo: boolean;
   orden: number;
+  usa_sap: boolean;
 }
 
 export interface Perfil {
@@ -23,7 +24,13 @@ export interface Equipo {
   modelo: string;
   flota: string | null;
   marca: string | null;
+  familia_id: string | null;
   activo: boolean;
+}
+
+export interface FamiliaSistema {
+  familia_id: string;
+  sistema_id: string;
 }
 
 export interface Catalogo {
@@ -75,6 +82,15 @@ export function etapaDe(estado: Estado): Etapa | null {
 
 export const PRIORIDADES = ["P1", "P2", "P3", "P4"] as const;
 export type Prioridad = (typeof PRIORIDADES)[number];
+// Niveles de criticidad de la OT de Dimelco. La base guarda P1 a P4; el plazo en días
+// está en parametros (1, 3, 14 y 40).
+export const NOMBRE_PRIORIDAD: Record<Prioridad, string> = {
+  P1: "1 Urgente",
+  P2: "2 Alto",
+  P3: "3 Medio",
+  P4: "4 Bajo",
+};
+export const nombrePrioridad = (p: Prioridad) => NOMBRE_PRIORIDAD[p] ?? p;
 
 export const TIPOS_PEDIDO = ["Normal", "Urgente"] as const;
 export type TipoPedido = (typeof TIPOS_PEDIDO)[number];
@@ -88,18 +104,19 @@ export interface Backlog {
   unidad_id: string;
   equipo_id: string;
   sistema_id: string;
+  sistema_otro: string | null;
   descripcion: string;
   justificacion: string | null;
   componente: string | null;
   horometro: number | null;
   tipo_pedido: TipoPedido;
-  numero_formato: string | null;
   origen: Origen;
   prioridad: Prioridad;
   estado: Estado;
   fecha_deteccion: string;
   fecha_limite: string | null;
   reportado_por: string | null;
+  aprobado_por: string | null;
   aviso_sap: string | null;
   ot_sap: string | null;
   semana_programada: string | null;
@@ -127,6 +144,8 @@ export interface BacklogFila extends Backlog {
   hh_reales: number;
   repuestos_total: number;
   repuestos_pendientes: number;
+  familia_id: string | null;
+  usa_sap: boolean;
 }
 
 export interface BacklogHh {

@@ -4,7 +4,7 @@ import { supabase } from "../lib/supabase";
 import { todo } from "../lib/queries";
 import { useAvisos } from "../components/Avisos";
 import DialogoConfirmar from "../components/DialogoConfirmar";
-import { PRIORIDADES } from "../lib/types";
+import { PRIORIDADES, nombrePrioridad } from "../lib/types";
 
 // Plazos de atención por prioridad (admin). La fecha límite de un backlog es la
 // fecha de detección más el plazo de su prioridad.
@@ -64,7 +64,7 @@ export default function Parametros() {
           <tbody>
             {PRIORIDADES.map((p) => (
               <tr key={p}>
-                <td>{p}</td>
+                <td>{nombrePrioridad(p)}</td>
                 <td className="num">
                   <input
                     key={`${p}-${plazo(p)}`}

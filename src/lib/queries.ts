@@ -3,7 +3,7 @@ import { useCallback, useEffect } from "react";
 import { supabase } from "./supabase";
 import { reportarCanal } from "./conexion";
 import { useUnidad } from "./unidad";
-import type { BacklogFila, CapacidadTaller, Catalogo, Equipo, Perfil, SemanasBacklog } from "./types";
+import type { BacklogFila, CapacidadTaller, Catalogo, Equipo, FamiliaSistema, Perfil, SemanasBacklog } from "./types";
 
 export async function todo<T>(tabla: string, orden?: string): Promise<T[]> {
   let q = supabase().from(tabla).select("*");
@@ -32,6 +32,28 @@ export const useEquipos = () =>
 
 export const useSistemas = () =>
   useQuery({ queryKey: ["sistemas"], queryFn: () => todo<Catalogo>("sistemas", "orden") });
+
+export const useFamilias = () =>
+  useQuery({ queryKey: ["familias"], queryFn: () => todo<Catalogo>("familias", "orden") });
+
+export const useFamiliaSistemas = () =>
+  useQuery({ queryKey: ["familia_sistemas"], queryFn: () => todo<FamiliaSistema>("familia_sistemas") });
+
+// Sistemas que se ofrecen para un equipo: los de su familia más "Otro". Si el equipo
+// no tiene familia o su familia aún no tiene sistemas cargados, todos los activos.
+export function sistemasDeEquipo(
+  equipo: { familia_id: string | null } | undefined,
+  sistemas: Catalogo[] | undefined,
+  relaciones: FamiliaSistema[] | undefined,
+  incluir?: string
+): Catalogo[] {
+  const activos = (sistemas ?? []).filter((s) => s.activo || s.id === incluir);
+  const deFamilia = new Set((relaciones ?? []).filter((r) => r.familia_id === equipo?.familia_id).map((r) => r.sistema_id));
+  if (!equipo?.familia_id || deFamilia.size === 0) return activos;
+  return activos.filter((s) => deFamilia.has(s.id) || s.nombre === "Otro" || s.id === incluir);
+}
+
+export const esOtro = (sistemas: Catalogo[] | undefined, id: string) => sistemas?.find((s) => s.id === id)?.nombre === "Otro";
 
 export const useEspecialidades = () =>
   useQuery({ queryKey: ["especialidades"], queryFn: () => todo<Catalogo>("especialidades", "orden") });
@@ -74,6 +96,8 @@ const TABLAS = [
   "backlog_fotos",
   "equipos",
   "sistemas",
+  "familias",
+  "familia_sistemas",
   "especialidades",
   "capacidad_taller",
   "parametros",

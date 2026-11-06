@@ -46,6 +46,7 @@ export function useCambioEstado() {
       transicion={pendiente.t}
       prioridadActual={pendiente.b.prioridad}
       otActual={pendiente.b.ot_sap}
+      usaSap={pendiente.b.usa_sap}
       fechaInicial={pendiente.fecha}
       ocupado={ocupado}
       onAceptar={aplicar}

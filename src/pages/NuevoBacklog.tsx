@@ -2,15 +2,14 @@ import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "../lib/supabase";
-import { useBacklogs, useEquipos, useEspecialidades, useSistemas } from "../lib/queries";
-import { useUnidades } from "../lib/unidad";
-import { useAuth } from "../auth";
+import { esOtro, sistemasDeEquipo, useBacklogs, useEquipos, useEspecialidades, useFamilias, useFamiliaSistemas, useSistemas } from "../lib/queries";
+import { useUnidades, useUsaSap } from "../lib/unidad";
 import { useAvisos } from "../components/Avisos";
 import { marcarPendientes } from "../lib/pendientes";
 import { hoyISO } from "../lib/fmt";
 import { subirFotos } from "../lib/fotos";
-import { BotonFotos } from "../components/ficha/Fotos";
-import { ORIGENES, PRIORIDADES, TIPOS_PEDIDO, type Origen, type Prioridad, type TipoPedido } from "../lib/types";
+import { BotonFotos, usePegarImagenes } from "../components/ficha/Fotos";
+import { ORIGENES, PRIORIDADES, nombrePrioridad, TIPOS_PEDIDO, type Origen, type Prioridad, type TipoPedido } from "../lib/types";
 
 // Registro con el orden del formato "Mantenimiento correctivo programado":
 // encabezado y equipo, descripción del trabajo, repuestos, HH y justificación.
@@ -41,15 +40,17 @@ const REPUESTO_VACIO: FilaRepuesto = {
   observaciones: "",
 };
 
-function formularioVacio(solicitante: string) {
+function formularioVacio() {
   return {
     equipo_id: "",
     sistema_id: "",
+    sistema_otro: "",
     origen: "Inspección" as Origen,
     tipo_pedido: "Normal" as TipoPedido,
     prioridad: "P3" as Prioridad,
     fecha_deteccion: hoyISO(),
-    reportado_por: solicitante,
+    reportado_por: "",
+    aprobado_por: "",
     aviso_sap: "",
     descripcion: "",
     componente: "",
@@ -67,18 +68,20 @@ export default function NuevoBacklog() {
   const navegar = useNavigate();
   const qc = useQueryClient();
   const { avisar } = useAvisos();
-  const { perfil } = useAuth();
   const { data: equipos } = useEquipos();
   const { data: sistemas } = useSistemas();
+  const { data: familias } = useFamilias();
+  const { data: relaciones } = useFamiliaSistemas();
+  const usaSap = useUsaSap();
   const { data: especialidades } = useEspecialidades();
   const { data: unidades } = useUnidades();
   const { data: backlogs } = useBacklogs();
-  const vacio = useMemo(() => formularioVacio(perfil?.nombre ?? ""), [perfil?.nombre]);
+  const vacio = useMemo(() => formularioVacio(), []);
   const [f, setF] = useState(vacio);
-  const [buscar, setBuscar] = useState("");
   const [repuestos, setRepuestos] = useState<FilaRepuesto[]>([]);
   const [hh, setHh] = useState<FilaHh[]>([]);
   const [fotos, setFotos] = useState<File[]>([]);
+  usePegarImagenes(true, (a) => setFotos((x) => [...x, ...a]));
 
   const sucio = JSON.stringify(f) !== JSON.stringify(vacio) || repuestos.length > 0 || hh.length > 0 || fotos.length > 0;
   useEffect(() => {
@@ -88,13 +91,26 @@ export default function NuevoBacklog() {
 
   const varias = new Set((equipos ?? []).map((e) => e.unidad_id)).size > 1;
   const nombreUnidad = (id: string) => unidades?.find((u) => u.id === id)?.nombre ?? "";
-  const equiposVisibles = useMemo(() => {
-    const t = buscar.trim().toLowerCase();
-    return (equipos ?? [])
-      .filter((e) => e.activo)
-      .filter((e) => !t || `${e.cod_interno} ${e.modelo} ${e.marca ?? ""} ${e.flota ?? ""} ${e.cod_sap ?? ""}`.toLowerCase().includes(t));
-  }, [equipos, buscar]);
+  const nombreFamilia = (id: string | null) => familias?.find((x) => x.id === id)?.nombre ?? null;
+  // Lista desplegable agrupada por familia (o flota escrita si aún no tiene familia).
+  const gruposEquipos = useMemo(() => {
+    const m = new Map<string, typeof equipos>();
+    for (const e of (equipos ?? []).filter((x) => x.activo)) {
+      const g = nombreFamilia(e.familia_id) ?? e.flota ?? "Sin familia";
+      m.set(g, [...(m.get(g) ?? []), e]);
+    }
+    return [...m.entries()].sort(([a], [b]) => a.localeCompare(b));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [equipos, familias]);
   const equipo = equipos?.find((e) => e.id === f.equipo_id);
+  const sap = usaSap(equipo?.unidad_id);
+  const sistemasEquipo = sistemasDeEquipo(equipo, sistemas, relaciones);
+  const otro = esOtro(sistemas, f.sistema_id);
+  // Al cambiar de equipo, el sistema elegido puede no ser de la familia nueva.
+  useEffect(() => {
+    if (f.sistema_id && !sistemasEquipo.some((s) => s.id === f.sistema_id)) setF((x) => ({ ...x, sistema_id: "" }));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [f.equipo_id, relaciones]);
 
   // Componentes ya usados, como sugerencia (backlogs y repuestos se escriben igual).
   const componentesUsados = useMemo(
@@ -107,6 +123,9 @@ export default function NuevoBacklog() {
   const faltantes: string[] = [];
   if (!f.equipo_id) faltantes.push("equipo");
   if (!f.sistema_id) faltantes.push("sistema");
+  if (otro && !f.sistema_otro.trim()) faltantes.push("cuál es el sistema");
+  if (!f.reportado_por.trim()) faltantes.push("quién reporta");
+  if (!f.aprobado_por.trim()) faltantes.push("quién aprueba");
   if (f.descripcion.trim().length < 5) faltantes.push("descripción del trabajo (mínimo 5 letras)");
   if (!f.fecha_deteccion) faltantes.push("fecha");
   if (f.horometro !== "" && !(Number(f.horometro) >= 0)) faltantes.push("horómetro válido");
@@ -121,12 +140,14 @@ export default function NuevoBacklog() {
         .insert({
           equipo_id: f.equipo_id,
           sistema_id: f.sistema_id,
+          sistema_otro: otro ? f.sistema_otro.trim() : null,
           origen: f.origen,
           tipo_pedido: f.tipo_pedido,
           prioridad: f.prioridad,
           fecha_deteccion: f.fecha_deteccion,
-          reportado_por: f.reportado_por.trim() || null,
-          aviso_sap: f.aviso_sap.trim() || null,
+          reportado_por: f.reportado_por.trim(),
+          aprobado_por: f.aprobado_por.trim(),
+          aviso_sap: sap ? f.aviso_sap.trim() || null : null,
           descripcion: f.descripcion.trim(),
           componente: f.componente.trim() || null,
           horometro: numeroONull(f.horometro),
@@ -145,7 +166,7 @@ export default function NuevoBacklog() {
               backlog_id: creado.id,
               item: i + 1,
               numero_parte: r.numero_parte.trim() || null,
-              cod_sap: r.cod_sap.trim() || null,
+              cod_sap: sap ? r.cod_sap.trim() || null : null,
               cantidad: Number(r.cantidad),
               stock: numeroONull(r.stock),
               descripcion: r.descripcion.trim() || null,
@@ -202,31 +223,24 @@ export default function NuevoBacklog() {
         <h2 className="titulo-seccion">Equipo y pedido</h2>
         <label className="campo">
           <span>Equipo</span>
-          <input
-            placeholder="Buscar por código interno, modelo, marca o flota"
-            value={buscar}
-            onChange={(e) => setBuscar(e.target.value)}
-          />
-        </label>
-        <label className="campo">
-          <span className="oculto-visual">Equipo elegido</span>
-          <select
-            value={f.equipo_id}
-            onChange={(e) => campo("equipo_id", e.target.value)}
-            size={Math.min(6, Math.max(2, equiposVisibles.length))}
-          >
-            {equiposVisibles.map((e) => (
-              <option key={e.id} value={e.id}>
-                {e.cod_interno} · {e.modelo}
-                {varias ? ` · ${nombreUnidad(e.unidad_id)}` : ""}
-              </option>
+          <select aria-label="Equipo" value={f.equipo_id} onChange={(e) => campo("equipo_id", e.target.value)}>
+            <option value="">Elegir equipo…</option>
+            {gruposEquipos.map(([grupo, lista]) => (
+              <optgroup key={grupo} label={grupo}>
+                {(lista ?? []).map((e) => (
+                  <option key={e.id} value={e.id}>
+                    {e.cod_interno} · {e.modelo}
+                    {varias ? ` · ${nombreUnidad(e.unidad_id)}` : ""}
+                  </option>
+                ))}
+              </optgroup>
             ))}
           </select>
-          {equipos && equiposVisibles.length === 0 && <span className="nota">Ningún equipo coincide.</span>}
+          {equipos && gruposEquipos.length === 0 && <span className="nota">No hay equipos activos.</span>}
         </label>
         {equipo && (
           <dl className="datos-fijos datos-equipo">
-            <div><dt>Equipo</dt><dd>{equipo.flota ?? "—"}</dd></div>
+            <div><dt>Familia</dt><dd>{nombreFamilia(equipo.familia_id) ?? equipo.flota ?? "—"}</dd></div>
             <div><dt>Marca</dt><dd>{equipo.marca ?? "—"}</dd></div>
             <div><dt>Modelo</dt><dd>{equipo.modelo}</dd></div>
             <div><dt>Código interno</dt><dd>{equipo.cod_interno}</dd></div>
@@ -239,8 +253,12 @@ export default function NuevoBacklog() {
             <input type="date" max={hoyISO()} value={f.fecha_deteccion} onChange={(e) => campo("fecha_deteccion", e.target.value)} />
           </label>
           <label className="campo">
-            <span>Solicitado por</span>
-            <input value={f.reportado_por} onChange={(e) => campo("reportado_por", e.target.value)} />
+            <span>Reportado por</span>
+            <input value={f.reportado_por} onChange={(e) => campo("reportado_por", e.target.value)} placeholder="Quien reporta la necesidad" />
+          </label>
+          <label className="campo">
+            <span>Aprobado por</span>
+            <input value={f.aprobado_por} onChange={(e) => campo("aprobado_por", e.target.value)} placeholder="Quien la aprueba como backlog" />
           </label>
           <div className="campo">
             <span className="etiqueta-campo">Tipo de pedido</span>
@@ -257,7 +275,7 @@ export default function NuevoBacklog() {
             <span>Prioridad</span>
             <select value={f.prioridad} onChange={(e) => campo("prioridad", e.target.value as Prioridad)}>
               {PRIORIDADES.map((p) => (
-                <option key={p}>{p}</option>
+                <option key={p} value={p}>{nombrePrioridad(p)}</option>
               ))}
             </select>
           </label>
@@ -265,9 +283,9 @@ export default function NuevoBacklog() {
         <div className="fila-campos">
           <label className="campo">
             <span>Sistema</span>
-            <select value={f.sistema_id} onChange={(e) => campo("sistema_id", e.target.value)}>
+            <select aria-label="Sistema" value={f.sistema_id} onChange={(e) => campo("sistema_id", e.target.value)}>
               <option value="">Elegir…</option>
-              {(sistemas ?? []).filter((s) => s.activo).map((s) => (
+              {sistemasEquipo.map((s) => (
                 <option key={s.id} value={s.id}>
                   {s.nombre}
                 </option>
@@ -282,10 +300,18 @@ export default function NuevoBacklog() {
               ))}
             </select>
           </label>
-          <label className="campo">
-            <span>Aviso SAP (si existe)</span>
-            <input value={f.aviso_sap} onChange={(e) => campo("aviso_sap", e.target.value)} />
-          </label>
+          {otro && (
+            <label className="campo">
+              <span>¿Cuál sistema?</span>
+              <input value={f.sistema_otro} onChange={(e) => campo("sistema_otro", e.target.value)} />
+            </label>
+          )}
+          {sap && (
+            <label className="campo">
+              <span>Aviso SAP (si existe)</span>
+              <input value={f.aviso_sap} onChange={(e) => campo("aviso_sap", e.target.value)} />
+            </label>
+          )}
         </div>
       </section>
 
@@ -338,7 +364,7 @@ export default function NuevoBacklog() {
                 <tr>
                   <th className="num">Ítem</th>
                   <th>Número de parte</th>
-                  <th>Código</th>
+                  {sap && <th>Código SAP</th>}
                   <th className="num">Cant/Req</th>
                   <th className="num">Stock</th>
                   <th>Descripción del repuesto</th>
@@ -352,7 +378,7 @@ export default function NuevoBacklog() {
                   <tr key={i}>
                     <td className="num">{i + 1}</td>
                     <td><input value={r.numero_parte} onChange={(e) => cambiarRepuesto(i, "numero_parte", e.target.value)} aria-label={`Número de parte ítem ${i + 1}`} /></td>
-                    <td><input value={r.cod_sap} onChange={(e) => cambiarRepuesto(i, "cod_sap", e.target.value)} aria-label={`Código ítem ${i + 1}`} /></td>
+                    {sap && <td><input value={r.cod_sap} onChange={(e) => cambiarRepuesto(i, "cod_sap", e.target.value)} aria-label={`Código ítem ${i + 1}`} /></td>}
                     <td className="num"><input type="number" min={0.01} step="any" value={r.cantidad} onChange={(e) => cambiarRepuesto(i, "cantidad", e.target.value)} aria-label={`Cantidad ítem ${i + 1}`} /></td>
                     <td className="num"><input type="number" min={0} step="any" value={r.stock} onChange={(e) => cambiarRepuesto(i, "stock", e.target.value)} aria-label={`Stock ítem ${i + 1}`} /></td>
                     <td><input value={r.descripcion} onChange={(e) => cambiarRepuesto(i, "descripcion", e.target.value)} aria-label={`Descripción ítem ${i + 1}`} /></td>
@@ -425,6 +451,7 @@ export default function NuevoBacklog() {
         <div className="barra-acciones" style={{ marginBottom: 8 }}>
           <h2 className="titulo-seccion">Fotos</h2>
           <div className="espacio" />
+          <span className="nota solo-escritorio">o pegar con Ctrl+V</span>
           <BotonFotos texto="Agregar fotos" etiqueta="Archivos de fotos" onArchivos={(a) => setFotos((x) => [...x, ...a])} />
         </div>
         {fotos.length === 0 ? (
@@ -467,7 +494,6 @@ export default function NuevoBacklog() {
             setRepuestos([]);
             setHh([]);
             setFotos([]);
-            setBuscar("");
           }}
         >
           Limpiar

@@ -79,14 +79,14 @@ function cuerpoCorreo(filas: BacklogFila[], semanas: SemanasBacklog[], unidades:
 <p>Reporte semanal de backlog, semana del ${fFecha(lunesDe(hoy))}. Adjuntos: el reporte en PDF y el Excel con los backlogs abiertos, los cerrados de los últimos 7 días y las semanas de backlog.</p>
 <table style="border-collapse:collapse;margin:6px 0 14px"><tr>
 ${cifra(String(r.abiertos), "backlogs abiertos")}
-${cifra(fNum(r.hhPendientes), "HH pendientes")}
+${cifra(fNum(r.hhPendientes), "HH acumuladas pendientes")}
 ${cifra(sem(totalSem.semanas), "semanas de backlog")}
 ${cifra(String(vencidos), "vencidos")}
 ${cifra(pct(r.pctProgramado), "HH ya programadas")}
 ${cifra(pct(r.pctEnPlazo), `cerrados en plazo (4 semanas, ${r.cierres4})`)}
 </tr></table>
 <table style="border-collapse:collapse;font-size:13px">
-<tr>${th("Unidad")}${th("Abiertos")}${th("HH pendientes")}${th("Semanas de backlog")}${th("Vencidos")}${th("HH programadas")}${th("Cerrados 7 días")}</tr>
+<tr>${th("Unidad")}${th("Abiertos")}${th("HH acumuladas")}${th("Semanas de backlog")}${th("Vencidos")}${th("HH programadas")}${th("Cerrados 7 días")}</tr>
 ${conDatos.map((u) => fila(u.nombre, filas.filter((b) => b.unidad_id === u.id), semanas.filter((s) => s.unidad_id === u.id))).join("\n")}
 ${fila("Todas las unidades", filas, semanas, true)}
 </table>

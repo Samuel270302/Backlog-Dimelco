@@ -59,6 +59,14 @@ export const useUnidades = () =>
     },
   });
 
+// SAP solo lo usa HEMCO (unidades.usa_sap). Fuera de HEMCO no se muestran Aviso SAP,
+// códigos SAP ni SolPed, y la OT se llama "N° OT".
+export function useUsaSap(): (unidadId: string | null | undefined) => boolean {
+  const { data } = useUnidades();
+  return (id) => !!id && !!data?.find((u) => u.id === id)?.usa_sap;
+}
+export const etiquetaOt = (usaSap: boolean) => (usaSap ? "OT SAP" : "N° OT");
+
 // Nombre de la unidad en vista, para títulos y nombres de archivo.
 export function useNombreUnidad(): string | null {
   const { unidadId } = useUnidad();

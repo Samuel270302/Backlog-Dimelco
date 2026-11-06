@@ -543,10 +543,11 @@ dialog.dialogo-ancho { width: min(1100px, 94vw); }
 .est-validado { background: #375623; color: #ffffff; }
 .est-planeado { background: #dde8f6; color: #1f4e79; }
 .est-rechazado, .est-anulado { background: var(--gris-fondo); color: var(--gris-letra); text-decoration: line-through; }
-.pri-p1 { background: var(--rojo-letra); color: #ffffff; }
-.pri-p2 { background: var(--rojo-fondo); color: var(--rojo-letra); }
-.pri-p3 { background: var(--amarillo-fondo); color: var(--amarillo-letra); }
-.pri-p4 { background: var(--gris-fondo); color: var(--gris-letra); }
+/* Colores de los niveles de criticidad de la OT de Dimelco. */
+.pri-p1 { background: #e00000; color: #ffffff; }
+.pri-p2 { background: #ffc000; color: #1c1c1c; }
+.pri-p3 { background: #ffff00; color: #1c1c1c; }
+.pri-p4 { background: #00b050; color: #ffffff; }
 
 /* ===== Formularios de backlog ===== */
 .pagina-formulario { max-width: 860px; }
@@ -927,25 +928,6 @@ dialog.dialogo-foto img { display: block; max-width: 88vw; max-height: 80vh; }
 @media (max-width: 1100px) { .rejilla-catalogos { grid-template-columns: 1fr; } }
 .rejilla-catalogos td.num input { width: 70px; }
 
-/* ===== Importar backlogs ===== */
-.campo-en-linea { display: flex; align-items: center; gap: 6px; font-size: 13px; color: var(--texto-suave); }
-.campo-en-linea select { width: auto; }
-.tabla-importar { font-size: 12.5px; }
-.tabla-importar th, .tabla-importar td { padding-left: 6px; padding-right: 6px; }
-.tabla-importar td { vertical-align: top; }
-.tabla-importar input[type="date"] { width: 124px; padding-left: 6px; padding-right: 4px; }
-.tabla-importar input:not([type="checkbox"]):not([type="date"]) { min-width: 140px; }
-.tabla-importar .celda-equipo { max-width: 160px; }
-.tabla-importar select { width: auto; padding-right: 22px; }
-.celda-clasificacion select { width: 100%; min-width: 128px; }
-.celda-clasificacion .fila-selects { display: flex; gap: 4px; margin-top: 4px; }
-.celda-clasificacion .fila-selects select { min-width: 0; flex: 1; }
-.nombre-archivo { max-width: 130px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.tabla-importar tr.fila-con-error td { background: #fffaf9; }
-.tabla-importar tr.fila-importada td { background: var(--verde-fondo); }
-.celda-revision { min-width: 140px; max-width: 200px; font-size: 12px; }
-.celda-revision .control-error, .celda-revision .control-aviso { margin-bottom: 2px; }
-.fila-detalle-importar td { background: var(--panel-2) !important; }
 
 /* ===== Celular (menos de 768 px). El escritorio no cambia. ===== */
 .cabecera-movil, .barra-inferior, .velo-menu { display: none; }
@@ -1075,3 +1057,8 @@ dialog.dialogo-foto img { display: block; max-width: 88vw; max-height: 80vh; }
   .semana-titulo { width: 100%; order: 3; font-size: 13px; }
 }
 a.tarjeta-cal { display: block; color: inherit; text-decoration: none; }
+
+/* Textos que solo aplican con teclado (Ctrl+V). */
+@media (max-width: 767px) { .solo-escritorio { display: none; } }
+.lista-casillas { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 2px 12px; margin: 8px 0; }
+.lista-casillas .campo-check { margin: 0; }

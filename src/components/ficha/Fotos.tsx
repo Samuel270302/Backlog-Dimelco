@@ -46,6 +46,29 @@ export function BotonFotos({
   );
 }
 
+// Ctrl+V: las imágenes del portapapeles se agregan como fotos. No actúa si el cursor
+// está en un campo de texto (ahí Ctrl+V pega texto).
+export function usePegarImagenes(activo: boolean, onArchivos: (archivos: File[]) => void) {
+  const ref = useRef(onArchivos);
+  ref.current = onArchivos;
+  useEffect(() => {
+    if (!activo) return;
+    const alPegar = (e: ClipboardEvent) => {
+      const destino = e.target as HTMLElement | null;
+      if (destino?.closest?.("input, textarea, [contenteditable='true']")) return;
+      const imagenes = Array.from(e.clipboardData?.files ?? []).filter((f) => f.type.startsWith("image/"));
+      if (!imagenes.length) return;
+      e.preventDefault();
+      const marca = new Date().toISOString().slice(0, 19).replace(/[-:T]/g, "");
+      ref.current(
+        imagenes.map((f, i) => new File([f], f.name && f.name !== "image.png" ? f.name : `pegada-${marca}-${i + 1}.png`, { type: f.type }))
+      );
+    };
+    document.addEventListener("paste", alPegar);
+    return () => document.removeEventListener("paste", alPegar);
+  }, [activo]);
+}
+
 export function useSubirFotos(b: { id: string; unidad_id: string }) {
   const qc = useQueryClient();
   const { avisar } = useAvisos();
@@ -78,6 +101,7 @@ export default function Fotos({
   const qc = useQueryClient();
   const { subir, subiendo } = useSubirFotos(b);
   const [destino, setDestino] = useState("");
+  usePegarImagenes(editable && !subiendo, (a) => subir(a, destino || null));
   const [ampliada, setAmpliada] = useState<FotoConUrl | null>(null);
   const [aBorrar, setABorrar] = useState<FotoConUrl | null>(null);
   const ordenados = [...repuestos].sort((x, y) => x.item - y.item);
@@ -115,6 +139,7 @@ export default function Fotos({
               ))}
             </select>
             <BotonFotos texto="Agregar fotos" etiqueta="Archivos de fotos" ocupado={subiendo} onArchivos={(a) => subir(a, destino || null)} />
+            <span className="nota solo-escritorio">o pegar con Ctrl+V</span>
           </>
         )}
       </div>
