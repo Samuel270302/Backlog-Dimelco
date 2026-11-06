@@ -3,11 +3,10 @@ name: Reporte semanal por correo
 # Cada lunes a las 6:03 hora de Nicaragua (UTC-6) envía por Gmail el reporte semanal:
 # resumen en el cuerpo, PDF del reporte y Excel con abiertos, cerrados de 7 días y
 # semanas de backlog. Los adjuntos no se guardan (el repositorio es público).
-# Secretos (Settings > Secrets and variables > Actions > Secrets):
+# Cuenta que envía y destinatarios: aquí abajo (CORREO_REPORTE y CORREO_DESTINATARIOS,
+# varios separados por comas). Secretos (Settings > Secrets and variables > Actions):
 #   SUPABASE_DB_URL       cadena de conexión (la misma de "Mantenimiento de la base")
-#   CORREO_REPORTE        cuenta de Gmail que envía
-#   CORREO_CLAVE_APP      contraseña de aplicación de esa cuenta
-#   CORREO_DESTINATARIOS  correos separados por comas
+#   CORREO_CLAVE_APP      contraseña de aplicación de Gmail de la cuenta que envía
 on:
   schedule:
     - cron: "3 12 * * 1"
@@ -21,15 +20,15 @@ jobs:
     runs-on: ubuntu-latest
     env:
       SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
-      CORREO_REPORTE: ${{ secrets.CORREO_REPORTE }}
+      CORREO_REPORTE: samuel.e.zapata.t@gmail.com
       CORREO_CLAVE_APP: ${{ secrets.CORREO_CLAVE_APP }}
-      CORREO_DESTINATARIOS: ${{ secrets.CORREO_DESTINATARIOS }}
+      CORREO_DESTINATARIOS: samuel.e.zapata.t@gmail.com
     steps:
       - name: Verificar secretos
         id: config
         run: |
           falta=""
-          for s in SUPABASE_DB_URL CORREO_REPORTE CORREO_CLAVE_APP CORREO_DESTINATARIOS; do
+          for s in SUPABASE_DB_URL CORREO_CLAVE_APP; do
             [ -z "${!s}" ] && falta="$falta $s"
           done
           if [ -n "$falta" ]; then

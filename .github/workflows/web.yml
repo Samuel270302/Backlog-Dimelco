@@ -1,9 +1,10 @@
 name: Web para celular
 
 # Publica la app como sitio web en GitHub Pages (https://samuel270302.github.io/Backlog-Hemco/).
-# La conexión a Supabase va fija en la compilación, desde dos variables del repositorio
-# (Settings > Secrets and variables > Actions > Variables): SUPABASE_URL y SUPABASE_ANON_KEY.
-# La llave anon es pública: sin usuario y contraseña no da acceso a datos.
+# La conexión a Supabase va fija en la compilación: la URL del proyecto está aquí (es
+# pública) y la llave anon sale de la variable del repositorio SUPABASE_ANON_KEY
+# (Settings > Secrets and variables > Actions > Variables). La llave anon es pública:
+# sin usuario y contraseña no da acceso a datos.
 on:
   workflow_dispatch:
   push:
@@ -30,11 +31,10 @@ jobs:
       - name: Verificar variables
         id: config
         env:
-          URL_SB: ${{ vars.SUPABASE_URL }}
           LLAVE_SB: ${{ vars.SUPABASE_ANON_KEY }}
         run: |
-          if [ -z "$URL_SB" ] || [ -z "$LLAVE_SB" ]; then
-            echo "::warning::No se publica: faltan las variables SUPABASE_URL y SUPABASE_ANON_KEY en Settings > Secrets and variables > Actions > Variables"
+          if [ -z "$LLAVE_SB" ]; then
+            echo "::warning::No se publica: falta la variable SUPABASE_ANON_KEY en Settings > Secrets and variables > Actions > Variables"
             echo "listo=no" >> "$GITHUB_OUTPUT"
           else
             echo "listo=si" >> "$GITHUB_OUTPUT"
@@ -50,7 +50,7 @@ jobs:
       - name: Compilar sitio
         if: steps.config.outputs.listo == 'si'
         env:
-          VITE_SUPABASE_URL: ${{ vars.SUPABASE_URL }}
+          VITE_SUPABASE_URL: ${{ vars.SUPABASE_URL || 'https://sfrelyrpnnvqjpzkznnu.supabase.co' }}
           VITE_SUPABASE_ANON_KEY: ${{ vars.SUPABASE_ANON_KEY }}
         run: npm run build:web
       - if: steps.config.outputs.listo == 'si'

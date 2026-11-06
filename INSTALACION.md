@@ -45,31 +45,36 @@ Con un backlog de prueba (se anula al final):
 
 ## Versión web para celular
 
-Dirección: https://samuel270302.github.io/Backlog-Hemco/ (mismo usuario y contraseña que la app de escritorio). Se publica sola con cada cambio en `main` (flujo "Web para celular").
+Dirección: https://samuel270302.github.io/Backlog-Hemco/ (mismo usuario y contraseña que la app de escritorio). Se publica sola con cada cambio en `main` (flujo "Web para celular"). La URL del proyecto ya está en el flujo; solo falta la llave anon.
 
-Activación, una sola vez, en GitHub (Samuel270302/Backlog-Hemco):
-1. Settings > Pages > Build and deployment > Source: **GitHub Actions**.
-2. Settings > Secrets and variables > Actions > pestaña **Variables** > New repository variable:
-   - `SUPABASE_URL` = `https://sfrelyrpnnvqjpzkznnu.supabase.co`
-   - `SUPABASE_ANON_KEY` = la llave anon (Supabase, Project Settings, API Keys). Es pública: sin usuario y contraseña no da acceso a datos.
-3. Actions > "Web para celular" > Run workflow. Al terminar en verde, abrir la dirección en el celular. En Android (Chrome) y en iPhone (Safari, Compartir) se puede "Agregar a pantalla de inicio" para abrirla como una app.
-
-En el celular: barra inferior con Por equipo, Kanban, Calendario (Nuevo para capturadores) y Más (resto del menú, unidad, contraseña y cerrar sesión). El Kanban se desliza por etapas y se avanza con los botones de cada tarjeta (no se arrastra). El calendario se ve por día; programar y reprogramar se hacen desde la ficha. El formato y el reporte se imprimen con "Guardar como PDF" del navegador.
+En el celular: barra inferior con Por equipo, Kanban, Calendario (Nuevo para capturadores) y Más (resto del menú, unidad, contraseña y cerrar sesión). El Kanban se desliza por etapas y se avanza con los botones de cada tarjeta (no se arrastra). El calendario se ve por día; programar y reprogramar se hacen desde la ficha. El formato y el reporte se imprimen con "Guardar como PDF" del navegador. En Android (Chrome) y en iPhone (Safari, Compartir) se puede "Agregar a pantalla de inicio": es un acceso directo a la misma página, siempre en línea.
 
 ## Reporte semanal por correo
 
-Cada lunes a las 6:03 a. m. (hora de Nicaragua) el flujo "Reporte semanal por correo" envía un correo con todas las unidades: las cifras en el cuerpo (abiertos, HH pendientes, semanas de backlog, vencidos, HH programadas y cerrados en 7 días, por unidad y total), el PDF del reporte semanal y un Excel con los backlogs abiertos, los cerrados de los últimos 7 días y las semanas de backlog.
+Cada lunes a las 6:03 a. m. (hora de Nicaragua) el flujo "Reporte semanal por correo" envía, desde y hacia samuel.e.zapata.t@gmail.com (se cambian en `.github/workflows/reporte_semanal.yml`), un correo con todas las unidades: las cifras en el cuerpo (abiertos, HH pendientes, semanas de backlog, vencidos, HH programadas y cerrados en 7 días, por unidad y total), el PDF del reporte semanal y un Excel con los backlogs abiertos, los cerrados de los últimos 7 días y las semanas de backlog. Solo falta la contraseña de aplicación de Gmail.
 
-Activación, una sola vez:
-1. En la cuenta de Gmail que va a enviar: activar la verificación en dos pasos y crear una contraseña de aplicación (Cuenta de Google > Seguridad > Contraseñas de aplicaciones). Son 16 letras.
-2. En GitHub, Settings > Secrets and variables > Actions > pestaña **Secrets** > New repository secret:
-   - `CORREO_REPORTE` = la cuenta de Gmail que envía.
-   - `CORREO_CLAVE_APP` = la contraseña de aplicación.
-   - `CORREO_DESTINATARIOS` = los correos que reciben, separados por comas.
-   (`SUPABASE_DB_URL` ya existe para el respaldo.)
-3. Actions > "Reporte semanal por correo" > Run workflow para probar; debe llegar el correo en un par de minutos.
+## Base de datos al día sola
 
-Mientras falten los secretos, el flujo avisa y no envía (no marca error).
+El flujo "Actualizar base de datos" aplica en Supabase las migraciones del repositorio cada vez que cambian (con el secreto `SUPABASE_DB_URL`, en una sola transacción) y deja en su registro la tabla de `tools/verificar_instalacion.sql`. Ya no hace falta pegar migraciones en el SQL Editor.
+
+## Lo único que queda por hacer a mano (una vez)
+
+En GitHub, repositorio Samuel270302/Backlog-Hemco:
+1. Settings > Pages > Build and deployment > Source: **GitHub Actions**.
+2. Settings > Secrets and variables > Actions > pestaña **Variables** > New repository variable: `SUPABASE_ANON_KEY` = la llave anon (Supabase > Project Settings > API Keys; la "anon public" o la "publishable"). Nunca la service_role ni la secret.
+3. En Gmail (samuel.e.zapata.t@gmail.com): con la verificación en dos pasos activa, crear una contraseña de aplicación en https://myaccount.google.com/apppasswords (nombre: "Backlog"). Son 16 letras.
+4. Settings > Secrets and variables > Actions > pestaña **Secrets** > New repository secret: `CORREO_CLAVE_APP` = esas 16 letras.
+5. Actions > "Web para celular" > Run workflow, y Actions > "Reporte semanal por correo" > Run workflow (prueba: llega el correo en un par de minutos).
+
+Prompt para que Claude in Chrome haga los clics (se detiene para que tú pegues la llave y la contraseña):
+
+    Haz en el navegador, en orden, y confírmame cada paso. Nunca escribas llaves ni contraseñas: detente y déjame pegarlas.
+    1. En https://github.com/Samuel270302/Backlog-Hemco/settings/pages pon "Source" en "GitHub Actions".
+    2. En https://supabase.com/dashboard abre el proyecto backlog-hemco > Project Settings > API Keys y muéstrame dónde está la llave "anon public" (o "publishable"). No la copies.
+    3. En https://github.com/Samuel270302/Backlog-Hemco/settings/variables/actions crea la variable SUPABASE_ANON_KEY y detente para que yo pegue el valor.
+    4. Abre https://myaccount.google.com/apppasswords con la cuenta samuel.e.zapata.t@gmail.com, crea una contraseña de aplicación llamada "Backlog" y detente: yo la copio.
+    5. En https://github.com/Samuel270302/Backlog-Hemco/settings/secrets/actions crea el secreto CORREO_CLAVE_APP y detente para que yo pegue la contraseña.
+    6. En https://github.com/Samuel270302/Backlog-Hemco/actions ejecuta "Web para celular" y "Reporte semanal por correo" (Run workflow) y dime si terminan en verde.
 
 ## Roles
 
