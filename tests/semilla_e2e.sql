@@ -21,9 +21,10 @@ select id, 'PS090', 'ST7', 'Scoop', 'Epiroc' from unidades where sigla = 'VTN';
 insert into familias (nombre, orden) values ('Scooptram ST1030', 1), ('Jumbo Boomer S1D', 2) on conflict (nombre) do nothing;
 update equipos set familia_id = (select id from familias where nombre = 'Scooptram ST1030') where modelo = 'ST1030';
 update equipos set familia_id = (select id from familias where nombre = 'Jumbo Boomer S1D') where modelo = 'Boomer S1D';
+delete from familia_sistemas where familia_id = (select id from familias where nombre = 'Scooptram ST1030');
 insert into familia_sistemas (familia_id, sistema_id)
 select f.id, s.id from familias f, sistemas s
-where f.nombre = 'Scooptram ST1030' and s.nombre in ('Sistema hidráulico', 'Motor', 'Frenos');
+where f.nombre = 'Scooptram ST1030' and s.nombre in ('Sistema hidráulico', 'Motor diésel', 'Frenos');
 
 -- Backlogs de contexto en varios estados (los mueve el admin con la función real).
 select set_config('request.jwt.claims', '{"sub":"00000000-0000-0000-0000-00000000000a"}', false);
@@ -34,10 +35,13 @@ from (values
   ('30000000-0000-0000-0000-000000000002', 'PS012', 'Frenos', 'Regular frenos de servicio', 'PM', 'P3', 'Normal', 'Frenos de servicio', 40, null),
   ('30000000-0000-0000-0000-000000000003', 'JU005', 'Sistema eléctrico', 'Reparar luminaria de cabina', 'Operador', 'P4', 'Normal', 'Luminaria de cabina', 1, null),
   ('30000000-0000-0000-0000-000000000004', 'JU005', 'Perforadora', 'Cambio de centralizador de barra', 'PM', 'P3', 'Normal', 'Centralizador', 6, null),
-  ('30000000-0000-0000-0000-000000000005', 'PS090', 'Motor', 'Fuga de refrigerante en radiador', 'Inspección', 'P2', 'Normal', 'Radiador', 2, null)
+  ('30000000-0000-0000-0000-000000000005', 'PS090', 'Motor diésel', 'Fuga de refrigerante en radiador', 'Inspección', 'P2', 'Normal', 'Radiador', 2, null)
 ) v(id, equipo, sistema, descr, origen, pri, tipo, comp, dias, just)
 join equipos e on e.cod_interno = v.equipo
-join sistemas s on s.nombre = v.sistema;
+join sistemas s on s.nombre = v.sistema
+-- Orden fijo de los folios: BL-HEM-000001 frenos (vencido), 2 mangueras, 3 centralizador, 4 luminaria.
+order by array_position(array['30000000-0000-0000-0000-000000000002', '30000000-0000-0000-0000-000000000001',
+  '30000000-0000-0000-0000-000000000004', '30000000-0000-0000-0000-000000000003', '30000000-0000-0000-0000-000000000005'], v.id);
 
 insert into backlog_hh (backlog_id, especialidad_id, tipo, personas, horas)
 select v.b::uuid, e.id, 'estimada', v.p, v.h

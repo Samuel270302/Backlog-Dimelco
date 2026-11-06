@@ -147,9 +147,9 @@ select pruebas.igual((select cierres from v_backlog_semanal where semana = '2026
 
 -- Semanas de backlog: 3 backlogs abiertos de HEMCO con 30 + 20 + 50 HH mecánicas = 100 HH / 100 HH semana.
 insert into backlogs (id, equipo_id, sistema_id, descripcion, origen, prioridad, reportado_por, aprobado_por) values
-  ('20000000-0000-0000-0000-000000000002', '10000000-0000-0000-0000-000000000001', (select id from sistemas where nombre = 'Motor'), 'Cambio de alternador', 'Falla', 'P3', 'A', 'B'),
+  ('20000000-0000-0000-0000-000000000002', '10000000-0000-0000-0000-000000000001', (select id from sistemas where nombre = 'Motor diésel'), 'Cambio de alternador', 'Falla', 'P3', 'A', 'B'),
   ('20000000-0000-0000-0000-000000000003', '10000000-0000-0000-0000-000000000001', (select id from sistemas where nombre = 'Frenos'), 'Regular frenos de servicio', 'PM', 'P4', 'A', 'B'),
-  ('20000000-0000-0000-0000-000000000004', '10000000-0000-0000-0000-000000000001', (select id from sistemas where nombre = 'Neumáticos'), 'Rotación de llantas', 'Operador', 'P4', 'A', 'B');
+  ('20000000-0000-0000-0000-000000000004', '10000000-0000-0000-0000-000000000001', (select id from sistemas where nombre = 'Ruedas y neumáticos'), 'Rotación de llantas', 'Operador', 'P4', 'A', 'B');
 insert into backlog_hh (backlog_id, especialidad_id, tipo, personas, horas)
 select v.b::uuid, e.id, 'estimada', v.p, v.h
 from (values ('20000000-0000-0000-0000-000000000002', 'Mecánico', 3, 10),
@@ -216,7 +216,7 @@ select pruebas.igual((select count(*)::int from unidades where usa_sap), 1, 'sol
 select pruebas.igual((select flota from v_backlog where id = '20000000-0000-0000-0000-000000000002'), 'Scooptram', 'familia como flota');
 select set_config('request.jwt.claims', '{"sub":"00000000-0000-0000-0000-00000000000c"}', false);
 select pruebas.espera_error($$insert into backlogs (equipo_id, sistema_id, descripcion, origen, prioridad, reportado_por)
-  values ('10000000-0000-0000-0000-000000000001', (select id from sistemas where nombre = 'Motor'), 'Sin aprobador', 'PM', 'P3', 'A')$$, 'quién la aprueba');
+  values ('10000000-0000-0000-0000-000000000001', (select id from sistemas where nombre = 'Motor diésel'), 'Sin aprobador', 'PM', 'P3', 'A')$$, 'quién la aprueba');
 select pruebas.espera_error($$insert into backlogs (equipo_id, sistema_id, descripcion, origen, prioridad, reportado_por, aprobado_por)
   values ('10000000-0000-0000-0000-000000000001', (select id from sistemas where nombre = 'Otro'), 'Otro sin texto', 'PM', 'P3', 'A', 'B')$$, 'cuál es el sistema');
 insert into backlogs (id, equipo_id, sistema_id, sistema_otro, descripcion, origen, prioridad, reportado_por, aprobado_por)
@@ -232,9 +232,9 @@ select pruebas.espera_error($$insert into capacidad_taller (unidad_id, especiali
   select u.id, e.id, 60, '2026-10-01' from unidades u, especialidades e where u.sigla = 'HEM' and e.nombre = 'Mecánico'$$, 'row-level security');
 select set_config('request.jwt.claims', '{"sub":"00000000-0000-0000-0000-00000000000a"}', false);
 insert into familias (id, nombre) values ('50000000-0000-0000-0000-000000000001', 'PowerROC T35');
-insert into familia_sistemas (familia_id, sistema_id) select '50000000-0000-0000-0000-000000000001', id from sistemas where nombre in ('Motor', 'Perforadora');
+insert into familia_sistemas (familia_id, sistema_id) select '50000000-0000-0000-0000-000000000001', id from sistemas where nombre in ('Motor diésel', 'Perforadora');
 select set_config('request.jwt.claims', '{"sub":"00000000-0000-0000-0000-00000000000c"}', false);
-select pruebas.igual((select count(*)::int from familia_sistemas), 2, 'capturador lee sistemas por familia');
+select pruebas.igual((select count(*)::int from familia_sistemas where familia_id = '50000000-0000-0000-0000-000000000001'), 2, 'capturador lee sistemas por familia');
 select pruebas.espera_error($$insert into familias (nombre) values ('No puede')$$, 'row-level security');
 select set_config('request.jwt.claims', '{"sub":"00000000-0000-0000-0000-00000000000a"}', false);
 
@@ -274,8 +274,15 @@ select pruebas.igual((select descripcion from v_backlog where id = '20000000-000
 select pruebas.igual((select string_agg(tipo, ',' order by creado_en, id) from backlog_eventos
   where backlog_id = '20000000-0000-0000-0000-000000000002' and tipo in ('borrado','restaurado')), 'borrado,restaurado', 'bitácora de borrado y restauración');
 insert into backlogs (id, equipo_id, sistema_id, descripcion, origen, prioridad, reportado_por, aprobado_por)
-values ('20000000-0000-0000-0000-00000000000a', '10000000-0000-0000-0000-000000000001', (select id from sistemas where nombre = 'Motor'), 'Después de borrar', 'PM', 'P3', 'A', 'B');
+values ('20000000-0000-0000-0000-00000000000a', '10000000-0000-0000-0000-000000000001', (select id from sistemas where nombre = 'Motor diésel'), 'Después de borrar', 'PM', 'P3', 'A', 'B');
 select pruebas.igual((select folio from backlogs where id = '20000000-0000-0000-0000-00000000000a'), 'BL-HEM-000006', 'folio no se reutiliza');
+
+
+-- Sistemas por familia (016): catálogo único y familias de la biblioteca.
+select pruebas.igual((select count(*)::int from familias where nombre in ('Scooptram ST1030','Boomer S1D','Furukawa HCR','PowerROC D55')), 4, 'familias de la biblioteca');
+select pruebas.igual((select string_agg(s.nombre, ',' order by s.orden) from familia_sistemas r join familias f on f.id = r.familia_id join sistemas s on s.id = r.sistema_id
+  where f.nombre = 'Ground Force AT18E'), 'Motor diésel,Sistema de enfriamiento,Tren de potencia,Frenos,Dirección,Sistema hidráulico,Sistema eléctrico,Cabina y entorno del operador,Bastidor y chasis,Caja de carga', 'sistemas del AT18E');
+select pruebas.igual((select count(*)::int from sistemas where nombre in ('Motor','Transmisión','Neumáticos','Empernadora')), 0, 'nombres viejos renombrados');
 
 reset role;
 \o

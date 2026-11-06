@@ -128,11 +128,11 @@ try {
   await equipoElegido.selectOption({ label: "PS011 · ST1030" });
   await cap.locator(".datos-equipo", { hasText: "Epiroc" }).waitFor();
   const sistemasOfrecidos = (await cap.getByLabel("Sistema", { exact: true }).locator("option").allTextContents()).slice(1);
-  if (sistemasOfrecidos.join("|") !== "Motor|Sistema hidráulico|Frenos|Otro") throw new Error(`Sistemas de la familia: ${sistemasOfrecidos.join("|")}`);
+  if (sistemasOfrecidos.join("|") !== "Motor diésel|Frenos|Sistema hidráulico|Otro") throw new Error(`Sistemas de la familia: ${sistemasOfrecidos.join("|")}`);
   await cap.getByLabel("Sistema", { exact: true }).selectOption({ label: "Otro" });
   await cap.getByLabel("¿Cuál sistema?").waitFor();
   if (!(await cap.locator(".barra-acciones .nota", { hasText: "cuál es el sistema" }).count())) throw new Error("Otro sin texto no pide cuál");
-  ok("el Scoop ofrece solo Motor, Sistema hidráulico, Frenos y Otro; Otro pide cuál");
+  ok("el Scoop ofrece solo Motor diésel, Frenos, Sistema hidráulico y Otro; Otro pide cuál");
   await cap.getByLabel("Sistema", { exact: true }).selectOption({ label: "Sistema hidráulico" });
   if (await cap.getByLabel("¿Cuál sistema?").count()) throw new Error("Queda el campo de Otro");
   if ((await cap.getByLabel("Reportado por").inputValue()) !== "") throw new Error("Reportado por debe empezar vacío");
