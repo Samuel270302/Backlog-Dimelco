@@ -37,3 +37,12 @@ export function fFechaHora(v: string | null | undefined): string {
   const p = (n: number) => String(n).padStart(2, "0");
   return `${p(d.getDate())}/${p(d.getMonth() + 1)}/${d.getFullYear()} ${p(d.getHours())}:${p(d.getMinutes())}`;
 }
+
+// Lunes de la semana ISO de una fecha YYYY-MM-DD.
+export function lunesDe(iso: string): string {
+  const d = new Date(iso + "T00:00:00");
+  const dia = (d.getDay() + 6) % 7;
+  d.setDate(d.getDate() - dia);
+  const p = (n: number) => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`;
+}

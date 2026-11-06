@@ -2,6 +2,7 @@ import type ExcelJS from "exceljs";
 import type { BacklogFila } from "./types";
 import { etapaDe } from "./types";
 import { esAbierto, type SemanasEspecialidad } from "./indicadores";
+import { hoyISO, sumarDiasISO } from "./fmt";
 
 interface AppEscritorio {
   guardarArchivo?: (datos: Uint8Array, nombre: string) => Promise<string | null>;
@@ -32,12 +33,23 @@ function encabezado(hoja: ExcelJS.Worksheet) {
   hoja.autoFilter = { from: { row: 1, column: 1 }, to: { row: 1, column: hoja.columnCount } };
 }
 
-export async function exportarAbiertos(
+// Cerrados de los últimos 7 días: ejecutados o validados con fecha de ejecución en
+// (hoy - 7, hoy], el mismo período del reporte semanal.
+export function cerradosUltimos7(filas: BacklogFila[], hoy: string): BacklogFila[] {
+  const desde = sumarDiasISO(hoy, -7);
+  return filas
+    .filter((b) => (b.estado === "Ejecutado" || b.estado === "Validado") && b.fecha_ejecucion && b.fecha_ejecucion > desde && b.fecha_ejecucion <= hoy)
+    .sort((a, b) => a.fecha_ejecucion!.localeCompare(b.fecha_ejecucion!) || a.folio.localeCompare(b.folio));
+}
+
+// Libro de backlog (abiertos, cerrados de 7 días y semanas de backlog). Sin navegador:
+// lo usan la exportación de Indicadores y el reporte semanal por correo.
+export async function armarLibroBacklog(
   filas: BacklogFila[],
   semanas: SemanasEspecialidad[],
   unidades: Map<string, string>,
-  titulo: string
-): Promise<string | null> {
+  hoy: string
+): Promise<ArrayBuffer> {
   const { default: Excel } = await import("exceljs"); // se carga solo al exportar
   const libro = new Excel.Workbook();
   libro.creator = "Control de Backlog - Dimelco";
@@ -98,6 +110,41 @@ export async function exportarAbiertos(
   }
   encabezado(hoja);
 
+  const hc = libro.addWorksheet("Cerrados últimos 7 días");
+  hc.columns = [
+    { header: "Folio", key: "folio", width: 15 },
+    { header: "Unidad", key: "unidad", width: 13 },
+    { header: "Código interno", key: "cod", width: 12 },
+    { header: "Descripción del trabajo", key: "descripcion", width: 45 },
+    { header: "Sistema", key: "sistema", width: 18 },
+    { header: "Ejecutado", key: "ejecucion", width: 11, style: { numFmt: "dd/mm/yyyy" } },
+    { header: "Estado", key: "estado", width: 11 },
+    { header: "Fecha límite", key: "limite", width: 11, style: { numFmt: "dd/mm/yyyy" } },
+    { header: "En plazo", key: "plazo", width: 9 },
+    { header: "HH estimadas", key: "hh_est", width: 10 },
+    { header: "HH reales", key: "hh_real", width: 10 },
+    { header: "Diferencia HH", key: "dif", width: 11 },
+    { header: "OT SAP", key: "ot", width: 11 },
+  ];
+  for (const b of cerradosUltimos7(filas, hoy)) {
+    hc.addRow({
+      folio: b.folio,
+      unidad: unidades.get(b.unidad_id) ?? "",
+      cod: b.cod_interno,
+      descripcion: b.descripcion,
+      sistema: b.sistema,
+      ejecucion: fecha(b.fecha_ejecucion),
+      estado: b.estado,
+      limite: fecha(b.fecha_limite),
+      plazo: b.fecha_limite && b.fecha_ejecucion! <= b.fecha_limite ? "Sí" : "No",
+      hh_est: Number(b.hh_estimadas),
+      hh_real: Number(b.hh_reales),
+      dif: Number(b.hh_reales) - Number(b.hh_estimadas),
+      ot: b.ot_sap,
+    });
+  }
+  encabezado(hc);
+
   const hs = libro.addWorksheet("Semanas de backlog");
   hs.columns = [
     { header: "Especialidad", key: "esp", width: 18 },
@@ -108,6 +155,14 @@ export async function exportarAbiertos(
   for (const s of semanas) hs.addRow({ esp: s.especialidad, hh: s.hhPendientes, cap: s.hhSemana || null, sem: s.semanas });
   encabezado(hs);
 
-  const buf = await libro.xlsx.writeBuffer();
-  return descargar(buf as ArrayBuffer, `${titulo}.xlsx`);
+  return (await libro.xlsx.writeBuffer()) as ArrayBuffer;
+}
+
+export async function exportarAbiertos(
+  filas: BacklogFila[],
+  semanas: SemanasEspecialidad[],
+  unidades: Map<string, string>,
+  titulo: string
+): Promise<string | null> {
+  return descargar(await armarLibroBacklog(filas, semanas, unidades, hoyISO()), `${titulo}.xlsx`);
 }

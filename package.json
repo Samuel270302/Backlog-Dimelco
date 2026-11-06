@@ -1,7 +1,7 @@
 {
   "name": "backlog-hemco",
   "productName": "Control de Backlog - Dimelco",
-  "version": "0.4.0",
+  "version": "0.4.1",
   "description": "Gestión de backlog de mantenimiento con horas hombre por especialidad",
   "private": true,
   "main": "dist-electron/main.js",
@@ -11,7 +11,9 @@
     "app": "npm run build && electron .",
     "dist": "npm run build && electron-builder --win nsis --publish never",
     "prueba:electron": "npm run build && xvfb-run -a node tests/electron.mjs",
-    "build:web": "tsc -b && vite build --mode web"
+    "build:web": "tsc -b && vite build --mode web",
+    "reporte:correo:compilar": "esbuild tools/reporte_correo.ts --bundle --platform=node --format=esm --packages=external --loader:.png=dataurl --outfile=tools/dist/reporte_correo.mjs --log-level=warning",
+    "reporte:correo": "npm run reporte:correo:compilar && node tools/dist/reporte_correo.mjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.49.4",
@@ -24,13 +26,16 @@
     "react-router-dom": "^6.28.0"
   },
   "devDependencies": {
+    "@types/nodemailer": "^6.4.17",
     "@types/react": "^18.3.12",
     "@types/react-dom": "^18.3.1",
     "@vitejs/plugin-react": "^4.3.4",
     "electron": "^33.2.1",
     "electron-builder": "^25.1.8",
     "esbuild": "^0.24.2",
+    "nodemailer": "^6.9.16",
     "pg": "^8.13.1",
+    "playwright": "^1.63.0",
     "typescript": "^5.7.2",
     "vite": "^6.0.7"
   },

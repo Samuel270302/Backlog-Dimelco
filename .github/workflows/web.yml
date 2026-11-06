@@ -8,7 +8,7 @@ on:
   workflow_dispatch:
   push:
     branches: [main]
-    paths-ignore: ['docs/**', 'tools/**', 'tests/**', 'supabase/**', '**.md', '.github/workflows/instalador.yml', '.github/workflows/mantenimiento.yml', '.github/workflows/pruebas.yml']
+    paths-ignore: ['docs/**', 'tools/**', 'tests/**', 'supabase/**', '**.md', '.github/workflows/instalador.yml', '.github/workflows/mantenimiento.yml', '.github/workflows/pruebas.yml', '.github/workflows/reporte_semanal.yml']
 
 permissions:
   contents: read

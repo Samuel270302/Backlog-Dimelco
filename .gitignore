@@ -12,3 +12,4 @@ DATOS_CONEXION.txt
 SECRETO_GITHUB.txt
 dist-electron/
 *.tsbuildinfo
+tools/dist/

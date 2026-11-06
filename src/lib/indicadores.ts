@@ -1,7 +1,6 @@
 // Cálculos de indicadores a partir de las filas de v_backlog (ya filtradas por unidad)
 // y de v_semanas_backlog. Los usan la pantalla Indicadores y el reporte semanal.
-import { lunesDe } from "./backlog";
-import { sumarDiasISO } from "./fmt";
+import { lunesDe, sumarDiasISO } from "./fmt";
 import { ESTADOS_ABIERTOS, PRIORIDADES, type BacklogFila, type Prioridad, type SemanasBacklog } from "./types";
 
 export const esAbierto = (b: BacklogFila) => ESTADOS_ABIERTOS.includes(b.estado);

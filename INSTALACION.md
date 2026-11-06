@@ -56,6 +56,21 @@ Activación, una sola vez, en GitHub (Samuel270302/Backlog-Hemco):
 
 En el celular: barra inferior con Por equipo, Kanban, Calendario (Nuevo para capturadores) y Más (resto del menú, unidad, contraseña y cerrar sesión). El Kanban se desliza por etapas y se avanza con los botones de cada tarjeta (no se arrastra). El calendario se ve por día; programar y reprogramar se hacen desde la ficha. El formato y el reporte se imprimen con "Guardar como PDF" del navegador.
 
+## Reporte semanal por correo
+
+Cada lunes a las 6:03 a. m. (hora de Nicaragua) el flujo "Reporte semanal por correo" envía un correo con todas las unidades: las cifras en el cuerpo (abiertos, HH pendientes, semanas de backlog, vencidos, HH programadas y cerrados en 7 días, por unidad y total), el PDF del reporte semanal y un Excel con los backlogs abiertos, los cerrados de los últimos 7 días y las semanas de backlog.
+
+Activación, una sola vez:
+1. En la cuenta de Gmail que va a enviar: activar la verificación en dos pasos y crear una contraseña de aplicación (Cuenta de Google > Seguridad > Contraseñas de aplicaciones). Son 16 letras.
+2. En GitHub, Settings > Secrets and variables > Actions > pestaña **Secrets** > New repository secret:
+   - `CORREO_REPORTE` = la cuenta de Gmail que envía.
+   - `CORREO_CLAVE_APP` = la contraseña de aplicación.
+   - `CORREO_DESTINATARIOS` = los correos que reciben, separados por comas.
+   (`SUPABASE_DB_URL` ya existe para el respaldo.)
+3. Actions > "Reporte semanal por correo" > Run workflow para probar; debe llegar el correo en un par de minutos.
+
+Mientras falten los secretos, el flujo avisa y no envía (no marca error).
+
 ## Roles
 
 | Rol | Puede |
@@ -77,5 +92,7 @@ El flujo "Mantenimiento de la base" (`.github/workflows/mantenimiento.yml`) cons
     tools/prueba_local.sh          base: migraciones, flujo de estados y permisos por rol y unidad
     tests/e2e.sh                   navegador: recorrido completo con capturador y administrador
     tests/e2e.sh electron.mjs      app de escritorio: sesión, foto, formato y reporte en PDF, Excel
+    tests/e2e.sh movil.mjs         sitio web en pantalla de celular
+    SIN_BUILD=1 tests/e2e.sh reporte_correo.mjs   reporte semanal por correo (sin enviar)
 
 Las tres levantan un PostgreSQL temporal y no tocan Supabase.

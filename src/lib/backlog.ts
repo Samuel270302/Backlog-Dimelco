@@ -107,14 +107,8 @@ export function claseEstado(estado: Estado): string {
   return "est-" + estado.toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "").replace(/\s+/g, "-");
 }
 
-// Lunes de la semana ISO de una fecha YYYY-MM-DD.
-export function lunesDe(iso: string): string {
-  const d = new Date(iso + "T00:00:00");
-  const dia = (d.getDay() + 6) % 7;
-  d.setDate(d.getDate() - dia);
-  const p = (n: number) => String(n).padStart(2, "0");
-  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`;
-}
+// lunesDe vive en fmt.ts (sin dependencias, lo usa también el reporte por correo).
+export { lunesDe } from "./fmt";
 
 // Repuestos y HH de varios backlogs en pocas consultas (por tandas de ids, para
 // no pasar el largo máximo de la URL). Se usa en el Kanban y en la vista por equipo.
