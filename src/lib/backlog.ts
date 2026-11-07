@@ -49,44 +49,58 @@ export interface Transicion {
   soloAdmin: boolean;
   campos: CampoTransicion[];
   peligro?: boolean;
+  atras?: boolean;
 }
 
+// soloAdmin: el capturador hace todo el flujo; solo revertir un backlog Validado y
+// reabrir uno Rechazado o Anulado quedan para el administrador (018). Los retrocesos
+// piden motivo.
 export function transiciones(estado: Estado): Transicion[] {
-  const anular: Transicion = { destino: "Anulado", etiqueta: "Anular", soloAdmin: true, campos: ["motivo"], peligro: true };
+  const anular: Transicion = { destino: "Anulado", etiqueta: "Anular", soloAdmin: false, campos: ["motivo"], peligro: true };
+  const atras = (destino: Estado, etiqueta: string): Transicion => ({ destino, etiqueta, soloAdmin: false, campos: ["motivo"], atras: true });
   switch (estado) {
     case "Identificado":
       return [
-        { destino: "En planificación", etiqueta: "Aprobar y planificar", soloAdmin: true, campos: ["prioridad"] },
-        { destino: "Rechazado", etiqueta: "Rechazar", soloAdmin: true, campos: ["motivo"], peligro: true },
+        { destino: "En planificación", etiqueta: "Aprobar y planificar", soloAdmin: false, campos: ["prioridad"] },
+        { destino: "Rechazado", etiqueta: "Rechazar", soloAdmin: false, campos: ["motivo"], peligro: true },
         anular,
       ];
     case "En planificación":
       return [
-        { destino: "Esperando repuestos", etiqueta: "Pasar a esperar repuestos", soloAdmin: true, campos: [] },
-        { destino: "Listo para programar", etiqueta: "Listo para programar", soloAdmin: true, campos: [] },
+        { destino: "Esperando repuestos", etiqueta: "Pasar a esperar repuestos", soloAdmin: false, campos: [] },
+        { destino: "Listo para programar", etiqueta: "Listo para programar", soloAdmin: false, campos: [] },
+        atras("Identificado", "Volver a Identificado"),
         anular,
       ];
     case "Esperando repuestos":
       return [
-        { destino: "Listo para programar", etiqueta: "Listo para programar", soloAdmin: true, campos: [] },
-        { destino: "En planificación", etiqueta: "Volver a planificación", soloAdmin: true, campos: [] },
+        { destino: "Listo para programar", etiqueta: "Listo para programar", soloAdmin: false, campos: [] },
+        atras("En planificación", "Volver a planificación"),
         anular,
       ];
     case "Listo para programar":
       return [
-        { destino: "Programado", etiqueta: "Programar", soloAdmin: true, campos: ["fecha_programada", "ot_sap", "aprovechar_pm"] },
-        { destino: "En planificación", etiqueta: "Volver a planificación", soloAdmin: true, campos: [] },
+        { destino: "Programado", etiqueta: "Programar", soloAdmin: false, campos: ["fecha_programada", "ot_sap", "aprovechar_pm"] },
+        atras("En planificación", "Volver a planificación"),
         anular,
       ];
     case "Programado":
       return [
         { destino: "Ejecutado", etiqueta: "Marcar ejecutado", soloAdmin: false, campos: ["fecha_ejecucion"] },
-        { destino: "Programado", etiqueta: "Reprogramar", soloAdmin: true, campos: ["fecha_programada", "motivo"] },
-        { destino: "Listo para programar", etiqueta: "Quitar del calendario", soloAdmin: true, campos: ["motivo"] },
+        { destino: "Programado", etiqueta: "Reprogramar", soloAdmin: false, campos: ["fecha_programada", "motivo"] },
+        atras("Listo para programar", "Quitar del calendario"),
         anular,
       ];
     case "Ejecutado":
-      return [{ destino: "Validado", etiqueta: "Validar", soloAdmin: true, campos: [] }];
+      return [
+        { destino: "Validado", etiqueta: "Validar", soloAdmin: false, campos: [] },
+        atras("Programado", "Volver a programado"),
+      ];
+    case "Validado":
+      return [{ ...atras("Ejecutado", "Revertir a ejecutado"), soloAdmin: true }];
+    case "Rechazado":
+    case "Anulado":
+      return [{ ...atras("Identificado", "Reabrir"), soloAdmin: true }];
     default:
       return [];
   }

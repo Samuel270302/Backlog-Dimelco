@@ -289,6 +289,45 @@ try {
   await foto(p, "borrar-dialogo");
   await p.getByRole("dialog").getByRole("button", { name: "Cancelar" }).click();
 
+  // Avanzar y retroceder estados (018: el capturador es autónomo)
+  const acciones = p.locator(".ficha-acciones");
+  await marcar(p, acciones);
+  await foto(p, "estados-acciones", { loc: p.locator(".ficha-cabecera") });
+  await acciones.getByRole("button", { name: "Aprobar y planificar", exact: true }).click();
+  await p.getByRole("dialog").waitFor();
+  await foto(p, "estados-aprobar");
+  await p.getByRole("dialog").getByRole("button", { name: "Aprobar y planificar", exact: true }).click();
+  await p.locator(".ficha-folio .etiqueta-estado", { hasText: "En planificación" }).waitFor();
+  await acciones.getByRole("button", { name: "Volver a Identificado", exact: true }).click();
+  await p.getByRole("dialog").getByLabel("Motivo").fill("Falta confirmar el diagnóstico con el supervisor");
+  await foto(p, "estados-retroceso");
+  await p.getByRole("dialog").getByRole("button", { name: "Cancelar" }).click();
+
+  // Programar y reprogramar (semilla: JU005 luminaria, Identificado y sin repuestos)
+  const manana = new Date(Date.now() + 86400000).toISOString().slice(0, 10);
+  const pasado = new Date(Date.now() + 2 * 86400000).toISOString().slice(0, 10);
+  await p.goto(base + "#/backlog/30000000-0000-0000-0000-000000000003");
+  await p.locator(".ficha-folio .etiqueta-estado", { hasText: "Identificado" }).waitFor();
+  await acciones.getByRole("button", { name: "Aprobar y planificar", exact: true }).click();
+  await p.getByRole("dialog").getByRole("button", { name: "Aprobar y planificar", exact: true }).click();
+  await p.locator(".ficha-folio .etiqueta-estado", { hasText: "En planificación" }).waitFor();
+  await acciones.getByRole("button", { name: "Listo para programar", exact: true }).click();
+  await p.getByRole("dialog").getByRole("button", { name: "Listo para programar", exact: true }).click();
+  await p.locator(".ficha-folio .etiqueta-estado", { hasText: "Listo para programar" }).waitFor();
+  await acciones.getByRole("button", { name: "Programar", exact: true }).click();
+  const dProg = p.getByRole("dialog");
+  await dProg.getByLabel("Fecha programada").fill(manana);
+  await dProg.getByLabel("OT SAP").fill("4002001");
+  await foto(p, "estados-programar");
+  await dProg.getByRole("button", { name: "Programar", exact: true }).click();
+  await p.locator(".ficha-folio .etiqueta-estado", { hasText: "Programado" }).waitFor();
+  await acciones.getByRole("button", { name: "Reprogramar", exact: true }).click();
+  const dRep = p.getByRole("dialog");
+  await dRep.getByLabel("Fecha programada").fill(pasado);
+  await dRep.getByLabel("Motivo").fill("El equipo sigue en producción mañana");
+  await foto(p, "estados-reprogramar");
+  await dRep.getByRole("button", { name: "Cancelar" }).click();
+
   // Kanban
   await p.goto(base + "#/kanban");
   await p.locator(".tarjeta-kanban").first().waitFor();
@@ -329,6 +368,14 @@ try {
   await p.waitForTimeout(400);
   await marcar(p, p.locator(".ficha-folio"));
   await foto(p, "ejecutar-resultado");
+  await acciones.getByRole("button", { name: "Validar", exact: true }).click();
+  await p.getByRole("dialog").waitFor();
+  await foto(p, "validar-dialogo");
+  await p.getByRole("dialog").getByRole("button", { name: "Validar", exact: true }).click();
+  await p.locator(".ficha-folio .etiqueta-estado", { hasText: "Validado" }).waitFor();
+  await p.waitForTimeout(400);
+  await marcar(p, p.locator(".ficha-folio"), acciones);
+  await foto(p, "validado-bloqueado", { loc: p.locator(".ficha-cabecera") });
 
   // Calendario, indicadores, capacidad
   await p.goto(base + "#/calendario");

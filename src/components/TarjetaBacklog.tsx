@@ -168,7 +168,7 @@ export default function TarjetaBacklog({
             {acciones.map((t) => (
               <button
                 key={t.destino}
-                className={t.peligro ? "boton-plano boton-peligro-plano" : "boton-chico"}
+                className={t.peligro ? "boton-plano boton-peligro-plano" : t.atras ? "boton-secundario boton-chico" : "boton-chico"}
                 onClick={() => onAccion(t)}
               >
                 {t.etiqueta}

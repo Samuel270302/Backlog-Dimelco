@@ -71,9 +71,11 @@ export default function DialogoTransicion({
         {transicion.etiqueta} · {folio}
       </h1>
       <p className="nota" style={{ marginTop: 0 }}>
-        {transicion.etiqueta === "Reprogramar" ? "Cambia la fecha programada." : `Pasa a «${transicion.destino}».`}
-        {transicion.destino === "En planificación" && " Revise la prioridad: la fecha límite se recalcula con ella."}
-        {transicion.destino === "Ejecutado" && " Antes deben estar cargadas las HH reales por especialidad."}
+        {transicion.etiqueta === "Reprogramar" ? "Cambia la fecha programada." : `${transicion.atras ? "Vuelve" : "Pasa"} a «${transicion.destino}».`}
+        {transicion.atras && " Indique el motivo: queda en la bitácora."}
+        {!transicion.atras && transicion.destino === "En planificación" && " Revise la prioridad: la fecha límite se recalcula con ella."}
+        {!transicion.atras && transicion.destino === "Ejecutado" && " Antes deben estar cargadas las HH reales por especialidad."}
+        {transicion.destino === "Validado" && " Una vez validado, el capturador ya no puede cambiarlo; solo el administrador lo revierte o lo borra."}
         {transicion.etiqueta === "Reprogramar" && " Se mantiene la OT y queda registrada la reprogramación."}
       </p>
       {pide("prioridad") && (

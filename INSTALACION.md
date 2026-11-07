@@ -96,8 +96,8 @@ Solo HEMCO usa SAP (`unidades.usa_sap`). En Veta Nueva, Mina La India y Explotec
 
 | Rol | Puede |
 |---|---|
-| Administrador | Todo, en todas las unidades: aprobar, planificar, programar, reprogramar, validar, anular, borrar y restaurar backlogs, borrar fotos y administrar familias, sistemas, equipos, capacidad, plazos y usuarios. |
-| Capturador | En sus unidades (las marcadas en Usuarios): registrar backlogs, cargar HH, repuestos y fotos, comentar, editar mientras está Identificado, marcar Ejecutado, editar la capacidad del taller y borrar backlogs (cualquier estado, con motivo). |
+| Administrador | Todo, en todas las unidades. Además de lo del capturador: revertir un backlog Validado, reabrir uno Rechazado o Anulado, borrar cualquiera y restaurarlo, borrar fotos y administrar familias, sistemas, equipos, capacidad, plazos y usuarios. |
+| Capturador | En sus unidades (las marcadas en Usuarios): registrar y editar backlogs abiertos; avanzar y retroceder estados con motivo (aprobar, esperar repuestos, programar, reprogramar, ejecutar, validar, rechazar, anular); cargar HH, repuestos y fotos; comentar; editar la capacidad del taller y borrar backlogs con motivo. Un backlog Validado, Rechazado o Anulado queda bloqueado para el capturador. |
 | Invitado | Consultar sus unidades (las marcadas en Usuarios), imprimir y exportar. La base rechaza cualquier escritura. |
 
 ## Actualizaciones

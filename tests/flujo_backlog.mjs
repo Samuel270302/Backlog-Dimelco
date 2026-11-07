@@ -180,8 +180,9 @@ try {
   if (!folio) throw new Error("La ficha no muestra el folio");
   await cap.getByRole("heading", { name: "PS011 · Sistema hidráulico · Block de implementos" }).waitFor();
   ok(`registro crea ${folio} con componente y abre la ficha`);
-  if (await cap.locator(".ficha-acciones button", { hasNotText: /Imprimir formato|^Borrar$/ }).count())
-    throw new Error("El capturador ve acciones de admin en Identificado");
+  // 018: el capturador es autónomo y ve las acciones del estado (aprobar, rechazar, anular).
+  for (const accion of ["Aprobar y planificar", "Rechazar", "Anular"])
+    await cap.locator(".ficha-acciones").getByRole("button", { name: accion, exact: true }).waitFor();
   await cap.getByRole("tab", { name: /^Repuestos/ }).click();
   for (const [parte] of REPUESTOS) await cap.getByRole("cell", { name: parte }).waitFor();
   await cap.getByRole("tab", { name: /^HH/ }).click();
@@ -358,8 +359,8 @@ try {
   await cap.getByRole("heading", { name: "Calendario" }).waitFor();
   if (lunesIso(otroDia) !== lunesIso(enDias(0))) await cap.getByRole("button", { name: "Semana siguiente" }).click();
   await cap.locator(".grilla-semana").getByLabel(`${folio} PS011`).waitFor();
-  if (await cap.locator('.pagina-calendario [draggable="true"]').count()) throw new Error("El capturador puede arrastrar en el calendario");
-  ok("el capturador ve el calendario pero no puede arrastrar");
+  if (!(await cap.locator('.pagina-calendario [draggable="true"]').count())) throw new Error("El capturador no puede arrastrar en el calendario");
+  ok("el capturador ve el calendario y también puede arrastrar para programar");
 
   // 3d. Indicadores (todas las unidades). Cálculo a mano en este punto del recorrido:
   //   Mecánico 12 + 6 + 8 + 8 = 34 HH / 40 = 0,85 · Hidráulico 6 / 10 = 0,6 · Eléctrico 2 / 20 = 0,1
@@ -429,27 +430,31 @@ try {
   await reales.getByLabel("Horas nuevas").fill("5");
   await reales.getByRole("button", { name: "Agregar" }).click();
   await reales.getByText("10", { exact: true }).first().waitFor();
-  if (await cap.locator(".ficha-acciones").getByRole("button", { name: "Reprogramar" }).count())
-    throw new Error("El capturador ve Reprogramar");
+  await cap.locator(".ficha-acciones").getByRole("button", { name: "Reprogramar", exact: true }).waitFor();
+  await cap.locator(".ficha-acciones").getByRole("button", { name: "Quitar del calendario", exact: true }).waitFor();
   await transicion(cap, "Marcar ejecutado", (d) => d.getByLabel(/Comentario/).fill("Se cambiaron sellos y se probó el levante"));
   await esperarEstado(cap, "Ejecutado");
   ok("capturador carga 10 HH reales y marca ejecutado");
 
-  // 5. El admin cierra; la ficha queda de solo lectura.
+  // 5. El capturador valida; el backlog queda bloqueado para él y solo el admin lo revierte o lo borra.
+  await transicion(cap, "Validar");
+  await esperarEstado(cap, "Validado");
+  await cap.getByLabel("Avance: paso 5 de 5, Validado").waitFor();
+  if (await cap.locator(".ficha-acciones button", { hasNotText: "Imprimir formato" }).count())
+    throw new Error("El capturador conserva acciones en un backlog validado");
   await adm.goto(base + `#/backlog/${id}`);
   await adm.reload();
-  await esperarEstado(adm, "Ejecutado");
-  await transicion(adm, "Validar");
   await esperarEstado(adm, "Validado");
-  await adm.getByLabel("Avance: paso 5 de 5, Validado").waitFor();
-  if (await adm.locator(".ficha-acciones button", { hasNotText: /Imprimir formato|^Borrar$/ }).count())
-    throw new Error("Quedan acciones en un backlog cerrado");
+  for (const accion of ["Revertir a ejecutado", "Borrar"])
+    await adm.locator(".ficha-acciones").getByRole("button", { name: accion, exact: true }).waitFor();
+  if (await adm.locator(".ficha-acciones button", { hasNotText: /Imprimir formato|^Borrar$|^Revertir a ejecutado$/ }).count())
+    throw new Error("Quedan otras acciones en un backlog validado");
   await adm.getByRole("tab", { name: "Datos" }).click();
   if (!(await adm.locator("label.campo", { hasText: "Descripción del trabajo" }).locator("input").isDisabled()))
     throw new Error("Datos editables en un backlog cerrado");
   const deteccion = await adm.locator("label.campo", { hasText: "Fecha de detección" }).locator("input").inputValue();
   if (!/^\d{4}-\d{2}-\d{2}$/.test(deteccion)) throw new Error(`Fecha de detección vacía o mal formada: «${deteccion}»`);
-  ok("admin valida (paso 5 de 5) y la ficha queda de solo lectura");
+  ok("el capturador valida (paso 5 de 5); para él queda sin acciones y el admin puede revertir o borrar");
 
   await adm.getByRole("tab", { name: /^Bitácora/ }).click();
   const eventos = await adm.locator(".bitacora .evento").count();

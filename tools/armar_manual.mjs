@@ -77,7 +77,7 @@ const html = `<!doctype html><html lang="es"><head><meta charset="utf-8"><title>
   <div class="titulo">Control de Backlog</div>
   <div class="sub">Manual del capturador</div>
   <div class="sub" style="font-size:12pt">Registro y seguimiento de backlogs de mantenimiento</div>
-  <div class="datos">Dimelco · versión de la app 0.5.4 · noviembre de 2026</div>
+  <div class="datos">Dimelco · versión de la app 0.5.5 · noviembre de 2026</div>
 </section>
 
 <h1>Contenido</h1>
@@ -88,8 +88,9 @@ const html = `<!doctype html><html lang="es"><head><meta charset="utf-8"><title>
   <li>Conceptos que hay que conocer: estados, prioridades, tipo de pedido, familias y sistemas</li>
   <li>Registrar un backlog paso a paso (ejemplo completo)</li>
   <li>La ficha del backlog: datos, HH, repuestos, fotos, bitácora, formato impreso y borrar</li>
+  <li>Avanzar y retroceder el backlog: aprobar, esperar repuestos, programar, reprogramar</li>
   <li>Seguir los backlogs: Kanban, Por equipo y Calendario</li>
-  <li>Cerrar un trabajo programado: HH reales y Marcar ejecutado</li>
+  <li>Cerrar un trabajo: HH reales, Marcar ejecutado y Validar</li>
   <li>Indicadores y reporte semanal</li>
   <li>Capacidad del taller</li>
   <li>Uso desde el celular</li>
@@ -102,15 +103,18 @@ const html = `<!doctype html><html lang="es"><head><meta charset="utf-8"><title>
 <p>El capturador es quien detecta o recibe la necesidad en campo y la deja registrada en la app con toda la información que el planificador necesita para programarla. En la app el capturador:</p>
 <ul>
   <li>registra backlogs nuevos de los equipos de sus unidades, con repuestos, horas hombre y fotos;</li>
-  <li>corrige los datos de un backlog mientras está en estado Identificado;</li>
+  <li>corrige los datos de un backlog mientras está abierto (hasta que se valida);</li>
+  <li>avanza el backlog por todo el flujo: lo aprueba, lo pasa a esperar repuestos, lo programa con fecha y OT, lo reprograma, lo marca ejecutado y lo valida;</li>
+  <li>lo devuelve un paso atrás cuando hace falta, dejando el motivo;</li>
+  <li>rechaza o anula un backlog que no procede, con motivo;</li>
   <li>carga y actualiza repuestos, HH estimadas y fotos mientras el backlog está abierto;</li>
   <li>deja comentarios en la bitácora;</li>
-  <li>carga las HH reales y marca como Ejecutado un trabajo programado cuando se termina;</li>
+  <li>carga las HH reales de un trabajo terminado;</li>
   <li>edita la capacidad del taller de su unidad;</li>
   <li>borra un backlog mal registrado, dejando el motivo;</li>
   <li>consulta el Kanban, la vista por equipo, el calendario y los indicadores, e imprime el formato y el reporte.</li>
 </ul>
-<p>Lo que hace solo el administrador (planificador): aprobar, planificar, programar, reprogramar, validar, anular y rechazar backlogs, y administrar equipos, familias, sistemas, plazos y usuarios.</p>
+<div class="nota">Una vez <b>Validado</b>, el backlog queda bloqueado para el capturador: ya no se edita ni se borra. Lo mismo pasa con un backlog <b>Rechazado</b> o <b>Anulado</b>. Solo el administrador puede revertirlos (devolverlos a un estado anterior) o borrarlos. El administrador también administra equipos, familias, sistemas, plazos y usuarios.</div>
 
 <h1>2. Entrar a la app</h1>
 <h2>2.1 Dónde está la app</h2>
@@ -138,11 +142,11 @@ ${fig("inicio-por-equipo", "Pantalla principal: Por equipo.")}
 <table>
   <tr><th>Opción</th><th>Para qué sirve</th></tr>
   <tr><td>Nuevo backlog</td><td>Registrar un trabajo pendiente (capítulo 5).</td></tr>
-  <tr><td>Por equipo</td><td>Ver los backlogs abiertos de cada equipo (capítulo 7).</td></tr>
-  <tr><td>Kanban</td><td>Ver todos los backlogs por etapa: Identificado, Planeado, Programado, Ejecutado, Validado.</td></tr>
-  <tr><td>Calendario</td><td>Ver qué trabajos están programados cada día de la semana.</td></tr>
-  <tr><td>Indicadores</td><td>HH acumuladas, antigüedad, vencidos, reporte semanal PDF y Excel (capítulo 9).</td></tr>
-  <tr><td>Capacidad del taller</td><td>HH disponibles por semana de cada especialidad en su unidad (capítulo 10).</td></tr>
+  <tr><td>Por equipo</td><td>Ver los backlogs abiertos de cada equipo (capítulo 8).</td></tr>
+  <tr><td>Kanban</td><td>Ver todos los backlogs por etapa (Identificado, Planeado, Programado, Ejecutado, Validado) y moverlos arrastrando la tarjeta.</td></tr>
+  <tr><td>Calendario</td><td>Ver y programar los trabajos de cada día de la semana.</td></tr>
+  <tr><td>Indicadores</td><td>HH acumuladas, antigüedad, vencidos, reporte semanal PDF y Excel (capítulo 10).</td></tr>
+  <tr><td>Capacidad del taller</td><td>HH disponibles por semana de cada especialidad en su unidad (capítulo 11).</td></tr>
 </table>
 ${fig("menu", "Menú del capturador. Arriba, la unidad; abajo, su nombre, Cambiar contraseña, Cerrar sesión y el estado de la conexión.", "angosta")}
 <div class="nota">Arriba del menú aparece su unidad. Si el administrador le asignó más de una, ahí verá una lista para elegir una unidad o <b>Todas mis unidades</b>. Abajo, el punto verde con "En línea" indica que la app está conectada; si dice "Reconectando" o "Sin conexión", revise el internet antes de grabar.</div>
@@ -152,15 +156,16 @@ ${fig("menu", "Menú del capturador. Arriba, la unidad; abajo, su nombre, Cambia
 <p>Cada backlog avanza por estas etapas. La barra de colores de cada tarjeta y de la ficha muestra en cuál va.</p>
 <table>
   <tr><th>Etapa</th><th>Estado en la app</th><th>Quién lo cambia</th><th>Qué significa</th></tr>
-  <tr><td>1. Identificado</td><td>Identificado</td><td>Se crea al registrar</td><td>El trabajo está detectado y registrado. Espera la revisión del planificador.</td></tr>
-  <tr><td rowspan="3">2. Planeado</td><td>En planificación</td><td>Administrador</td><td>El planificador lo aprobó y confirma prioridad, HH y repuestos.</td></tr>
-  <tr><td>Esperando repuestos</td><td>Administrador</td><td>Faltan repuestos por llegar.</td></tr>
-  <tr><td>Listo para programar</td><td>Administrador, o solo al marcar recibido el último repuesto</td><td>Todo está disponible para hacer el trabajo.</td></tr>
-  <tr><td>3. Programado</td><td>Programado</td><td>Administrador</td><td>Tiene día asignado en el calendario y número de OT.</td></tr>
-  <tr><td>4. Ejecutado</td><td>Ejecutado</td><td><b>Capturador</b> o administrador</td><td>El trabajo se hizo; se cargaron las HH reales.</td></tr>
-  <tr><td>5. Validado</td><td>Validado</td><td>Administrador</td><td>El planificador revisó y cerró el backlog. Ya no se edita.</td></tr>
+  <tr><td>1. Identificado</td><td>Identificado</td><td>Se crea al registrar</td><td>El trabajo está detectado y registrado.</td></tr>
+  <tr><td rowspan="3">2. Planeado</td><td>En planificación</td><td>Capturador o administrador (Aprobar y planificar)</td><td>Se aprobó; se confirman prioridad, HH y repuestos.</td></tr>
+  <tr><td>Esperando repuestos</td><td>Capturador o administrador</td><td>Faltan repuestos por llegar.</td></tr>
+  <tr><td>Listo para programar</td><td>Capturador o administrador, o solo al marcar recibido el último repuesto</td><td>Todo está disponible para hacer el trabajo.</td></tr>
+  <tr><td>3. Programado</td><td>Programado</td><td>Capturador o administrador (Programar)</td><td>Tiene día asignado en el calendario y número de OT.</td></tr>
+  <tr><td>4. Ejecutado</td><td>Ejecutado</td><td>Capturador o administrador</td><td>El trabajo se hizo; se cargaron las HH reales.</td></tr>
+  <tr><td>5. Validado</td><td>Validado</td><td>Capturador o administrador</td><td>Se revisó y se cerró. Queda bloqueado: solo el administrador lo revierte o lo borra.</td></tr>
 </table>
-<p>Fuera del flujo: <b>Rechazado</b> (no procede) y <b>Anulado</b> (equipo dado de baja, duplicado), ambos con motivo y solo por el administrador.</p>
+<p>Fuera del flujo: <b>Rechazado</b> (no procede) y <b>Anulado</b> (equipo dado de baja, duplicado), ambos con motivo. Los puede poner el capturador; reabrirlos lo hace solo el administrador.</p>
+<p>Cada estado tiene un paso atrás (por ejemplo, de Programado a Listo para programar): se usa cuando algo cambió y siempre pide el motivo, que queda en la bitácora (capítulo 7).</p>
 
 <h2>4.2 Prioridad</h2>
 <p>La prioridad son los niveles de criticidad de la orden de trabajo de Dimelco. La app calcula la <b>fecha límite</b> sumando el plazo a la fecha de detección; pasada esa fecha, el backlog aparece como <b>vencido</b> (en rojo).</p>
@@ -261,7 +266,7 @@ ${fig("nuevo-completo", "Formulario completo del ejemplo antes de registrar.", "
 ${fig("ficha-datos", "Ficha del backlog recién registrado, pestaña Datos.")}
 
 <h2>6.1 Datos</h2>
-<p>Mientras el backlog está <b>Identificado</b>, el capturador puede corregir cualquier dato y pulsar <b>Grabar datos</b> (o <b>Deshacer</b> para volver a lo grabado). Una vez aprobado por el planificador, estos datos quedan solo para consulta.</p>
+<p>Mientras el backlog está abierto (de Identificado hasta Ejecutado), el capturador puede corregir cualquier dato y pulsar <b>Grabar datos</b> (o <b>Deshacer</b> para volver a lo grabado). Al validarlo, los datos quedan solo para consulta.</p>
 <p>Arriba se ven datos fijos: equipo, unidad, <b>fecha límite</b> (según la prioridad) y antigüedad en días.</p>
 
 <h2>6.2 Repuestos</h2>
@@ -270,7 +275,7 @@ ${fig("ficha-datos", "Ficha del backlog recién registrado, pestaña Datos.")}
 ${fig("ficha-repuestos", "Pestaña Repuestos.")}
 
 <h2>6.3 HH</h2>
-<p>Tiene dos tablas: <b>HH estimadas</b> (las del registro; se pueden corregir hasta que el trabajo se ejecute) y <b>HH reales</b> (se cargan cuando el backlog está Programado o Ejecutado, ver capítulo 8).</p>
+<p>Tiene dos tablas: <b>HH estimadas</b> (las del registro; se pueden corregir hasta que el trabajo se ejecute) y <b>HH reales</b> (se cargan cuando el backlog está Programado o Ejecutado, ver capítulo 9).</p>
 ${fig("ficha-hh", "Pestaña HH.")}
 
 <h2>6.4 Fotos</h2>
@@ -286,26 +291,70 @@ ${fig("ficha-bitacora", "Bitácora con el registro y un comentario.")}
 ${fig("formato-impreso", "Formato impreso del ejemplo, con la hoja de imágenes.", "alta")}
 
 <h2>6.7 Borrar un backlog</h2>
-<p>Use <b>Borrar</b> solo si el backlog se registró por error (duplicado, equipo equivocado). La app pide el <b>motivo</b>; sin motivo no deja borrar.</p>
+<p>Use <b>Borrar</b> solo si el backlog se registró por error (duplicado, equipo equivocado). La app pide el <b>motivo</b>; sin motivo no deja borrar. Un backlog Validado no lo puede borrar el capturador.</p>
 ${fig("borrar-dialogo", "Borrar pide el motivo.")}
-<div class="alerta">El backlog borrado desaparece de todas las pantallas, los indicadores y los reportes. No se pierde: el administrador lo ve en "Backlogs borrados" con el motivo, quién y cuándo, y puede restaurarlo. Si el trabajo ya no procede por otra razón (el equipo se dio de baja, otra área lo resolvió), pida al planificador que lo <b>anule</b> en lugar de borrarlo.</div>
+<div class="alerta">El backlog borrado desaparece de todas las pantallas, los indicadores y los reportes. No se pierde: el administrador lo ve en "Backlogs borrados" con el motivo, quién y cuándo, y puede restaurarlo. Si el trabajo ya no procede por otra razón (el equipo se dio de baja, otra área lo resolvió), <b>anúlelo</b> con motivo en lugar de borrarlo (capítulo 7): así queda en el historial.</div>
 
-<h1>7. Seguir los backlogs</h1>
-<h2>7.1 Kanban</h2>
+<h1>7. Avanzar y retroceder el backlog</h1>
+<p>Los botones de la derecha, en la cabecera de la ficha, son las acciones posibles en el estado actual. Los botones amarillos avanzan, los de borde gris devuelven un paso atrás y los rojos son para rechazar, anular o borrar. Cada cambio pide confirmación en un cuadro y queda en la bitácora con fecha, hora y usuario.</p>
+${fig("estados-acciones", "Acciones de un backlog Identificado: Aprobar y planificar, Rechazar, Anular, además de Imprimir formato y Borrar.")}
+<table>
+  <tr><th>Estado actual</th><th>Avanzar</th><th>Paso atrás (pide motivo)</th><th>Otros (piden motivo)</th></tr>
+  <tr><td>Identificado</td><td>Aprobar y planificar</td><td>-</td><td>Rechazar, Anular</td></tr>
+  <tr><td>En planificación</td><td>Pasar a esperar repuestos; Listo para programar</td><td>Volver a Identificado</td><td>Anular</td></tr>
+  <tr><td>Esperando repuestos</td><td>Listo para programar</td><td>Volver a planificación</td><td>Anular</td></tr>
+  <tr><td>Listo para programar</td><td>Programar</td><td>Volver a planificación</td><td>Anular</td></tr>
+  <tr><td>Programado</td><td>Marcar ejecutado; Reprogramar</td><td>Quitar del calendario</td><td>Anular</td></tr>
+  <tr><td>Ejecutado</td><td>Validar</td><td>Volver a programado</td><td>-</td></tr>
+  <tr><td>Validado, Rechazado, Anulado</td><td colspan="3">Bloqueado para el capturador. Solo el administrador lo revierte o lo borra.</td></tr>
+</table>
+
+<h2>7.1 Aprobar y planificar</h2>
+<p>Pasa el backlog de Identificado a En planificación. El cuadro pide confirmar la <b>prioridad</b>; si cambia, la fecha límite se recalcula. Necesita al menos una especialidad con HH estimadas.</p>
+${fig("estados-aprobar", "Aprobar y planificar: confirmar la prioridad.")}
+
+<h2>7.2 Esperar repuestos y listo para programar</h2>
+<p>Si hay repuestos sin recibir, use <b>Pasar a esperar repuestos</b>. Cuando llegan, márquelos como Recibido en la pestaña Repuestos: al recibir el último, el backlog pasa solo a <b>Listo para programar</b>. Si el trabajo no lleva repuestos, use directamente <b>Listo para programar</b>.</p>
+
+<h2>7.3 Programar</h2>
+<p>Desde Listo para programar, pulse <b>Programar</b> y complete:</p>
+<ol>
+  <li><span class="paso">1</span><b>Fecha programada</b>: el día del trabajo (no puede ser pasada).</li>
+  <li><span class="paso">2</span><b>OT SAP</b> en HEMCO, o <b>N° OT</b> en las demás unidades (obligatorio).</li>
+  <li><span class="paso">3</span>Marque <b>Aprovechar la parada de un PM</b> si se hará junto con un preventivo.</li>
+</ol>
+${fig("estados-programar", "Programar: fecha, número de OT y si aprovecha un PM.")}
+<p>También se programa arrastrando la tarjeta desde "Listos para programar" hasta el día en el <b>Calendario</b> (8.3).</p>
+
+<h2>7.4 Reprogramar o quitar del calendario</h2>
+<p><b>Reprogramar</b> cambia la fecha de un backlog Programado: pide la fecha nueva y el motivo, mantiene la OT y suma una reprogramación. En el calendario se hace arrastrando la tarjeta a otro día. <b>Quitar del calendario</b> lo devuelve a Listo para programar, también con motivo.</p>
+${fig("estados-reprogramar", "Reprogramar: fecha nueva y motivo.")}
+
+<h2>7.5 Volver un paso atrás</h2>
+<p>Si algo cambió (falta información, cambió la prioridad de producción, el trabajo quedó mal hecho), use el botón de paso atrás del estado actual. El cuadro pide el <b>motivo</b>; en la bitácora queda como "Retroceso" con ese motivo.</p>
+${fig("estados-retroceso", "Volver a Identificado con motivo.")}
+<div class="ejemplo">Un trabajo marcado como Ejecutado quedó con fuga: pulse <b>Volver a programado</b> con el motivo "Quedó una fuga, se repite". Se borra la fecha de ejecución y se mantienen la fecha programada y la OT.</div>
+
+<h2>7.6 Rechazar y anular</h2>
+<p><b>Rechazar</b> (desde Identificado) es para una necesidad que no procede. <b>Anular</b> (en cualquier estado abierto) es para un trabajo que ya no se hará: equipo dado de baja, otra área lo resolvió. Los dos piden motivo y dejan el backlog bloqueado; si hay que retomarlo, el administrador lo reabre.</p>
+
+<h1>8. Seguir los backlogs</h1>
+<h2>8.1 Kanban</h2>
 <p>Muestra los backlogs en cinco columnas, una por etapa. Cada tarjeta tiene folio, prioridad, tipo de pedido, equipo, trabajo, HH, días desde la detección, repuestos recibidos y, si corresponde, "vencido" en rojo. Arriba hay filtros por texto (folio, equipo, trabajo, OT), familia, prioridad y tipo de pedido.</p>
+<p>En la PC, arrastre una tarjeta a otra columna para cambiarla de etapa: la app abre el mismo cuadro que el botón de la ficha (por ejemplo, al soltarla en Programado pide fecha y OT). Si el cambio no es posible desde ese estado, la tarjeta no se suelta.</p>
 ${fig("kanban", "Kanban de la unidad.")}
 <p>Clic en una tarjeta para desplegarla: muestra equipo, sistema, horómetro, quién reportó y aprobó, repuestos, especialidades y justificación, con un enlace a la ficha.</p>
 ${fig("kanban-tarjeta", "Tarjeta desplegada.")}
 
-<h2>7.2 Por equipo</h2>
+<h2>8.2 Por equipo</h2>
 <p>Clic en un equipo para ver sus backlogs abiertos. <b>Historial del equipo</b> abre todos sus backlogs, abiertos y cerrados, con las HH por sistema. Use los filtros de arriba para buscar un equipo, ver una familia o solo los equipos con vencidos.</p>
 ${fig("por-equipo-desplegado", "Equipo PS011 desplegado con su backlog.")}
 
-<h2>7.3 Calendario</h2>
-<p>Muestra la semana de lunes a domingo con los trabajos programados por equipo y día, y abajo las barras de HH programadas contra la capacidad del taller por especialidad. El capturador lo consulta; programar y reprogramar lo hace el planificador. Use las flechas para cambiar de semana y <b>Hoy</b> para volver a la actual.</p>
+<h2>8.3 Calendario</h2>
+<p>Muestra la semana de lunes a domingo con los trabajos programados por equipo y día, y abajo las barras de HH programadas contra la capacidad del taller por especialidad. Para programar, arrastre una tarjeta desde "Listos para programar" hasta el día (pide la OT); para reprogramar, arrastre la tarjeta programada a otro día (pide el motivo). Use las flechas para cambiar de semana y <b>Hoy</b> para volver a la actual.</p>
 ${fig("calendario", "Calendario semanal.")}
 
-<h1>8. Cerrar un trabajo programado</h1>
+<h1>9. Cerrar un trabajo: ejecutar y validar</h1>
 <p>Cuando se termina un trabajo que estaba <b>Programado</b>, el capturador lo cierra así:</p>
 <ol>
   <li><span class="paso">1</span>Abra la ficha del backlog (desde el Kanban, columna Programado, o desde el calendario).</li>
@@ -317,11 +366,16 @@ ${fig("ejecutar-hh-reales", "Carga de HH reales: 2 mecánicos × 3,5 horas.")}
   <li><span class="paso">4</span>Pulse <b>Marcar ejecutado</b> en el cuadro para confirmar.</li>
 </ol>
 ${fig("ejecutar-dialogo", "Cuadro Marcar ejecutado con fecha y comentario.")}
-<p>El backlog pasa a <b>Ejecutado</b>. Después el planificador lo revisa y lo valida.</p>
+<p>El backlog pasa a <b>Ejecutado</b>.</p>
 ${fig("ejecutar-resultado", "Backlog en estado Ejecutado.")}
 <div class="nota">Cargue las HH reales antes de marcar ejecutado: con ellas se compara lo estimado con lo real en los indicadores y en el reporte semanal.</div>
+<h2>9.1 Validar</h2>
+<p>Revise que el trabajo quedó bien (prueba del equipo, HH reales, repuestos usados) y pulse <b>Validar</b>. El cuadro avisa que después ya no se podrá cambiar.</p>
+${fig("validar-dialogo", "Validar: el cuadro avisa que el backlog quedará bloqueado.")}
+<p>Un backlog validado muestra la barra completa (5 de 5) y, para el capturador, solo el botón Imprimir formato. Si hay que corregir algo, pida al administrador que lo revierta a Ejecutado.</p>
+${fig("validado-bloqueado", "Backlog validado: bloqueado para el capturador.")}
 
-<h1>9. Indicadores y reporte semanal</h1>
+<h1>10. Indicadores y reporte semanal</h1>
 <p>La pantalla <b>Indicadores</b> muestra, para su unidad:</p>
 <ul>
   <li>backlogs abiertos, <b>HH acumuladas pendientes</b>, semanas de backlog (cuando hay capacidad cargada), vencidos, HH ya programadas y cerrados dentro del plazo;</li>
@@ -333,7 +387,7 @@ ${fig("ejecutar-resultado", "Backlog en estado Ejecutado.")}
 <p>Botones: <b>Reporte semanal PDF</b> (el mismo reporte que llega por correo los lunes) y <b>Exportar abiertos a Excel</b>.</p>
 ${fig("indicadores", "Indicadores.")}
 
-<h1>10. Capacidad del taller</h1>
+<h1>11. Capacidad del taller</h1>
 <p>Indica cuántas HH por semana hay disponibles para backlog en cada especialidad de su unidad. Con ella se calculan las semanas de backlog y las barras del calendario.</p>
 <ol>
   <li><span class="paso">1</span>Pulse <b>Cambiar</b> en la especialidad.</li>
@@ -344,12 +398,12 @@ ${fig("indicadores", "Indicadores.")}
 ${fig("capacidad", "Calculadora de capacidad para Mecánico.")}
 <p>Cada cambio queda en el historial con su fecha; los indicadores de semanas anteriores no cambian.</p>
 
-<h1>11. Uso desde el celular</h1>
+<h1>12. Uso desde el celular</h1>
 <p>En el celular el menú pasa a una barra abajo: <b>Nuevo</b>, <b>Por equipo</b>, <b>Kanban</b> y <b>Más</b> (resto del menú, unidad, cambiar contraseña y cerrar sesión). El Kanban se recorre por etapas con las pestañas de arriba y se avanza con los botones dentro de cada tarjeta. En Fotos, el botón ofrece tomar la foto con la cámara.</p>
 ${movil([["movil-inicio", "Por equipo en el celular."], ["movil-nuevo", "Nuevo backlog en el celular."]])}
 ${movil([["movil-kanban", "Kanban en el celular."], ["movil-ficha", "Ficha en el celular."]])}
 
-<h1>12. Preguntas frecuentes y mensajes de la app</h1>
+<h1>13. Preguntas frecuentes y mensajes de la app</h1>
 <table>
   <tr><th>Situación o mensaje</th><th>Qué significa y qué hacer</th></tr>
   <tr><td>El botón Registrar backlog está gris</td><td>Falta un dato obligatorio. Lea el texto "Falta: ..." junto al botón.</td></tr>
@@ -358,27 +412,34 @@ ${movil([["movil-kanban", "Kanban en el celular."], ["movil-ficha", "Ficha en el
   <tr><td>"Cada repuesto necesita número de parte o código, y cantidad"</td><td>Complete el número de parte (o código SAP en HEMCO) y la cantidad, o quite la fila vacía con la ×.</td></tr>
   <tr><td>"Indique quién reporta la necesidad y quién la aprueba"</td><td>Complete Reportado por y Aprobado por.</td></tr>
   <tr><td>"La fecha de detección no puede ser futura"</td><td>Corrija la fecha.</td></tr>
-  <tr><td>No puedo cambiar los datos del backlog</td><td>Ya fue aprobado por el planificador. Deje un comentario en la bitácora con la corrección.</td></tr>
+  <tr><td>No puedo cambiar los datos del backlog</td><td>Está Validado, Rechazado o Anulado. Pida al administrador que lo revierta si hace falta corregirlo.</td></tr>
+  <tr><td>"Indique el motivo para volver a ..."</td><td>Todo paso atrás pide motivo. Escríbalo en el cuadro.</td></tr>
+  <tr><td>"Faltan N repuesto(s) por recibir"</td><td>Para pasar a Listo para programar, marque como Recibido los repuestos en la pestaña Repuestos, o use Pasar a esperar repuestos.</td></tr>
+  <tr><td>"Para programar indique fecha programada y N° de OT"</td><td>Complete la fecha y el número de OT en el cuadro Programar.</td></tr>
+  <tr><td>"El backlog está ...: solo el administrador puede revertirlo"</td><td>El backlog está cerrado (Validado, Rechazado o Anulado). Pida al administrador que lo revierta.</td></tr>
   <tr><td>"Las HH reales se cargan con el backlog Programado o Ejecutado"</td><td>Todavía no está programado. Las HH reales se cargan al terminar el trabajo.</td></tr>
-  <tr><td>No veo los botones Aprobar, Programar o Validar</td><td>Son del administrador. El capturador solo ve Marcar ejecutado, Imprimir formato y Borrar.</td></tr>
+  <tr><td>No veo un botón que esperaba</td><td>Cada estado muestra solo sus acciones (tabla del capítulo 7). Por ejemplo, Programar aparece en Listo para programar y Validar en Ejecutado.</td></tr>
   <tr><td>"El backlog está borrado: no se edita"</td><td>Alguien lo borró. Pida al administrador que lo restaure si hace falta.</td></tr>
   <tr><td>Abajo dice "Sin conexión" o "Reconectando"</td><td>Revise el internet. Lo que esté escrito y no grabado se pierde si cierra la app.</td></tr>
   <tr><td>Olvidé la contraseña</td><td>Pida al administrador que la restablezca desde la pantalla Usuarios.</td></tr>
-  <tr><td>Registré un backlog dos veces</td><td>Borre el duplicado con el motivo "Duplicado de BL-..." (6.7).</td></tr>
+  <tr><td>Registré un backlog dos veces</td><td>Borre el duplicado con el motivo "Duplicado de BL-..." (6.7) o anúlelo.</td></tr>
 </table>
 
-<h1>13. Resumen: qué puede y qué no puede hacer el capturador</h1>
+<h1>14. Resumen: qué puede y qué no puede hacer el capturador</h1>
 <table>
   <tr><th>Acción</th><th>Capturador</th><th>Administrador</th></tr>
   <tr><td>Registrar backlogs de sus unidades</td><td>Sí</td><td>Sí, en todas</td></tr>
-  <tr><td>Corregir datos del backlog</td><td>Solo en Identificado</td><td>Mientras esté abierto</td></tr>
+  <tr><td>Corregir datos del backlog</td><td>Mientras esté abierto (hasta Ejecutado)</td><td>Mientras esté abierto</td></tr>
   <tr><td>Repuestos, HH estimadas y fotos</td><td>Mientras esté abierto</td><td>Sí</td></tr>
   <tr><td>Borrar fotos</td><td>No</td><td>Sí</td></tr>
   <tr><td>Comentar en la bitácora</td><td>Sí</td><td>Sí</td></tr>
-  <tr><td>Aprobar, planificar, programar, reprogramar</td><td>No</td><td>Sí</td></tr>
+  <tr><td>Aprobar, esperar repuestos, programar, reprogramar</td><td>Sí</td><td>Sí</td></tr>
+  <tr><td>Volver un paso atrás (con motivo)</td><td>Sí, hasta Ejecutado</td><td>Sí</td></tr>
   <tr><td>Cargar HH reales y marcar ejecutado</td><td>Sí</td><td>Sí</td></tr>
-  <tr><td>Validar, anular, rechazar</td><td>No</td><td>Sí</td></tr>
-  <tr><td>Borrar un backlog con motivo</td><td>Sí</td><td>Sí, y también restaurarlo</td></tr>
+  <tr><td>Validar</td><td>Sí</td><td>Sí</td></tr>
+  <tr><td>Rechazar y anular (con motivo)</td><td>Sí</td><td>Sí</td></tr>
+  <tr><td>Revertir un Validado; reabrir un Rechazado o Anulado</td><td>No</td><td>Sí</td></tr>
+  <tr><td>Borrar un backlog con motivo</td><td>Sí, salvo Validado</td><td>Sí, y también restaurarlo</td></tr>
   <tr><td>Capacidad del taller</td><td>Sí, en su unidad</td><td>Sí, en todas</td></tr>
   <tr><td>Indicadores, reporte PDF, Excel, formato impreso</td><td>Sí</td><td>Sí</td></tr>
   <tr><td>Equipos, familias, sistemas, plazos, usuarios</td><td>No</td><td>Sí</td></tr>

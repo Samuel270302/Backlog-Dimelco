@@ -25,7 +25,7 @@ function nivel(uso: number) {
 }
 
 export default function Calendario() {
-  const { esAdmin } = useAuth();
+  const { puedeCapturar } = useAuth();
   const hoy = hoyISO();
   const [lunes, setLunes] = useState(() => lunesDe(hoy));
   const dias = useMemo(() => Array.from({ length: 7 }, (_, i) => sumarDiasISO(lunes, i)), [lunes]);
@@ -114,7 +114,7 @@ export default function Calendario() {
       .join(" ");
 
   const arrastre = (b: BacklogFila) =>
-    esAdmin && (b.estado === "Listo para programar" || b.estado === "Programado")
+    puedeCapturar && (b.estado === "Listo para programar" || b.estado === "Programado")
       ? {
           draggable: true,
           onDragStart: (e: React.DragEvent) => {
@@ -177,7 +177,7 @@ export default function Calendario() {
           <h2>
             Listos para programar <span className="nota">{listos.length}</span>
           </h2>
-          {esAdmin && listos.length > 0 && <p className="nota">Arrastre al día en que se hará el trabajo.</p>}
+          {puedeCapturar && listos.length > 0 && <p className="nota">Arrastre al día en que se hará el trabajo.</p>}
           {listos.length === 0 && <p className="nota">No hay backlogs listos.</p>}
           {listos.map((b) => (
             <div key={b.id} className={`tarjeta-cal listo${b.vencido ? " vencida" : ""}`} aria-label={`${b.folio} ${b.cod_interno}`} {...arrastre(b)}>
@@ -249,7 +249,7 @@ export default function Calendario() {
                   <td className="col-equipo nota">Sin trabajos</td>
                   {dias.map((d) => (
                     <td key={d} className={`celda-vacia ${claseDia(d)}`} {...zonaDia(d)}>
-                      {esAdmin && listos.length > 0 && d >= hoy ? "Soltar aquí" : ""}
+                      {puedeCapturar && listos.length > 0 && d >= hoy ? "Soltar aquí" : ""}
                     </td>
                   ))}
                 </tr>

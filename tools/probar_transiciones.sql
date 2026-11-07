@@ -69,7 +69,6 @@ insert into backlog_hh (backlog_id, especialidad_id, tipo, personas, horas)
 values ('20000000-0000-0000-0000-000000000001', (select id from especialidades where nombre = 'Mecánico'), 'estimada', 2, 4);
 update backlogs set descripcion = 'Fuga en cilindro de levante izquierdo, sello dañado' where id = '20000000-0000-0000-0000-000000000001';
 select pruebas.espera_error($$update backlogs set estado = 'Programado' where id = '20000000-0000-0000-0000-000000000001'$$, 'cambiar_estado_backlog');
-select pruebas.espera_error($$select cambiar_estado_backlog('20000000-0000-0000-0000-000000000001', 'En planificación')$$, 'Solo el administrador');
 select pruebas.espera_error($$insert into backlogs (equipo_id, sistema_id, descripcion, origen, prioridad, reportado_por, aprobado_por)
   values ('10000000-0000-0000-0000-000000000002', (select id from sistemas limit 1), 'Equipo de otra unidad', 'PM', 'P3', 'A', 'B')$$, 'row-level security');
 select pruebas.espera_error($$insert into backlogs (equipo_id, sistema_id, descripcion, origen, prioridad, fecha_deteccion, reportado_por, aprobado_por)
@@ -128,17 +127,18 @@ select pruebas.igual((select texto from backlog_eventos where backlog_id = '2000
 
 -- Capturador ejecuta con HH reales; admin cierra.
 select set_config('request.jwt.claims', '{"sub":"00000000-0000-0000-0000-00000000000c"}', false);
-select pruebas.espera_error($$select cambiar_estado_backlog('20000000-0000-0000-0000-000000000001', 'Programado', '{"fecha_programada":"2026-11-13","motivo":"x"}')$$, 'Solo el administrador');
+select pruebas.espera_error($$select cambiar_estado_backlog('20000000-0000-0000-0000-000000000001', 'Programado', '{"fecha_programada":"2026-11-12","motivo":"x"}')$$, 'distinta');
 select pruebas.espera_error($$select cambiar_estado_backlog('20000000-0000-0000-0000-000000000001', 'Ejecutado', '{"fecha_ejecucion":"2026-11-02"}')$$, 'HH reales');
 insert into backlog_hh (backlog_id, especialidad_id, tipo, personas, horas)
 values ('20000000-0000-0000-0000-000000000001', (select id from especialidades where nombre = 'Mecánico'), 'real', 2, 5);
 select pruebas.espera_error($$select cambiar_estado_backlog('20000000-0000-0000-0000-000000000001', 'Ejecutado', '{"fecha_ejecucion":"2026-11-20"}')$$, 'futura');
 select cambiar_estado_backlog('20000000-0000-0000-0000-000000000001', 'Ejecutado', '{"fecha_ejecucion":"2026-11-02","comentario":"Se cambiaron sellos"}');
-select pruebas.espera_error($$select cambiar_estado_backlog('20000000-0000-0000-0000-000000000001', 'Validado')$$, 'Solo el administrador');
 insert into backlog_eventos (backlog_id, tipo, texto) values ('20000000-0000-0000-0000-000000000001', 'comentario', 'Equipo probado OK');
+-- 018: el capturador también valida; después ya no lo puede revertir.
+select cambiar_estado_backlog('20000000-0000-0000-0000-000000000001', 'Validado');
+select pruebas.espera_error($$select cambiar_estado_backlog('20000000-0000-0000-0000-000000000001', 'Ejecutado', '{"motivo":"Revisar"}')$$, 'solo el administrador puede revertirlo');
 
 select set_config('request.jwt.claims', '{"sub":"00000000-0000-0000-0000-00000000000a"}', false);
-select cambiar_estado_backlog('20000000-0000-0000-0000-000000000001', 'Validado');
 select pruebas.espera_error($$update backlogs set descripcion = 'cambio tardío' where id = '20000000-0000-0000-0000-000000000001'$$, 'no se edita');
 select pruebas.espera_error($$delete from backlog_hh where backlog_id = '20000000-0000-0000-0000-000000000001'$$, 'no se edita');
 select pruebas.igual((select hh_reales from v_backlog where id = '20000000-0000-0000-0000-000000000001'), 10::numeric, 'HH reales');
@@ -242,14 +242,17 @@ select set_config('request.jwt.claims', '{"sub":"00000000-0000-0000-0000-0000000
 -- Borrar (015): capturador de la unidad, cualquier estado, con motivo; admin restaura.
 select set_config('request.jwt.claims', '{"sub":"00000000-0000-0000-0000-00000000000c"}', false);
 select pruebas.igual((select estado from v_backlog where id = '20000000-0000-0000-0000-000000000001'), 'Validado', 'BL 1 validado antes de borrar');
-select pruebas.espera_error($$select borrar_backlog('20000000-0000-0000-0000-000000000001', 'no')$$, 'motivo');
+select pruebas.espera_error($$select borrar_backlog('20000000-0000-0000-0000-000000000002', 'no')$$, 'motivo');
 select set_config('request.jwt.claims', '{"sub":"00000000-0000-0000-0000-00000000000e"}', false);
 select pruebas.espera_error($$select borrar_backlog('20000000-0000-0000-0000-000000000001', 'Invitado no puede')$$, 'Solo el administrador o un capturador');
 select set_config('request.jwt.claims', '{"sub":"00000000-0000-0000-0000-00000000000d"}', false);
 select pruebas.espera_error($$select borrar_backlog('20000000-0000-0000-0000-000000000002', 'Otra unidad no puede')$$, 'Solo el administrador o un capturador');
 select set_config('request.jwt.claims', '{"sub":"00000000-0000-0000-0000-00000000000c"}', false);
-select borrar_backlog('20000000-0000-0000-0000-000000000001', 'Registrado dos veces');
+select pruebas.espera_error($$select borrar_backlog('20000000-0000-0000-0000-000000000001', 'Registrado dos veces')$$, 'solo el administrador puede borrarlo');
 select borrar_backlog('20000000-0000-0000-0000-000000000002', 'Equipo equivocado');
+select set_config('request.jwt.claims', '{"sub":"00000000-0000-0000-0000-00000000000a"}', false);
+select borrar_backlog('20000000-0000-0000-0000-000000000001', 'Registrado dos veces');
+select set_config('request.jwt.claims', '{"sub":"00000000-0000-0000-0000-00000000000c"}', false);
 select pruebas.igual((select count(*)::int from v_backlog where id in ('20000000-0000-0000-0000-000000000001', '20000000-0000-0000-0000-000000000002')), 0, 'borrados fuera de v_backlog');
 select pruebas.igual((select hh_pendientes from v_semanas_backlog where especialidad = 'Mecánico' and unidad_id = (select id from unidades where sigla = 'HEM')), 20::numeric, 'HH pendientes sin el borrado');
 select pruebas.igual((select cierres from v_backlog_semanal where semana = '2026-11-02'), 0::bigint, 'cierre borrado no cuenta');
@@ -306,6 +309,50 @@ update perfiles set unidad_id = (select id from unidades where sigla = 'EXP') wh
 select pruebas.igual((select unidades = array[(select id from unidades where sigla = 'EXP')] from perfiles where correo = 'inv.hem@prueba'), true, 'cambiar unidad_id reemplaza la lista');
 set role authenticated;
 select set_config('request.jwt.claims', '{"sub":"00000000-0000-0000-0000-00000000000a"}', false);
+
+
+-- Capturador autónomo (018): hace el ciclo completo, retrocede con motivo y valida;
+-- el backlog validado queda bloqueado para él.
+select set_config('request.jwt.claims', '{"sub":"00000000-0000-0000-0000-00000000000c"}', false);
+insert into backlogs (id, equipo_id, sistema_id, descripcion, origen, prioridad, reportado_por, aprobado_por)
+values ('20000000-0000-0000-0000-0000000000c1', '10000000-0000-0000-0000-000000000001', (select id from sistemas where nombre = 'Frenos'), 'Cambio de pastillas', 'PM', 'P3', 'A', 'B');
+insert into backlog_hh (backlog_id, especialidad_id, tipo, personas, horas)
+values ('20000000-0000-0000-0000-0000000000c1', (select id from especialidades where nombre = 'Mecánico'), 'estimada', 1, 3);
+update backlogs set descripcion = 'Cambio de pastillas de freno' where id = '20000000-0000-0000-0000-0000000000c1';
+select cambiar_estado_backlog('20000000-0000-0000-0000-0000000000c1', 'En planificación', '{"prioridad":"P2"}');
+update backlogs set descripcion = 'Cambio de pastillas de freno delanteras' where id = '20000000-0000-0000-0000-0000000000c1';
+select pruebas.igual((select descripcion from backlogs where id = '20000000-0000-0000-0000-0000000000c1'), 'Cambio de pastillas de freno delanteras', 'capturador edita en planificación');
+select pruebas.espera_error($$select cambiar_estado_backlog('20000000-0000-0000-0000-0000000000c1', 'Identificado')$$, 'motivo');
+select cambiar_estado_backlog('20000000-0000-0000-0000-0000000000c1', 'Identificado', '{"motivo":"Falta confirmar el diagnóstico"}');
+select pruebas.igual((select texto from backlog_eventos where backlog_id = '20000000-0000-0000-0000-0000000000c1' order by creado_en desc, id desc limit 1),
+  'Retroceso · Falta confirmar el diagnóstico', 'retroceso en la bitácora');
+select cambiar_estado_backlog('20000000-0000-0000-0000-0000000000c1', 'En planificación');
+select cambiar_estado_backlog('20000000-0000-0000-0000-0000000000c1', 'Listo para programar');
+select cambiar_estado_backlog('20000000-0000-0000-0000-0000000000c1', 'Programado', '{"fecha_programada":"2026-11-05","ot_sap":"777"}');
+select cambiar_estado_backlog('20000000-0000-0000-0000-0000000000c1', 'Programado', '{"fecha_programada":"2026-11-06","motivo":"Sin parada el jueves"}');
+select cambiar_estado_backlog('20000000-0000-0000-0000-0000000000c1', 'Listo para programar', '{"motivo":"Cambio de prioridades de producción"}');
+select cambiar_estado_backlog('20000000-0000-0000-0000-0000000000c1', 'Programado', '{"fecha_programada":"2026-11-06"}');
+insert into backlog_hh (backlog_id, especialidad_id, tipo, personas, horas)
+values ('20000000-0000-0000-0000-0000000000c1', (select id from especialidades where nombre = 'Mecánico'), 'real', 1, 2);
+select cambiar_estado_backlog('20000000-0000-0000-0000-0000000000c1', 'Ejecutado', '{"fecha_ejecucion":"2026-11-02"}');
+select cambiar_estado_backlog('20000000-0000-0000-0000-0000000000c1', 'Programado', '{"motivo":"Quedó una fuga, se repite"}');
+select pruebas.igual((select fecha_ejecucion is null and ot_sap = '777' from backlogs where id = '20000000-0000-0000-0000-0000000000c1'), true, 'volver a programado borra la ejecución y deja la OT');
+select cambiar_estado_backlog('20000000-0000-0000-0000-0000000000c1', 'Ejecutado', '{"fecha_ejecucion":"2026-11-02"}');
+select cambiar_estado_backlog('20000000-0000-0000-0000-0000000000c1', 'Validado');
+update backlogs set descripcion = 'Cambio después de validar' where id = '20000000-0000-0000-0000-0000000000c1';
+select pruebas.igual((select descripcion from backlogs where id = '20000000-0000-0000-0000-0000000000c1'), 'Cambio de pastillas de freno delanteras', 'validado no se edita');
+select pruebas.espera_error($$select cambiar_estado_backlog('20000000-0000-0000-0000-0000000000c1', 'Ejecutado', '{"motivo":"Revisar"}')$$, 'solo el administrador puede revertirlo');
+select pruebas.espera_error($$select borrar_backlog('20000000-0000-0000-0000-0000000000c1', 'Prueba de borrado')$$, 'solo el administrador puede borrarlo');
+-- Rechazar y anular: el capturador sí; reabrir, solo el admin.
+insert into backlogs (id, equipo_id, sistema_id, descripcion, origen, prioridad, reportado_por, aprobado_por)
+values ('20000000-0000-0000-0000-0000000000c2', '10000000-0000-0000-0000-000000000001', (select id from sistemas where nombre = 'Frenos'), 'Revisar ruido en freno', 'Operador', 'P4', 'A', 'B');
+select cambiar_estado_backlog('20000000-0000-0000-0000-0000000000c2', 'Rechazado', '{"motivo":"No procede: ruido normal"}');
+select pruebas.espera_error($$select cambiar_estado_backlog('20000000-0000-0000-0000-0000000000c2', 'Identificado', '{"motivo":"Reabrir"}')$$, 'solo el administrador puede revertirlo');
+select set_config('request.jwt.claims', '{"sub":"00000000-0000-0000-0000-00000000000a"}', false);
+select cambiar_estado_backlog('20000000-0000-0000-0000-0000000000c2', 'Identificado', '{"motivo":"El ruido volvió"}');
+select pruebas.igual((select estado || ' ' || coalesce(motivo_anulacion, '-') from backlogs where id = '20000000-0000-0000-0000-0000000000c2'), 'Identificado -', 'admin reabre');
+select cambiar_estado_backlog('20000000-0000-0000-0000-0000000000c1', 'Ejecutado', '{"motivo":"Falta adjuntar la prueba"}');
+select pruebas.igual((select estado from backlogs where id = '20000000-0000-0000-0000-0000000000c1'), 'Ejecutado', 'admin revierte el validado');
 
 reset role;
 \o

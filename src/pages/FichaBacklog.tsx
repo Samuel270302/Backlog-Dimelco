@@ -57,7 +57,7 @@ export default function FichaBacklog() {
     );
 
   const final = ESTADOS_FINALES.includes(b.estado);
-  const datosEditables = esAdmin ? !final : puedeCapturar && b.estado === "Identificado";
+  const datosEditables = puedeCapturar && !final;
   const detalleEditable = puedeCapturar && !final;
   const estimadasEditables = detalleEditable && b.estado !== "Ejecutado";
   const realesEditables = detalleEditable && (b.estado === "Programado" || b.estado === "Ejecutado");
@@ -141,7 +141,7 @@ export default function FichaBacklog() {
           <button className="boton-plano" disabled={imprimiendo} onClick={imprimir}>
             {imprimiendo ? "Generando…" : "Imprimir formato"}
           </button>
-          {puedeCapturar && (
+          {(esAdmin || (puedeCapturar && b.estado !== "Validado")) && (
             <button className="boton-plano boton-peligro-plano" disabled={borrando} onClick={borrar}>
               {borrando ? "Borrando…" : "Borrar"}
             </button>
@@ -149,7 +149,7 @@ export default function FichaBacklog() {
           {acciones.map((t) => (
             <button
               key={t.destino}
-              className={t.peligro ? "boton-plano boton-peligro-plano" : undefined}
+              className={t.peligro ? "boton-plano boton-peligro-plano" : t.atras ? "boton-secundario" : undefined}
               onClick={() => cambio.abrir(b, t)}
             >
               {t.etiqueta}
