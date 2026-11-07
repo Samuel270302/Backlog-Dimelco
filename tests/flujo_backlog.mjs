@@ -584,6 +584,36 @@ try {
   await adm.screenshot({ path: join(SALIDA, "usuarios.png"), fullPage: true });
   ok("usuario creado con dos unidades marcadas; se agrega Explotec y se quita Veta Nueva en la tabla");
 
+  // Capturador con dos unidades: elige entre sus unidades y registra en cualquiera de ellas.
+  const pedir = (ruta, opciones = {}) =>
+    fetch(`http://localhost:${PUERTO_REST}/rest/v1/${ruta}`, {
+      ...opciones,
+      headers: { authorization: `Bearer ${token(USUARIOS.admin)}`, "content-type": "application/json", ...(opciones.headers ?? {}) },
+    });
+  const uni = Object.fromEntries((await (await pedir("unidades?select=id,sigla")).json()).map((u) => [u.sigla, u.id]));
+  const ponerUnidades = async (lista) => {
+    const r = await pedir(`perfiles?user_id=eq.${USUARIOS.cap.id}`, { method: "PATCH", body: JSON.stringify({ unidades: lista }) });
+    if (!r.ok) throw new Error(`No se pudieron cambiar las unidades del capturador: ${r.status} ${await r.text()}`);
+  };
+  await ponerUnidades([uni.HEM, uni.VTN]);
+  const cap2 = await abrir("cap");
+  await cap2.goto(base + "#/nuevo");
+  const selector = cap2.locator(".selector-unidad select");
+  await selector.waitFor();
+  await cap2.waitForFunction(() => document.querySelectorAll(".selector-unidad select option").length > 1);
+  const opcionesUnidad = await selector.locator("option").allTextContents();
+  if (opcionesUnidad.join("|") !== "Todas mis unidades|HEMCO|Veta Nueva")
+    throw new Error(`Selector de unidad del capturador: ${opcionesUnidad.join("|")}`);
+  const equipoCap2 = cap2.getByLabel("Equipo", { exact: true });
+  await equipoCap2.locator("option", { hasText: "PS090 · ST7 · Veta Nueva" }).waitFor({ state: "attached" });
+  await equipoCap2.locator("option", { hasText: "PS011 · ST1030 · HEMCO" }).waitFor({ state: "attached" });
+  await selector.selectOption({ label: "HEMCO" });
+  await cap2.waitForFunction(() => ![...document.querySelectorAll('select[aria-label="Equipo"] option')].some((o) => o.textContent.includes("PS090")));
+  await cap2.screenshot({ path: join(SALIDA, "capturador-dos-unidades.png") });
+  await cap2.context().close();
+  await ponerUnidades([uni.HEM]);
+  ok("capturador con HEMCO y Veta Nueva: el selector ofrece Todas mis unidades, ve equipos de las dos y filtra por unidad");
+
   // 6. Vista de celular.
   const movil = await abrir("cap", 390, 844);
   await movil.goto(base + `#/backlog/${id}`);

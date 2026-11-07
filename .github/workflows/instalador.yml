@@ -5,7 +5,7 @@ on:
   push:
     branches: [main]
     # La guía, las herramientas y las pruebas no cambian el instalador.
-    paths-ignore: ['docs/**', 'tools/**', 'tests/**', 'supabase/**', '**.md', '.github/workflows/instalador.yml', '.github/workflows/mantenimiento.yml', '.github/workflows/pruebas.yml', '.github/workflows/reporte_semanal.yml', '.github/workflows/web.yml']
+    paths-ignore: ['docs/**', 'tools/**', 'tests/**', 'supabase/**', '**.md', '.gitignore', '.github/workflows/instalador.yml', '.github/workflows/mantenimiento.yml', '.github/workflows/pruebas.yml', '.github/workflows/reporte_semanal.yml', '.github/workflows/web.yml']
 
 permissions:
   contents: write
@@ -15,22 +15,39 @@ jobs:
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 22
-      - run: npm install --no-audit --no-fund
-      - run: npm run dist
+      # Solo se construye cuando cambia la versión de package.json: si el release de esa
+      # versión ya existe, el flujo termina sin tocarlo.
       - name: Leer versión
         id: ver
         shell: bash
-        run: echo "v=$(node -p "require('./package.json').version")" >> "$GITHUB_OUTPUT"
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          v=$(node -p "require('./package.json').version")
+          echo "v=$v" >> "$GITHUB_OUTPUT"
+          if gh release view "v$v" --repo "$GITHUB_REPOSITORY" > /dev/null 2>&1; then
+            echo "existe=true" >> "$GITHUB_OUTPUT"
+            echo "::notice::El release v$v ya existe; no se construye. Para publicar, suba la versión en package.json."
+          else
+            echo "existe=false" >> "$GITHUB_OUTPUT"
+          fi
+      - uses: actions/setup-node@v4
+        if: steps.ver.outputs.existe != 'true'
+        with:
+          node-version: 22
+      - run: npm install --no-audit --no-fund
+        if: steps.ver.outputs.existe != 'true'
+      - run: npm run dist
+        if: steps.ver.outputs.existe != 'true'
       - uses: actions/upload-artifact@v4
+        if: steps.ver.outputs.existe != 'true'
         with:
           name: instalador-windows
           path: |
             release/*.exe
             release/latest.yml
       - name: Publicar release
+        if: steps.ver.outputs.existe != 'true'
         uses: softprops/action-gh-release@v2
         with:
           tag_name: v${{ steps.ver.outputs.v }}
