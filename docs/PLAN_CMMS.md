@@ -94,7 +94,7 @@ Estados de OT, validados en la base con una función `cambiar_estado_ot()` como 
 
 Lo de backlog ya está en la base del CMMS. Lo que se mueve es lo de preventivos, con `tools/traer_preventivos.mjs`. El procedimiento paso a paso está en `docs/FUSION.md` del repositorio CMMS-Dimelco y no se ejecuta sin aprobación.
 
-1. Esquema: el flujo "Actualizar base de datos" del repositorio CMMS-Dimelco aplica `supabase/instalar_todo.sql` (backlog 001 a 018, que ya están, y preventivo 019). Solo agrega tablas, columnas y vistas; no cambia los datos de backlog. Se corre a mano y pide escribir APLICAR.
+1. Esquema: el flujo "Actualizar base de datos" del repositorio CMMS-Dimelco aplica `supabase/instalar_todo.sql` (backlog 001 a 018, que ya están, preventivo 019 y órdenes de trabajo 020). Solo agrega tablas, columnas y vistas; no cambia los datos de backlog. Se corre a mano y pide escribir APLICAR.
 2. Ensayo sobre producción: el flujo "Traer datos de preventivos" en modo ensayo hace toda la copia y la verificación dentro de una transacción y la deshace. Muestra conteos, equipos que no cruzan y usuarios con perfiles distintos.
 3. Ventana sin captura en preventivos, respaldo de las dos bases y el mismo flujo en modo grabar (pide escribir GRABAR). Confirma solo si la verificación sale sin diferencias.
 4. Verificación incluida en la herramienta: los mismos conteos de planes, componentes, lecturas, registros PM, cambios de horómetro y registros manuales en las dos bases, y v_control_pm, v_control_40, v_cumplimiento_pm y v_utilizacion_mensual iguales fila por fila (con el id de equipo traducido).
@@ -110,11 +110,12 @@ El ensayo completo ya corre en bases locales con `tests/ensayo_traer_preventivos
 | 0 | Esquema 019, herramienta de copia y ensayo local | sin publicar | hecho el 08/11/2026 |
 | 1 | App base: pantallas de las dos apps bajo un solo menú, un login, una ficha de equipo con pestañas Preventivo y Backlog | CMMS 0.1.0 | hecho el 08/11/2026 |
 | 2 | Fusión de datos en producción (pasos 1 a 6 de arriba) | sin cambio de versión | espera aprobación |
-| 3 | Órdenes de trabajo: tablas, `cambiar_estado_ot()`, OT sugeridas desde Control PM, OT desde backlog, cierre que escribe registros_pm y backlog Ejecutado | CMMS 0.2.0 | pendiente |
-| 4 | Tablero de programación (ver abajo): preventivos y correctivos en una sola vista, con arrastrar y soltar y carga del taller en vivo | CMMS 0.3.0 | pendiente |
+| 3 | Órdenes de trabajo: programar (PM sugeridos desde Control PM y backlogs), mover, agrupar y anular | CMMS 0.2.0 | hecho el 08/11/2026 (migración 020) |
+| 4 | Tablero de programación (ver abajo): preventivos y correctivos en una sola vista, con arrastrar y soltar y carga del taller | CMMS 0.2.0 | hecho el 08/11/2026, en el entorno de pruebas |
+| 4b | Ejecución y cierre de la OT: HH reales, cierre que escribe registros_pm y deja los backlogs en Ejecutado, pauta de tareas por gama | CMMS 0.3.0 | pendiente |
 | 5 | Indicadores de CMMS (ver propuestas) y reporte semanal único | CMMS 0.4.0 | pendiente |
 
-Las fases 3 y 4 se pueden construir y probar antes de la fase 2, con bases locales.
+Las fases 3, 4 y 4b se construyen y prueban antes de la fase 2, con bases locales. El tablero de la 0.2.0 programa; todavía no ejecuta ni cierra OT.
 
 Menú del CMMS 0.1.0:
 
