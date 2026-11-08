@@ -121,7 +121,7 @@ Lo de preventivos ya está en la base fusionada. Lo que se mueve es lo de backlo
 | 1 | Fusión de bases (pasos 2 a 6) | Backlog 0.5.6 | backlog trabaja en la base de preventivos y las pruebas por rol de las dos apps pasan |
 | 2 | Repositorio CMMS-Dimelco con las pantallas de las dos apps bajo un solo menú, un login y una sola pantalla de usuarios | CMMS 0.1.0 | un usuario hace en el CMMS todo lo que hacía en las dos apps |
 | 3 | Órdenes de trabajo: tablas, `cambiar_estado_ot()`, OT sugeridas desde Control PM, OT desde backlog, cierre que escribe registros_pm y backlog Ejecutado | CMMS 0.2.0 | un PM y un backlog recorren el ciclo completo con OT |
-| 4 | Programación semanal única: calendario por equipo y turno con OT preventivas y correctivas, carga contra capacidad_taller | CMMS 0.3.0 | el programa de la semana sale del CMMS en PDF y Excel |
+| 4 | Tablero de programación (ver abajo): preventivos y correctivos en una sola vista, con arrastrar y soltar y carga del taller en vivo | CMMS 0.3.0 | el programa de la semana se arma en el tablero y sale en PDF y Excel |
 | 5 | Indicadores de CMMS (ver propuestas) y reporte semanal único | CMMS 0.4.0 | el reporte del lunes reemplaza a los dos reportes actuales |
 
 Menú propuesto para el CMMS, a partir de las rutas actuales:
@@ -134,6 +134,20 @@ Menú propuesto para el CMMS, a partir de las rutas actuales:
     Programación    Calendario semanal, Capacidad del taller
     Indicadores
     Administración  Usuarios, Equipos, Plan MP y pautas, Catálogos, Plazos, Borrados
+
+## Tablero de programación
+
+Es el objetivo principal de juntar las dos apps: programar preventivos y correctivos en la misma vista, de forma visual.
+
+- Filas: equipos de la unidad, agrupados por familia (Scooptram, Jumbo, Empernador...). Columnas: días de la semana, partidos en turno Día y Noche. Se puede cambiar a vista de 4 semanas.
+- Columna lateral "Por programar" con dos grupos: PM sugeridos desde `v_control_pm` y `v_control_40` (con su fecha estimada y si están vencidos) y backlogs en "Listo para programar" (con prioridad, HH y si tienen los repuestos).
+- Tarjetas por tipo: un color para preventiva, otro para rutina 40 h, otro para correctiva y otro para emergencia. El borde muestra la prioridad P1 a P4.
+- Arrastrar una tarjeta de la columna lateral a una celda crea o programa la OT en ese equipo, día y turno. Moverla de celda la reprograma y pide el motivo, que queda en la bitácora.
+- Soltar un backlog sobre la tarjeta de un PM del mismo equipo lo agrupa en esa OT. Al abrir la tarjeta del PM, se ven los backlogs del equipo que se pueden sumar.
+- Barra de carga por especialidad (Mecánico, Eléctrico, Hidráulico, Soldador, Llantero) arriba del tablero, con las HH programadas contra `capacidad_taller`. Se recalcula al mover cada tarjeta y se pone roja si la semana pasa la capacidad.
+- Avisos en la celda: dos OT del mismo equipo en el mismo turno, PM que se programa después de su fecha estimada, backlog cuyos repuestos no llegan antes de la fecha.
+- Cambios en tiempo real con Supabase Realtime: si un planificador mueve una tarjeta, los demás la ven moverse sin recargar.
+- Salida: programa de la semana en PDF y Excel, por unidad y por especialidad.
 
 ## Propuestas de mejora
 
