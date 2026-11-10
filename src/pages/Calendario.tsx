@@ -77,9 +77,10 @@ export default function Calendario() {
   const totalDia = (d: string) =>
     semana.filter((b) => b.fecha_programada === d).reduce((s, b) => s + Number(b.hh_estimadas), 0);
 
-  // Transición que corresponde al soltar en un día: programar un listo o reprogramar un programado.
+  // Transición que corresponde al soltar en un día: programar un listo o reprogramar un
+  // programado. Se admite un día pasado, pero no anterior a la detección del backlog (019).
   function transicionAlSoltar(b: BacklogFila, dia: string) {
-    if (dia < hoy) return undefined;
+    if (dia < b.fecha_deteccion) return undefined;
     if (b.estado === "Listo para programar") return permitidas(b.estado).find((t) => t.destino === "Programado");
     if (b.estado === "Programado" && b.fecha_programada !== dia)
       return permitidas(b.estado).find((t) => t.etiqueta === "Reprogramar");
@@ -249,7 +250,7 @@ export default function Calendario() {
                   <td className="col-equipo nota">Sin trabajos</td>
                   {dias.map((d) => (
                     <td key={d} className={`celda-vacia ${claseDia(d)}`} {...zonaDia(d)}>
-                      {puedeCapturar && listos.length > 0 && d >= hoy ? "Soltar aquí" : ""}
+                      {arrastrando && transicionAlSoltar(arrastrando, d) ? "Soltar aquí" : ""}
                     </td>
                   ))}
                 </tr>

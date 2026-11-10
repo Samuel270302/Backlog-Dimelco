@@ -48,6 +48,7 @@ export function useCambioEstado() {
       otActual={pendiente.b.ot_sap}
       usaSap={pendiente.b.usa_sap}
       fechaInicial={pendiente.fecha}
+      fechaMinima={pendiente.b.fecha_deteccion}
       ocupado={ocupado}
       onAceptar={aplicar}
       onCerrar={() => setPendiente(null)}

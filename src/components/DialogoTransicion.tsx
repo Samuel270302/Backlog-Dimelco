@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { PRIORIDADES, nombrePrioridad, type Prioridad } from "../lib/types";
 import type { Transicion } from "../lib/backlog";
-import { hoyISO } from "../lib/fmt";
+import { fFecha, hoyISO } from "../lib/fmt";
 
 // Pide los datos que exige el estado destino y un comentario opcional.
 // onAceptar recibe el p_datos de cambiar_estado_backlog().
@@ -12,6 +12,7 @@ export default function DialogoTransicion({
   otActual,
   usaSap = true,
   fechaInicial,
+  fechaMinima,
   ocupado,
   onAceptar,
   onCerrar,
@@ -22,6 +23,8 @@ export default function DialogoTransicion({
   otActual: string | null;
   usaSap?: boolean;
   fechaInicial?: string;
+  // Fecha de detección: la programación puede ser anterior a hoy, pero no a esta fecha (019).
+  fechaMinima?: string;
   ocupado: boolean;
   onAceptar: (datos: Record<string, unknown>) => void;
   onCerrar: () => void;
@@ -43,6 +46,8 @@ export default function DialogoTransicion({
 
   const faltantes: string[] = [];
   if (pide("fecha_programada") && !fechaProg) faltantes.push("fecha programada");
+  if (pide("fecha_programada") && fechaProg && fechaMinima && fechaProg < fechaMinima)
+    faltantes.push(`fecha programada desde el ${fFecha(fechaMinima)} (detección)`);
   if (pide("ot_sap") && !ot.trim()) faltantes.push(usaSap ? "OT SAP" : "N° OT");
   if (pide("fecha_ejecucion") && !fechaEjec) faltantes.push("fecha de ejecución");
   if (pide("motivo") && motivo.trim().length < 3) faltantes.push("motivo");
@@ -91,7 +96,10 @@ export default function DialogoTransicion({
       {pide("fecha_programada") && (
         <label className="campo">
           <span>Fecha programada</span>
-          <input type="date" min={hoyISO()} value={fechaProg} onChange={(e) => setFechaProg(e.target.value)} />
+          <input type="date" min={fechaMinima} value={fechaProg} onChange={(e) => setFechaProg(e.target.value)} />
+          {fechaProg && fechaProg < hoyISO() && (!fechaMinima || fechaProg >= fechaMinima) && (
+            <span className="nota">Fecha anterior a hoy: queda registrada como programación pasada.</span>
+          )}
         </label>
       )}
       {pide("ot_sap") && (

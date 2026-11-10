@@ -77,7 +77,7 @@ const html = `<!doctype html><html lang="es"><head><meta charset="utf-8"><title>
   <div class="titulo">Control de Backlog</div>
   <div class="sub">Manual del capturador</div>
   <div class="sub" style="font-size:12pt">Registro y seguimiento de backlogs de mantenimiento</div>
-  <div class="datos">Dimelco · versión de la app 0.5.5 · noviembre de 2026</div>
+  <div class="datos">Dimelco · versión de la app 0.5.6 · noviembre de 2026</div>
 </section>
 
 <h1>Contenido</h1>
@@ -319,7 +319,7 @@ ${fig("estados-aprobar", "Aprobar y planificar: confirmar la prioridad.")}
 <h2>7.3 Programar</h2>
 <p>Desde Listo para programar, pulse <b>Programar</b> y complete:</p>
 <ol>
-  <li><span class="paso">1</span><b>Fecha programada</b>: el día del trabajo (no puede ser pasada).</li>
+  <li><span class="paso">1</span><b>Fecha programada</b>: el día del trabajo. Puede ser anterior a hoy (para registrar un trabajo que ya se programó), pero no anterior a la fecha de detección del backlog.</li>
   <li><span class="paso">2</span><b>OT SAP</b> en HEMCO, o <b>N° OT</b> en las demás unidades (obligatorio).</li>
   <li><span class="paso">3</span>Marque <b>Aprovechar la parada de un PM</b> si se hará junto con un preventivo.</li>
 </ol>
@@ -327,7 +327,7 @@ ${fig("estados-programar", "Programar: fecha, número de OT y si aprovecha un PM
 <p>También se programa arrastrando la tarjeta desde "Listos para programar" hasta el día en el <b>Calendario</b> (8.3).</p>
 
 <h2>7.4 Reprogramar o quitar del calendario</h2>
-<p><b>Reprogramar</b> cambia la fecha de un backlog Programado: pide la fecha nueva y el motivo, mantiene la OT y suma una reprogramación. En el calendario se hace arrastrando la tarjeta a otro día. <b>Quitar del calendario</b> lo devuelve a Listo para programar, también con motivo.</p>
+<p><b>Reprogramar</b> cambia la fecha de un backlog Programado: pide la fecha nueva (desde la fecha de detección, aunque sea anterior a hoy) y el motivo, mantiene la OT y suma una reprogramación. En el calendario se hace arrastrando la tarjeta a otro día. <b>Quitar del calendario</b> lo devuelve a Listo para programar, también con motivo.</p>
 ${fig("estados-reprogramar", "Reprogramar: fecha nueva y motivo.")}
 
 <h2>7.5 Volver un paso atrás</h2>
@@ -416,6 +416,7 @@ ${movil([["movil-kanban", "Kanban en el celular."], ["movil-ficha", "Ficha en el
   <tr><td>"Indique el motivo para volver a ..."</td><td>Todo paso atrás pide motivo. Escríbalo en el cuadro.</td></tr>
   <tr><td>"Faltan N repuesto(s) por recibir"</td><td>Para pasar a Listo para programar, marque como Recibido los repuestos en la pestaña Repuestos, o use Pasar a esperar repuestos.</td></tr>
   <tr><td>"Para programar indique fecha programada y N° de OT"</td><td>Complete la fecha y el número de OT en el cuadro Programar.</td></tr>
+  <tr><td>"La fecha programada no puede ser anterior a la fecha de detección"</td><td>Elija una fecha igual o posterior al día en que se reportó el backlog (campo Fecha de la pestaña Datos).</td></tr>
   <tr><td>"El backlog está ...: solo el administrador puede revertirlo"</td><td>El backlog está cerrado (Validado, Rechazado o Anulado). Pida al administrador que lo revierta.</td></tr>
   <tr><td>"Las HH reales se cargan con el backlog Programado o Ejecutado"</td><td>Todavía no está programado. Las HH reales se cargan al terminar el trabajo.</td></tr>
   <tr><td>No veo un botón que esperaba</td><td>Cada estado muestra solo sus acciones (tabla del capítulo 7). Por ejemplo, Programar aparece en Listo para programar y Validar en Ejecutado.</td></tr>

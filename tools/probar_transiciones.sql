@@ -106,7 +106,7 @@ select pruebas.igual((select fecha_recibido from backlog_repuestos where id = '3
 
 -- Programar, reprogramar y volver a programar.
 select pruebas.espera_error($$select cambiar_estado_backlog('20000000-0000-0000-0000-000000000001', 'Programado', '{"fecha_programada":"2026-11-04"}')$$, 'N° de OT');
-select pruebas.espera_error($$select cambiar_estado_backlog('20000000-0000-0000-0000-000000000001', 'Programado', '{"fecha_programada":"2026-10-28","ot_sap":"4001"}')$$, 'pasada');
+select pruebas.espera_error($$select cambiar_estado_backlog('20000000-0000-0000-0000-000000000001', 'Programado', '{"fecha_programada":"2026-10-28","ot_sap":"4001"}')$$, 'anterior a la fecha de detección (30/10/2026)');
 select cambiar_estado_backlog('20000000-0000-0000-0000-000000000001', 'Programado', '{"fecha_programada":"2026-11-04","ot_sap":"4001234"}');
 select pruebas.igual((select semana_programada from backlogs where id = '20000000-0000-0000-0000-000000000001'), date '2026-11-02', 'semana lunes');
 select pruebas.igual((select hh_programadas from v_carga_semanal)::numeric, 8::numeric, 'carga semanal');
@@ -118,7 +118,7 @@ select cambiar_estado_backlog('20000000-0000-0000-0000-000000000001', 'Programad
 -- Reprogramación directa (009): otra fecha y motivo en un solo llamado.
 select pruebas.espera_error($$select cambiar_estado_backlog('20000000-0000-0000-0000-000000000001', 'Programado', '{"fecha_programada":"2026-11-10","motivo":"x"}')$$, 'distinta');
 select pruebas.espera_error($$select cambiar_estado_backlog('20000000-0000-0000-0000-000000000001', 'Programado', '{"fecha_programada":"2026-11-12"}')$$, 'motivo');
-select pruebas.espera_error($$select cambiar_estado_backlog('20000000-0000-0000-0000-000000000001', 'Programado', '{"fecha_programada":"2026-10-30","motivo":"x"}')$$, 'pasada');
+select pruebas.espera_error($$select cambiar_estado_backlog('20000000-0000-0000-0000-000000000001', 'Programado', '{"fecha_programada":"2026-10-29","motivo":"x"}')$$, 'anterior a la fecha de detección');
 select cambiar_estado_backlog('20000000-0000-0000-0000-000000000001', 'Programado', '{"fecha_programada":"2026-11-12","motivo":"Sin parada de producción el martes"}');
 select pruebas.igual((select fecha_programada || ' ' || semana_programada || ' ' || reprogramaciones || ' ' || ot_sap
   from backlogs where id = '20000000-0000-0000-0000-000000000001'), '2026-11-12 2026-11-09 2 4001234', 'reprogramado con la misma OT');
@@ -353,6 +353,23 @@ select cambiar_estado_backlog('20000000-0000-0000-0000-0000000000c2', 'Identific
 select pruebas.igual((select estado || ' ' || coalesce(motivo_anulacion, '-') from backlogs where id = '20000000-0000-0000-0000-0000000000c2'), 'Identificado -', 'admin reabre');
 select cambiar_estado_backlog('20000000-0000-0000-0000-0000000000c1', 'Ejecutado', '{"motivo":"Falta adjuntar la prueba"}');
 select pruebas.igual((select estado from backlogs where id = '20000000-0000-0000-0000-0000000000c1'), 'Ejecutado', 'admin revierte el validado');
+
+
+-- Programar con fecha pasada (019): desde la fecha de detección, aunque sea antes de hoy.
+select set_config('request.jwt.claims', '{"sub":"00000000-0000-0000-0000-00000000000c"}', false);
+insert into backlogs (id, equipo_id, sistema_id, descripcion, origen, prioridad, fecha_deteccion, reportado_por, aprobado_por)
+values ('20000000-0000-0000-0000-0000000000d1', '10000000-0000-0000-0000-000000000001', (select id from sistemas where nombre = 'Frenos'), 'Ajuste de freno de parqueo', 'PM', 'P3', '2026-10-25', 'A', 'B');
+insert into backlog_hh (backlog_id, especialidad_id, tipo, personas, horas)
+values ('20000000-0000-0000-0000-0000000000d1', (select id from especialidades where nombre = 'Mecánico'), 'estimada', 1, 2);
+select cambiar_estado_backlog('20000000-0000-0000-0000-0000000000d1', 'En planificación');
+select cambiar_estado_backlog('20000000-0000-0000-0000-0000000000d1', 'Listo para programar');
+select pruebas.espera_error($$select cambiar_estado_backlog('20000000-0000-0000-0000-0000000000d1', 'Programado', '{"fecha_programada":"2026-10-24","ot_sap":"9001"}')$$,
+  'anterior a la fecha de detección (25/10/2026)');
+select cambiar_estado_backlog('20000000-0000-0000-0000-0000000000d1', 'Programado', '{"fecha_programada":"2026-10-25","ot_sap":"9001"}');
+select cambiar_estado_backlog('20000000-0000-0000-0000-0000000000d1', 'Programado', '{"fecha_programada":"2026-10-28","motivo":"Se hizo el martes"}');
+select pruebas.igual((select fecha_programada::text || ' ' || semana_programada::text || ' ' || reprogramaciones from backlogs where id = '20000000-0000-0000-0000-0000000000d1'),
+  '2026-10-28 2026-10-26 1', 'programado y reprogramado en fechas pasadas');
+select set_config('request.jwt.claims', '{"sub":"00000000-0000-0000-0000-00000000000a"}', false);
 
 reset role;
 \o

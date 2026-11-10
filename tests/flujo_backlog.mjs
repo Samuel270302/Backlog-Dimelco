@@ -619,6 +619,35 @@ try {
   await ponerUnidades([uni.HEM]);
   ok("capturador con HEMCO y Veta Nueva: el selector ofrece Todas mis unidades, ve equipos de las dos y filtra por unidad");
 
+  // Programar desde el Kanban con fecha pasada (019): se admite desde la fecha de detección.
+  // BL-HEM-000004 (JU005, luminaria) se detectó ayer y está En planificación sin repuestos.
+  const capK = await abrir("cap");
+  await capK.goto(base + "#/backlog/30000000-0000-0000-0000-000000000003");
+  await esperarEstado(capK, "En planificación");
+  await transicion(capK, "Listo para programar");
+  await esperarEstado(capK, "Listo para programar");
+  await capK.goto(base + "#/kanban");
+  const lum = capK.getByRole("article", { name: "BL-HEM-000004 JU005" });
+  await lum.waitFor();
+  await lum.dragTo(capK.locator('section[aria-label="Programado"] .columna-cabecera'), { sourcePosition: { x: 40, y: 12 } });
+  const dlgP = capK.getByRole("dialog");
+  await dlgP.waitFor();
+  await dlgP.getByLabel("Fecha programada").fill(enDias(-2));
+  await dlgP.getByLabel("OT SAP").fill("4002550");
+  await dlgP.locator(".nota", { hasText: "fecha programada desde el" }).waitFor();
+  if (!(await dlgP.getByRole("button", { name: "Programar", exact: true }).isDisabled())) throw new Error("Deja programar antes de la detección");
+  await dlgP.getByLabel("Fecha programada").fill(enDias(-1));
+  await dlgP.locator(".nota", { hasText: "programación pasada" }).waitFor();
+  await capK.screenshot({ path: join(SALIDA, "programar-fecha-pasada.png") });
+  await dlgP.getByRole("button", { name: "Programar", exact: true }).click();
+  await capK.locator('section[aria-label="Programado"]').getByRole("article", { name: "BL-HEM-000004 JU005" }).waitFor();
+  const prog = (await (await fetch(`http://localhost:${PUERTO_REST}/rest/v1/backlogs?select=fecha_programada&id=eq.30000000-0000-0000-0000-000000000003`, {
+    headers: { authorization: `Bearer ${token(USUARIOS.admin)}` },
+  })).json())[0].fecha_programada;
+  if (prog !== enDias(-1)) throw new Error(`Fecha programada ${prog}, esperada ${enDias(-1)}`);
+  await capK.context().close();
+  ok("desde el Kanban se programa ayer (fecha de detección); antes de la detección no deja");
+
   // 6. Vista de celular.
   const movil = await abrir("cap", 390, 844);
   await movil.goto(base + `#/backlog/${id}`);
