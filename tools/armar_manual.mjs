@@ -77,7 +77,7 @@ const html = `<!doctype html><html lang="es"><head><meta charset="utf-8"><title>
   <div class="titulo">Control de Backlog</div>
   <div class="sub">Manual del capturador</div>
   <div class="sub" style="font-size:12pt">Registro y seguimiento de backlogs de mantenimiento</div>
-  <div class="datos">Dimelco · versión de la app 0.5.8 · noviembre de 2026</div>
+  <div class="datos">Dimelco · versión de la app 0.5.9 · noviembre de 2026</div>
 </section>
 
 <h1>Contenido</h1>
@@ -270,7 +270,7 @@ ${fig("ficha-datos", "Ficha del backlog recién registrado, pestaña Datos.")}
 <p>Arriba se ven datos fijos: equipo, unidad, <b>fecha límite</b> (según la prioridad) y antigüedad en días.</p>
 
 <h2>6.2 Repuestos</h2>
-<p>Muestra cada ítem con su seguimiento: número de solicitud (SolPed, solo HEMCO), fecha estimada de llegada, estado (Por pedir, Pedido, Recibido) y fecha de recepción. El capturador puede agregar o quitar ítems y cambiar el estado mientras el backlog está abierto.</p>
+<p>Muestra cada ítem con su seguimiento: número de solicitud (SolPed, solo HEMCO), fecha estimada de llegada, estado (Por pedir, Pedido, Recibido) y fecha de recepción. Hasta <b>Listo para programar</b>, el capturador puede agregar o quitar ítems y corregir cualquier dato de los ya agregados (número de parte, cantidad, stock, descripción, componente, observaciones, fecha estimada y estado): se escribe en la celda y se graba al salir de ella. Desde <b>Programado</b> los materiales quedan bloqueados; para cambiarlos, vuelva el backlog a Listo para programar con <b>Quitar del calendario</b>.</p>
 <div class="nota">Cuando se marca <b>Recibido</b> el último repuesto pendiente, el backlog pasa solo a <b>Listo para programar</b> y queda anotado en la bitácora.</div>
 ${fig("ficha-repuestos", "Pestaña Repuestos.")}
 
@@ -426,6 +426,7 @@ ${movil([["movil-kanban", "Kanban en el celular."], ["movil-ficha", "Ficha en el
   <tr><td>"Faltan N repuesto(s) por recibir"</td><td>Para pasar a Listo para programar, marque como Recibido los repuestos en la pestaña Repuestos, o use Pasar a esperar repuestos.</td></tr>
   <tr><td>"Para programar indique fecha programada y N° de OT"</td><td>Complete la fecha y el número de OT en el cuadro Programar.</td></tr>
   <tr><td>"La fecha programada no puede ser anterior a la fecha de detección"</td><td>Elija una fecha igual o posterior al día en que se reportó el backlog (campo Fecha de la pestaña Datos).</td></tr>
+  <tr><td>"Con el backlog Programado los materiales no se editan"</td><td>Vuelva el backlog a Listo para programar (Quitar del calendario, con motivo), corrija los repuestos y prográmelo de nuevo.</td></tr>
   <tr><td>"El backlog está ...: solo el administrador puede revertirlo"</td><td>El backlog está cerrado (Validado, Rechazado o Anulado). Pida al administrador que lo revierta.</td></tr>
   <tr><td>"Las HH reales se cargan con el backlog Programado o Ejecutado"</td><td>Todavía no está programado. Las HH reales se cargan al terminar el trabajo.</td></tr>
   <tr><td>No veo un botón que esperaba</td><td>Cada estado muestra solo sus acciones (tabla del capítulo 7). Por ejemplo, Programar aparece en Listo para programar y Validar en Ejecutado.</td></tr>

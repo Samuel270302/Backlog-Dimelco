@@ -371,6 +371,31 @@ select pruebas.igual((select fecha_programada::text || ' ' || semana_programada:
   '2026-10-28 2026-10-26 1', 'programado y reprogramado en fechas pasadas');
 select set_config('request.jwt.claims', '{"sub":"00000000-0000-0000-0000-00000000000a"}', false);
 
+
+-- Materiales hasta Listo para programar (020): editables antes, bloqueados desde Programado.
+select set_config('request.jwt.claims', '{"sub":"00000000-0000-0000-0000-00000000000c"}', false);
+insert into backlogs (id, equipo_id, sistema_id, descripcion, origen, prioridad, reportado_por, aprobado_por)
+values ('20000000-0000-0000-0000-0000000000e1', '10000000-0000-0000-0000-000000000001', (select id from sistemas where nombre = 'Frenos'), 'Cambio de discos de freno', 'PM', 'P3', 'A', 'B');
+insert into backlog_hh (backlog_id, especialidad_id, tipo, personas, horas)
+values ('20000000-0000-0000-0000-0000000000e1', (select id from especialidades where nombre = 'Mecánico'), 'estimada', 1, 2);
+insert into backlog_repuestos (id, backlog_id, numero_parte, descripcion, cantidad)
+values ('70000000-0000-0000-0000-000000000001', '20000000-0000-0000-0000-0000000000e1', 'SWITCH, PROXIMITY', '2653 1264 47', 2);
+select cambiar_estado_backlog('20000000-0000-0000-0000-0000000000e1', 'En planificación');
+update backlog_repuestos set numero_parte = '2653 1264 47', descripcion = 'Switch, proximity', cantidad = 3, stock = 1
+ where id = '70000000-0000-0000-0000-000000000001';
+select pruebas.igual((select numero_parte || ' ' || descripcion || ' ' || cantidad || ' ' || stock from backlog_repuestos where id = '70000000-0000-0000-0000-000000000001'),
+  '2653 1264 47 Switch, proximity 3 1', 'material corregido en planificación');
+update backlog_repuestos set estado = 'Recibido' where id = '70000000-0000-0000-0000-000000000001';
+select cambiar_estado_backlog('20000000-0000-0000-0000-0000000000e1', 'Listo para programar');
+select cambiar_estado_backlog('20000000-0000-0000-0000-0000000000e1', 'Programado', '{"fecha_programada":"2026-11-03","ot_sap":"5001"}');
+select pruebas.espera_error($$update backlog_repuestos set cantidad = 4 where id = '70000000-0000-0000-0000-000000000001'$$, 'los materiales no se editan');
+select pruebas.espera_error($$insert into backlog_repuestos (backlog_id, numero_parte, cantidad) values ('20000000-0000-0000-0000-0000000000e1', 'X1', 1)$$, 'los materiales no se editan');
+select pruebas.espera_error($$delete from backlog_repuestos where id = '70000000-0000-0000-0000-000000000001'$$, 'los materiales no se editan');
+select cambiar_estado_backlog('20000000-0000-0000-0000-0000000000e1', 'Listo para programar', '{"motivo":"Corregir cantidad"}');
+update backlog_repuestos set cantidad = 4 where id = '70000000-0000-0000-0000-000000000001';
+select pruebas.igual((select cantidad from backlog_repuestos where id = '70000000-0000-0000-0000-000000000001'), 4::numeric, 'al volver a Listo se editan de nuevo');
+select set_config('request.jwt.claims', '{"sub":"00000000-0000-0000-0000-00000000000a"}', false);
+
 reset role;
 \o
 select 'Bitácora del BL-HEM-000001:' as titulo;

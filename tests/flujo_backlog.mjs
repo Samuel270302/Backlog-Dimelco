@@ -259,6 +259,21 @@ try {
   await adm.getByRole("button", { name: "Agregar", exact: true }).click();
   await adm.getByLabel("Estado ítem 5").waitFor();
   ok("repuesto agregado en la ficha toma el ítem 5");
+  // Los materiales ya agregados se editan en la ficha hasta Listo para programar.
+  const cant5 = adm.getByLabel("Cantidad ítem 5");
+  await cant5.fill("3");
+  await cant5.blur();
+  const desc5 = adm.getByLabel("Descripción ítem 5");
+  await desc5.fill("Aceite hidráulico ISO 68 (tambor)");
+  await desc5.blur();
+  await adm.waitForFunction(() => document.querySelector('[aria-label="Descripción ítem 5"]')?.defaultValue === "Aceite hidráulico ISO 68 (tambor)");
+  const rep5 = (await (await fetch(`http://localhost:${PUERTO_REST}/rest/v1/backlog_repuestos?select=cantidad,descripcion&backlog_id=eq.${id}&item=eq.5`, {
+    headers: { authorization: `Bearer ${token(USUARIOS.admin)}` },
+  })).json())[0];
+  if (Number(rep5.cantidad) !== 3 || rep5.descripcion !== "Aceite hidráulico ISO 68 (tambor)") throw new Error(`Ítem 5 no se editó: ${JSON.stringify(rep5)}`);
+  const anchoEstado = await adm.getByLabel("Estado ítem 5").evaluate((e) => e.scrollWidth <= e.clientWidth + 1 && e.clientWidth >= 100);
+  if (!anchoEstado) throw new Error("La columna Estado del repuesto queda cortada");
+  ok("los materiales ya agregados se editan en la ficha (cantidad y descripción) y la columna Estado se ve completa");
   await transicion(adm, "Listo para programar");
   await aviso(adm, "Faltan 5 repuesto");
   await adm.getByRole("dialog").getByRole("button", { name: "Cancelar" }).click();
@@ -438,6 +453,10 @@ try {
   await reales.getByLabel("Horas nuevas").fill("5");
   await reales.getByRole("button", { name: "Agregar" }).click();
   await reales.getByText("10", { exact: true }).first().waitFor();
+  await cap.getByRole("tab", { name: /^Repuestos/ }).click();
+  await cap.locator(".bloque-ficha .nota", { hasText: "los materiales no se editan" }).waitFor();
+  if (await cap.getByLabel("Número de parte ítem 1").count()) throw new Error("Materiales editables con el backlog Programado");
+  await cap.getByRole("tab", { name: /^HH/ }).click();
   await cap.locator(".ficha-acciones").getByRole("button", { name: "Reprogramar", exact: true }).waitFor();
   await cap.locator(".ficha-acciones").getByRole("button", { name: "Quitar del calendario", exact: true }).waitFor();
   await transicion(cap, "Marcar ejecutado", (d) => d.getByLabel(/Comentario/).fill("Se cambiaron sellos y se probó el levante"));

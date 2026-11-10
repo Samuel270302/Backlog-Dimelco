@@ -634,6 +634,8 @@ fieldset.sin-borde:disabled input, fieldset.sin-borde:disabled select, fieldset.
 .bloque-ficha .tabla-repuestos-formato { min-width: 1100px; }
 .tabla-repuestos-formato input { min-width: 0; width: 100%; }
 .tabla-repuestos-formato td.num input { width: 64px; }
+.tabla-repuestos-formato select { min-width: 112px; width: auto; padding-right: 26px; }
+.tabla-repuestos-formato input[type="date"] { min-width: 132px; }
 .boton-quitar { padding: 4px 9px; font-size: 15px; line-height: 1; }
 .etiqueta-urgente { background: var(--rojo-letra); color: #ffffff; padding: 2px 8px; border-radius: 10px; font-size: 12px; font-weight: 600; }
 

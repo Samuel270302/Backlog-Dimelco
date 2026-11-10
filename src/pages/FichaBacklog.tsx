@@ -59,6 +59,8 @@ export default function FichaBacklog() {
   const final = ESTADOS_FINALES.includes(b.estado);
   const datosEditables = puedeCapturar && !final;
   const detalleEditable = puedeCapturar && !final;
+  // Materiales: se editan hasta Listo para programar (020).
+  const repuestosEditables = detalleEditable && b.estado !== "Programado" && b.estado !== "Ejecutado";
   const estimadasEditables = detalleEditable && b.estado !== "Ejecutado";
   const realesEditables = detalleEditable && (b.estado === "Programado" || b.estado === "Ejecutado");
   const acciones = permitidas(b.estado);
@@ -198,7 +200,13 @@ export default function FichaBacklog() {
           backlogId={b.id}
           sap={b.usa_sap}
           filas={repuestos ?? []}
-          editable={detalleEditable}
+          editable={repuestosEditables}
+          fotosEditables={detalleEditable}
+          motivoBloqueo={
+            detalleEditable && !repuestosEditables
+              ? "Con el backlog Programado o en estados posteriores, los materiales no se editan. Para cambiarlos, vuelva el backlog a Listo para programar (Quitar del calendario)."
+              : undefined
+          }
           fotosPorItem={new Map((repuestos ?? []).map((r) => [r.id, (fotos ?? []).filter((f) => f.repuesto_id === r.id).length]))}
           onFotos={(repuestoId, archivos) => subidaFotos.subir(archivos, repuestoId)}
           subiendo={subidaFotos.subiendo}

@@ -29,6 +29,8 @@ export default function TablaRepuestos({
   onFotos,
   subiendo,
   sap = true,
+  fotosEditables,
+  motivoBloqueo,
 }: {
   backlogId: string;
   sap?: boolean;
@@ -37,6 +39,9 @@ export default function TablaRepuestos({
   fotosPorItem?: Map<string, number>;
   onFotos?: (repuestoId: string, archivos: File[]) => void;
   subiendo?: boolean;
+  // Las fotos por ítem se pueden seguir subiendo aunque los materiales estén bloqueados.
+  fotosEditables?: boolean;
+  motivoBloqueo?: string;
 }) {
   const qc = useQueryClient();
   const { avisar } = useAvisos();
@@ -83,7 +88,8 @@ export default function TablaRepuestos({
   const n = (k: keyof typeof NUEVO) => (e: React.ChangeEvent<HTMLInputElement>) => setNuevo((x) => ({ ...x, [k]: e.target.value }));
 
   // Texto editable que se graba al salir del campo.
-  const textoEditable = (f: BacklogRepuesto, campo: "solicitud_sap" | "observaciones", etiqueta: string) =>
+  type CampoTexto = "numero_parte" | "cod_sap" | "descripcion" | "componente" | "solicitud_sap" | "observaciones";
+  const textoEditable = (f: BacklogRepuesto, campo: CampoTexto, etiqueta: string) =>
     editable ? (
       <input
         key={`${f.id}-${f[campo]}`}
@@ -91,11 +97,43 @@ export default function TablaRepuestos({
         aria-label={`${etiqueta} ítem ${f.item}`}
         onBlur={(e) => {
           const v = e.target.value.trim() || null;
-          if (v !== f[campo]) accion.mutate({ tipo: "cambiar", id: f.id, cambios: { [campo]: v } });
+          if (v === f[campo]) return;
+          // La base exige número de parte o código en cada línea.
+          if ((campo === "numero_parte" || campo === "cod_sap") && !v && !(campo === "numero_parte" ? f.cod_sap : f.numero_parte)) {
+            avisar("Cada repuesto necesita número de parte o código", "error");
+            e.target.value = f[campo] ?? "";
+            return;
+          }
+          accion.mutate({ tipo: "cambiar", id: f.id, cambios: { [campo]: v } });
         }}
       />
     ) : (
       f[campo]
+    );
+  // Número editable (cantidad mayor que 0; stock vacío o mayor o igual a 0).
+  const numeroEditable = (f: BacklogRepuesto, campo: "cantidad" | "stock", etiqueta: string) =>
+    editable ? (
+      <input
+        key={`${f.id}-${f[campo]}`}
+        type="number"
+        min={campo === "cantidad" ? 0.01 : 0}
+        step="any"
+        defaultValue={f[campo] ?? ""}
+        aria-label={`${etiqueta} ítem ${f.item}`}
+        onBlur={(e) => {
+          const texto = e.target.value.trim();
+          const v = texto === "" ? null : Number(texto);
+          if (v === (f[campo] === null ? null : Number(f[campo]))) return;
+          if ((campo === "cantidad" && !(v !== null && v > 0)) || (campo === "stock" && v !== null && !(v >= 0))) {
+            avisar(campo === "cantidad" ? "La cantidad debe ser mayor que 0" : "El stock no puede ser negativo", "error");
+            e.target.value = f[campo] === null ? "" : String(f[campo]);
+            return;
+          }
+          accion.mutate({ tipo: "cambiar", id: f.id, cambios: { [campo]: v } });
+        }}
+      />
+    ) : (
+      fNum(f[campo], 2)
     );
 
   return (
@@ -107,7 +145,8 @@ export default function TablaRepuestos({
         </span>
       </h2>
       <p className="nota">
-        Al marcar como recibido el último repuesto, un backlog en «Esperando repuestos» pasa solo a «Listo para programar».
+        {motivoBloqueo ??
+          "Los cambios se graban al salir de cada celda. Al marcar como recibido el último repuesto, un backlog en «Esperando repuestos» pasa solo a «Listo para programar»."}
       </p>
       <div className="tabla-marco">
         <table className="tabla-edicion tabla-repuestos-formato">
@@ -133,12 +172,12 @@ export default function TablaRepuestos({
             {ordenadas.map((f) => (
               <tr key={f.id} className={f.estado === "Recibido" ? "fila-recibida" : undefined}>
                 <td className="num">{f.item}</td>
-                <td>{f.numero_parte}</td>
-                {sap && <td>{f.cod_sap}</td>}
-                <td className="num">{fNum(f.cantidad, 2)}</td>
-                <td className="num">{fNum(f.stock, 2)}</td>
-                <td>{f.descripcion}</td>
-                <td>{f.componente}</td>
+                <td>{textoEditable(f, "numero_parte", "Número de parte")}</td>
+                {sap && <td>{textoEditable(f, "cod_sap", "Código")}</td>}
+                <td className="num">{numeroEditable(f, "cantidad", "Cantidad")}</td>
+                <td className="num">{numeroEditable(f, "stock", "Stock")}</td>
+                <td>{textoEditable(f, "descripcion", "Descripción")}</td>
+                <td>{textoEditable(f, "componente", "Componente")}</td>
                 <td>{textoEditable(f, "observaciones", "Observaciones")}</td>
                 {sap && <td>{textoEditable(f, "solicitud_sap", "Solicitud")}</td>}
                 <td>
@@ -171,7 +210,7 @@ export default function TablaRepuestos({
                 <td>{fFecha(f.fecha_recibido)}</td>
                 <td className="celda-fotos">
                   <span className="nota">{fotosPorItem?.get(f.id) ?? 0}</span>
-                  {editable && onFotos && (
+                  {(fotosEditables ?? editable) && onFotos && (
                     <BotonFotos
                       plano
                       texto="+ Foto"
