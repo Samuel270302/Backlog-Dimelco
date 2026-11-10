@@ -77,7 +77,7 @@ const html = `<!doctype html><html lang="es"><head><meta charset="utf-8"><title>
   <div class="titulo">Control de Backlog</div>
   <div class="sub">Manual del capturador</div>
   <div class="sub" style="font-size:12pt">Registro y seguimiento de backlogs de mantenimiento</div>
-  <div class="datos">Dimelco · versión de la app 0.5.7 · noviembre de 2026</div>
+  <div class="datos">Dimelco · versión de la app 0.5.8 · noviembre de 2026</div>
 </section>
 
 <h1>Contenido</h1>
@@ -287,7 +287,7 @@ ${fig("ficha-fotos", "Pestaña Fotos.")}
 ${fig("ficha-bitacora", "Bitácora con el registro y un comentario.")}
 
 <h2>6.6 Imprimir formato</h2>
-<p>El botón <b>Imprimir formato</b> genera el formato "Mantenimiento correctivo programado" en A4 con el logo de Dimelco: datos del equipo, repuestos, HH, justificación y las firmas de Reportado por y Aprobado por. Si hay fotos, van en una segunda hoja. En la PC se guarda como PDF (la app pregunta dónde); en el celular o el navegador, use "Guardar como PDF" en la ventana de impresión.</p>
+<p>El botón <b>Imprimir formato</b> genera el formato "Mantenimiento correctivo programado" en A4 con el logo de Dimelco (en Explotec, también el de Explotec a la par): datos del equipo, repuestos, HH, justificación y las firmas de Reportado por y Aprobado por. Si hay fotos, van en una segunda hoja. En la PC se guarda como PDF (la app pregunta dónde); en el celular o el navegador, use "Guardar como PDF" en la ventana de impresión.</p>
 ${fig("formato-impreso", "Formato impreso del ejemplo, con la hoja de imágenes.", "alta")}
 
 <h2>6.7 Borrar un backlog</h2>

@@ -278,6 +278,8 @@ try {
   await p.getByRole("tab", { name: "Datos" }).click();
   const [ventana] = await Promise.all([p.context().waitForEvent("page"), p.getByRole("button", { name: "Imprimir formato" }).click()]);
   await ventana.waitForFunction(() => document.title && !document.title.startsWith("Generando"));
+  const htmlFormato = await ventana.content();
+  if ((htmlFormato.match(/alt="Explotec"/g) ?? []).length !== 2) throw new Error("El formato de Explotec debe llevar su logo en las dos hojas");
   await ventana.setViewportSize({ width: 900, height: 1270 });
   await ventana.waitForTimeout(500);
   await foto(ventana, "formato-impreso");

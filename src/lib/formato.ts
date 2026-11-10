@@ -1,13 +1,23 @@
 // Formato imprimible "Mantenimiento correctivo programado" de un backlog, con la
 // disposición del formato en papel: encabezado, equipo, repuestos, HH, justificación
-// y firmas. Lleva el logo Dimelco; nada del cliente.
+// y firmas. Lleva el logo Dimelco y, en las unidades de LOGOS_UNIDAD, también el de la
+// unidad a la par (Explotec).
 import logoDimelco from "../assets/logo-dimelco.png";
+import logoExplotec from "../assets/logo-explotec.png";
 import { fFecha, fNum } from "./fmt";
 import type { BacklogEvento, BacklogFila, BacklogHh, BacklogRepuesto, Catalogo, Perfil } from "./types";
 import { nombrePrioridad } from "./types";
 import type { FotoConUrl } from "./fotos";
 
 const FILAS_MINIMAS_REPUESTOS = 8;
+
+// Logo que va a la par del de Dimelco, por nombre de unidad.
+const LOGOS_UNIDAD: Record<string, string> = { Explotec: logoExplotec };
+
+const celdaLogos = (logo: string, logoUnidad: string, unidad: string) =>
+  `<td class="logo${logoUnidad ? " doble" : ""}">${logo ? `<img src="${logo}" alt="Dimelco">` : "Dimelco"}${
+    logoUnidad ? `<img src="${logoUnidad}" alt="${esc(unidad)}">` : ""
+  }</td>`;
 
 const esc = (v: unknown) =>
   String(v ?? "")
@@ -43,7 +53,7 @@ export interface DatosFormato {
 }
 
 // imagenes: id de foto -> data URL ya incrustable.
-export function armarFormato(d: DatosFormato, logo: string, imagenes: Map<string, string> = new Map()): string {
+export function armarFormato(d: DatosFormato, logo: string, imagenes: Map<string, string> = new Map(), logoUnidad = ""): string {
   const { b } = d;
   const nombre = (id: string | null) => d.perfiles.find((p) => p.user_id === id)?.nombre ?? "";
   const sap = b.usa_sap;
@@ -81,7 +91,9 @@ export function armarFormato(d: DatosFormato, logo: string, imagenes: Map<string
   .n { text-align: right; }
   .enc td { vertical-align: middle; }
   .enc .logo { width: 150px; text-align: center; }
-  .enc .logo img { max-width: 130px; max-height: 52px; }
+  .enc .logo img { max-width: 130px; max-height: 52px; vertical-align: middle; }
+  .enc .logo.doble { width: 270px; white-space: nowrap; }
+  .enc .logo.doble img { max-width: 118px; margin: 0 4px; }
   .enc .titulo { font-size: 16px; font-weight: 700; text-align: center; letter-spacing: 0.5px; }
   .enc .datos { width: 190px; font-size: 11px; }
   .et { color: #555; font-size: 10px; display: block; }
@@ -104,7 +116,7 @@ export function armarFormato(d: DatosFormato, logo: string, imagenes: Map<string
   @media print { @page { size: A4 portrait; margin: 10mm; } .hoja { padding: 0; } }
 </style></head><body><div class="hoja">
 <table class="enc"><tr>
-  <td class="logo">${logo ? `<img src="${logo}" alt="Dimelco">` : "Dimelco"}</td>
+  ${celdaLogos(logo, logoUnidad, d.unidad)}
   <td class="titulo">MANTENIMIENTO CORRECTIVO PROGRAMADO</td>
   <td class="datos"><span class="et">N°</span><b>${esc(b.folio)}</b><br><span class="et">Fecha</span>${fFecha(b.fecha_deteccion)}<br><span class="et">Unidad</span>${esc(d.unidad)}</td>
 </tr></table>
@@ -146,12 +158,12 @@ export function armarFormato(d: DatosFormato, logo: string, imagenes: Map<string
   <div class="firma"><div class="quien">${esc(b.aprobado_por)}</div><div class="linea">Aprobado por</div></div>
 </div>
 <div class="pie">Control de Backlog · Dimelco · ${esc(b.folio)}</div>
-${hojaImagenes(d, logo, imagenes)}
+${hojaImagenes(d, logo, imagenes, logoUnidad)}
 </div></body></html>`;
 }
 
 // Hoja 2 del formato: primero las fotos de repuestos por ítem, luego las generales.
-function hojaImagenes(d: DatosFormato, logo: string, imagenes: Map<string, string>): string {
+function hojaImagenes(d: DatosFormato, logo: string, imagenes: Map<string, string>, logoUnidad: string): string {
   const fotos = (d.fotos ?? []).filter((f) => imagenes.get(f.id));
   if (!fotos.length) return "";
   const rep = new Map(d.repuestos.map((r) => [r.id, r]));
@@ -171,7 +183,7 @@ function hojaImagenes(d: DatosFormato, logo: string, imagenes: Map<string, strin
     .join("");
   return `<div class="hoja2">
 <table class="enc"><tr>
-  <td class="logo">${logo ? `<img src="${logo}" alt="Dimelco">` : "Dimelco"}</td>
+  ${celdaLogos(logo, logoUnidad, d.unidad)}
   <td class="titulo">IMÁGENES</td>
   <td class="datos"><span class="et">N°</span><b>${esc(d.b.folio)}</b><br><span class="et">Código interno</span>${esc(d.b.cod_interno)}</td>
 </tr></table>
@@ -209,7 +221,8 @@ export async function imprimirFormato(d: DatosFormato): Promise<string | null> {
       const dataUrl = await comoDataUrl(f.url);
       if (dataUrl) imagenes.set(f.id, dataUrl);
     }
-    const html = armarFormato(d, await comoDataUrl(logoDimelco), imagenes);
+    const logoUnidad = LOGOS_UNIDAD[d.unidad] ? await comoDataUrl(LOGOS_UNIDAD[d.unidad]) : "";
+    const html = armarFormato(d, await comoDataUrl(logoDimelco), imagenes, logoUnidad);
     if (ventana) {
       escribirParaImprimir(ventana, html); // navegador: diálogo de impresión ("Guardar como PDF")
       return null;

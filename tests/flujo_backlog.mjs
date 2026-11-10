@@ -226,6 +226,7 @@ try {
   }
   if (!htmlFormato.includes("data:image/png")) throw new Error("El formato no lleva el logo Dimelco incrustado");
   if (htmlFormato.includes("TMSA")) throw new Error("El formato tiene datos del cliente");
+  if (htmlFormato.includes('alt="Explotec"')) throw new Error("Un backlog de HEMCO no lleva el logo de Explotec");
   if (!htmlFormato.includes("Reempaque de block de implementos")) throw new Error("Falta la descripción del trabajo");
   if (!/Xavier Araica<\/div><div class="linea">Reportado por/.test(htmlFormato) || !/Luis Mena<\/div><div class="linea">Aprobado por/.test(htmlFormato))
     throw new Error("Las firmas no llevan quién reporta y quién aprueba");
