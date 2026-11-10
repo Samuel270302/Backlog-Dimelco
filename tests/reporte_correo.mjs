@@ -37,9 +37,13 @@ try {
   const libro = new ExcelJS.Workbook();
   await libro.xlsx.readFile(join(SALIDA, archivos.find((f) => f.endsWith(".xlsx"))));
   const hojas = libro.worksheets.map((h) => h.name).join(" | ");
-  if (hojas !== "Backlogs abiertos | Cerrados últimos 7 días | Semanas de backlog") throw new Error(`Hojas: ${hojas}`);
+  if (hojas !== "Backlogs abiertos | Repuestos de abiertos | Cerrados últimos 7 días | Ejecutados y validados | Rep. ejecutados y validados | Semanas de backlog") throw new Error(`Hojas: ${hojas}`);
   if (libro.getWorksheet("Backlogs abiertos").rowCount !== 6) throw new Error("El Excel no trae los 5 abiertos");
-  ok("Excel con hojas Backlogs abiertos (5), Cerrados últimos 7 días y Semanas de backlog");
+  const repAb = libro.getWorksheet("Repuestos de abiertos");
+  const partes = repAb.getRows(2, repAb.rowCount - 1).map((r) => r.values.filter((v) => typeof v === "string").join(" "));
+  if (partes.length !== 2 || !partes.every((t) => t.includes("Cambio de mangueras de levante por desgaste")))
+    throw new Error(`Repuestos de abiertos: ${partes.join(" / ")}`);
+  ok("Excel con abiertos (5), sus 2 repuestos con la actividad, cerrados de 7 días, ejecutados y validados con sus repuestos y semanas de backlog");
 
   const cuerpo = readFileSync(join(SALIDA, "correo.html"), "utf8");
   for (const t of ["HEMCO", "Veta Nueva", "Todas las unidades", "backlogs abiertos", "semanas de backlog"])

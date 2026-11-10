@@ -1,5 +1,5 @@
 import type ExcelJS from "exceljs";
-import type { BacklogFila } from "./types";
+import type { BacklogFila, BacklogRepuesto } from "./types";
 import { etapaDe, nombrePrioridad } from "./types";
 import { esAbierto, type SemanasEspecialidad } from "./indicadores";
 import { hoyISO, sumarDiasISO } from "./fmt";
@@ -48,7 +48,8 @@ export async function armarLibroBacklog(
   filas: BacklogFila[],
   semanas: SemanasEspecialidad[],
   unidades: Map<string, string>,
-  hoy: string
+  hoy: string,
+  repuestos: BacklogRepuesto[] = []
 ): Promise<ArrayBuffer> {
   const { default: Excel } = await import("exceljs"); // se carga solo al exportar
   const libro = new Excel.Workbook();
@@ -112,6 +113,69 @@ export async function armarLibroBacklog(
   }
   encabezado(hoja);
 
+  // Repuestos con la actividad de su backlog: una fila por número de parte.
+  const porBacklog = new Map<string, BacklogRepuesto[]>();
+  for (const r of repuestos) porBacklog.set(r.backlog_id, [...(porBacklog.get(r.backlog_id) ?? []), r]);
+  const hojaRepuestos = (nombre: string, lista: BacklogFila[], conEjecucion: boolean) => {
+    const h = libro.addWorksheet(nombre);
+    h.columns = [
+      { header: "Folio", key: "folio", width: 15 },
+      { header: "Unidad", key: "unidad", width: 13 },
+      { header: "Código interno", key: "cod", width: 12 },
+      { header: "Equipo", key: "flota", width: 16 },
+      { header: "Actividad", key: "actividad", width: 45 },
+      { header: "Sistema", key: "sistema", width: 18 },
+      { header: "Estado del backlog", key: "estado", width: 18 },
+      ...(conEjecucion
+        ? [
+            { header: "Ejecutado", key: "ejecucion", width: 11, style: { numFmt: "dd/mm/yyyy" } },
+            { header: "N° OT", key: "ot", width: 11 },
+          ]
+        : []),
+      { header: "Ítem", key: "item", width: 6 },
+      { header: "Número de parte", key: "parte", width: 16 },
+      { header: "Código SAP", key: "sap", width: 12 },
+      { header: "Descripción del repuesto", key: "descripcion", width: 32 },
+      { header: "Cant/Req", key: "cantidad", width: 9 },
+      { header: "Stock", key: "stock", width: 8 },
+      { header: "Componente", key: "componente", width: 20 },
+      { header: "Observaciones", key: "obs", width: 24 },
+      { header: "Solicitud (SolPed)", key: "solicitud", width: 14 },
+      { header: "Estado del repuesto", key: "estado_rep", width: 12 },
+      { header: "Fecha estimada", key: "estimada", width: 11, style: { numFmt: "dd/mm/yyyy" } },
+      { header: "Recibido", key: "recibido", width: 11, style: { numFmt: "dd/mm/yyyy" } },
+    ];
+    for (const b of [...lista].sort((x, y) => x.folio.localeCompare(y.folio))) {
+      for (const r of [...(porBacklog.get(b.id) ?? [])].sort((x, y) => x.item - y.item)) {
+        h.addRow({
+          folio: b.folio,
+          unidad: unidades.get(b.unidad_id) ?? "",
+          cod: b.cod_interno,
+          flota: b.flota,
+          actividad: b.descripcion,
+          sistema: b.sistema,
+          estado: b.estado,
+          ejecucion: fecha(b.fecha_ejecucion),
+          ot: b.ot_sap,
+          item: r.item,
+          parte: r.numero_parte,
+          sap: r.cod_sap,
+          descripcion: r.descripcion,
+          cantidad: Number(r.cantidad),
+          stock: r.stock === null ? null : Number(r.stock),
+          componente: r.componente,
+          obs: r.observaciones,
+          solicitud: r.solicitud_sap,
+          estado_rep: r.estado,
+          estimada: fecha(r.fecha_estimada),
+          recibido: fecha(r.fecha_recibido),
+        });
+      }
+    }
+    encabezado(h);
+  };
+  hojaRepuestos("Repuestos de abiertos", abiertos, false);
+
   const hc = libro.addWorksheet("Cerrados últimos 7 días");
   hc.columns = [
     { header: "Folio", key: "folio", width: 15 },
@@ -147,6 +211,48 @@ export async function armarLibroBacklog(
   }
   encabezado(hc);
 
+  // Todos los ejecutados y validados, con sus repuestos (consumo histórico).
+  const ejecutados = filas
+    .filter((b) => b.estado === "Ejecutado" || b.estado === "Validado")
+    .sort((a, b) => (b.fecha_ejecucion ?? "").localeCompare(a.fecha_ejecucion ?? "") || a.folio.localeCompare(b.folio));
+  const he = libro.addWorksheet("Ejecutados y validados");
+  he.columns = [
+    { header: "Folio", key: "folio", width: 15 },
+    { header: "Unidad", key: "unidad", width: 13 },
+    { header: "Código interno", key: "cod", width: 12 },
+    { header: "Equipo", key: "flota", width: 16 },
+    { header: "Actividad", key: "actividad", width: 45 },
+    { header: "Sistema", key: "sistema", width: 18 },
+    { header: "Estado", key: "estado", width: 11 },
+    { header: "Detección", key: "deteccion", width: 11, style: { numFmt: "dd/mm/yyyy" } },
+    { header: "Ejecutado", key: "ejecucion", width: 11, style: { numFmt: "dd/mm/yyyy" } },
+    { header: "En plazo", key: "plazo", width: 9 },
+    { header: "HH estimadas", key: "hh_est", width: 10 },
+    { header: "HH reales", key: "hh_real", width: 10 },
+    { header: "Repuestos", key: "rep", width: 9 },
+    { header: "N° OT", key: "ot", width: 11 },
+  ];
+  for (const b of ejecutados) {
+    he.addRow({
+      folio: b.folio,
+      unidad: unidades.get(b.unidad_id) ?? "",
+      cod: b.cod_interno,
+      flota: b.flota,
+      actividad: b.descripcion,
+      sistema: b.sistema,
+      estado: b.estado,
+      deteccion: fecha(b.fecha_deteccion),
+      ejecucion: fecha(b.fecha_ejecucion),
+      plazo: b.fecha_limite && b.fecha_ejecucion && b.fecha_ejecucion <= b.fecha_limite ? "Sí" : "No",
+      hh_est: Number(b.hh_estimadas),
+      hh_real: Number(b.hh_reales),
+      rep: b.repuestos_total,
+      ot: b.ot_sap,
+    });
+  }
+  encabezado(he);
+  hojaRepuestos("Rep. ejecutados y validados", ejecutados, true);
+
   const hs = libro.addWorksheet("Semanas de backlog");
   hs.columns = [
     { header: "Especialidad", key: "esp", width: 18 },
@@ -164,7 +270,8 @@ export async function exportarAbiertos(
   filas: BacklogFila[],
   semanas: SemanasEspecialidad[],
   unidades: Map<string, string>,
-  titulo: string
+  titulo: string,
+  repuestos: BacklogRepuesto[] = []
 ): Promise<string | null> {
-  return descargar(await armarLibroBacklog(filas, semanas, unidades, hoyISO()), `${titulo}.xlsx`);
+  return descargar(await armarLibroBacklog(filas, semanas, unidades, hoyISO(), repuestos), `${titulo}.xlsx`);
 }

@@ -20,7 +20,7 @@ import { armarReporte } from "../src/lib/reporte";
 import { armarLibroBacklog, cerradosUltimos7 } from "../src/lib/exportar";
 import { esAbierto, resumen, semanasPorEspecialidad } from "../src/lib/indicadores";
 import { fFecha, fNum, lunesDe } from "../src/lib/fmt";
-import type { BacklogFila, SemanasBacklog } from "../src/lib/types";
+import type { BacklogFila, BacklogRepuesto, SemanasBacklog } from "../src/lib/types";
 
 // Mismos formatos que entrega PostgREST a la app: fechas y marcas de tiempo como texto,
 // numeric y bigint como número.
@@ -54,7 +54,10 @@ async function leerBase() {
     const filas = (await cliente.query("select * from v_backlog")).rows as BacklogFila[];
     const semanas = (await cliente.query("select * from v_semanas_backlog")).rows as SemanasBacklog[];
     const unidades = (await cliente.query("select id, nombre from unidades where activo order by orden")).rows as { id: string; nombre: string }[];
-    return { filas, semanas, unidades };
+    const repuestos = (
+      await cliente.query("select r.* from backlog_repuestos r join backlogs b on b.id = r.backlog_id where b.borrado_en is null")
+    ).rows as BacklogRepuesto[];
+    return { filas, semanas, unidades, repuestos };
   } finally {
     await cliente.end();
   }
@@ -76,7 +79,7 @@ function cuerpoCorreo(filas: BacklogFila[], semanas: SemanasBacklog[], unidades:
     `<td style="padding:8px 14px 8px 0;vertical-align:top"><div style="font-size:22px;font-weight:700;color:#1c1c1c">${valor}</div><div style="color:#555;font-size:12px">${etiqueta}</div></td>`;
   const vencidos = filas.filter((b) => esAbierto(b) && b.vencido).length;
   return `<div style="font-family:Segoe UI,Arial,sans-serif;font-size:14px;color:#1c1c1c">
-<p>Reporte semanal de backlog, semana del ${fFecha(lunesDe(hoy))}. Adjuntos: el reporte en PDF y el Excel con los backlogs abiertos, los cerrados de los últimos 7 días y las semanas de backlog.</p>
+<p>Reporte semanal de backlog, semana del ${fFecha(lunesDe(hoy))}. Adjuntos: el reporte en PDF y el Excel con los backlogs abiertos y sus repuestos, los cerrados de los últimos 7 días, todos los ejecutados y validados con sus repuestos, y las semanas de backlog.</p>
 <table style="border-collapse:collapse;margin:6px 0 14px"><tr>
 ${cifra(String(r.abiertos), "backlogs abiertos")}
 ${cifra(fNum(r.hhPendientes), "HH acumuladas pendientes")}
@@ -107,16 +110,16 @@ async function pdfDesdeHtml(html: string): Promise<Buffer> {
 
 async function main() {
   const hoy = hoyNicaragua();
-  const { filas, semanas, unidades } = await leerBase();
+  const { filas, semanas, unidades, repuestos } = await leerBase();
   const semanasTodas = semanasPorEspecialidad(semanas);
   const html = armarReporte({ filas, semanas: semanasTodas, unidad: "Todas las unidades", hoy }, logoDimelco);
   const pdf = await pdfDesdeHtml(html);
-  const xlsx = Buffer.from(await armarLibroBacklog(filas, semanasTodas.lista, new Map(unidades.map((u) => [u.id, u.nombre])), hoy));
+  const xlsx = Buffer.from(await armarLibroBacklog(filas, semanasTodas.lista, new Map(unidades.map((u) => [u.id, u.nombre])), hoy, repuestos));
   const cuerpo = cuerpoCorreo(filas, semanas, unidades, hoy);
   const asunto = `Reporte semanal de backlog · semana del ${fFecha(lunesDe(hoy))}`;
   const adjuntos = [
     { filename: `Reporte semanal backlog ${hoy}.pdf`, content: pdf, contentType: "application/pdf" },
-    { filename: `Backlog abiertos y cerrados ${hoy}.xlsx`, content: xlsx, contentType: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" },
+    { filename: `Backlog y repuestos ${hoy}.xlsx`, content: xlsx, contentType: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" },
   ];
 
   if (salida) {

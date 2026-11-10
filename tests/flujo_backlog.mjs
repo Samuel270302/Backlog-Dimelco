@@ -394,7 +394,7 @@ try {
   await rep.close();
   ok("reporte semanal con indicadores, vencidos y programados de los próximos 7 días");
 
-  const [descarga] = await Promise.all([adm.waitForEvent("download"), adm.getByRole("button", { name: "Exportar abiertos a Excel" }).click()]);
+  const [descarga] = await Promise.all([adm.waitForEvent("download"), adm.getByRole("button", { name: "Exportar a Excel" }).click()]);
   const rutaXlsx = join(SALIDA, "backlog-abierto.xlsx");
   await descarga.saveAs(rutaXlsx);
   const ExcelJS = require("exceljs");
@@ -404,7 +404,14 @@ try {
   if (hojaAb.rowCount !== 7) throw new Error(`El Excel debía tener 6 abiertos, tiene ${hojaAb.rowCount - 1}`);
   const mec = libro.getWorksheet("Semanas de backlog").getRows(2, 10).find((r) => r.getCell(1).value === "Mecánico");
   if (Math.abs(mec.getCell(4).value - 0.85) > 1e-9) throw new Error("Excel: semanas de Mecánico distinto de 0,85");
-  ok("Excel con 6 backlogs abiertos y hoja de semanas de backlog");
+  const hojasXlsx = libro.worksheets.map((h) => h.name).join(" | ");
+  if (hojasXlsx !== "Backlogs abiertos | Repuestos de abiertos | Cerrados últimos 7 días | Ejecutados y validados | Rep. ejecutados y validados | Semanas de backlog") throw new Error(`Hojas del Excel: ${hojasXlsx}`);
+  const repAb = libro.getWorksheet("Repuestos de abiertos");
+  const filaParte = repAb.getRows(2, repAb.rowCount - 1).find((r) => r.values.includes("6060003007"));
+  if (!filaParte || !filaParte.values.includes("Reempaque de block de implementos por fugas de aceite"))
+    throw new Error("Repuestos de abiertos sin el número de parte 6060003007 con su actividad");
+  if (repAb.rowCount - 1 !== 7) throw new Error(`Repuestos de abiertos: esperadas 7 líneas (5 del registro y 2 de la semilla), hay ${repAb.rowCount - 1}`);
+  ok("Excel con 6 backlogs abiertos, sus 7 repuestos con la actividad, ejecutados y validados, y semanas de backlog");
 
   // Vista por equipo: el capturador ve PS011 en la flota Scoop con su backlog abierto, y no ve Veta Nueva.
   await cap.goto(base + "#/flota");
@@ -455,6 +462,23 @@ try {
   const deteccion = await adm.locator("label.campo", { hasText: "Fecha de detección" }).locator("input").inputValue();
   if (!/^\d{4}-\d{2}-\d{2}$/.test(deteccion)) throw new Error(`Fecha de detección vacía o mal formada: «${deteccion}»`);
   ok("el capturador valida (paso 5 de 5); para él queda sin acciones y el admin puede revertir o borrar");
+
+  // El Excel trae los repuestos del backlog validado en su hoja.
+  await adm.goto(base + "#/indicadores");
+  await adm.reload();
+  await adm.getByRole("heading", { name: "Indicadores" }).waitFor();
+  const [descarga2] = await Promise.all([adm.waitForEvent("download"), adm.getByRole("button", { name: "Exportar a Excel" }).click()]);
+  const rutaXlsx2 = join(SALIDA, "backlog-con-validado.xlsx");
+  await descarga2.saveAs(rutaXlsx2);
+  const libro2 = new (require("exceljs").Workbook)();
+  await libro2.xlsx.readFile(rutaXlsx2);
+  const repEj = libro2.getWorksheet("Rep. ejecutados y validados");
+  const lineasEj = repEj.getRows(2, Math.max(1, repEj.rowCount - 1)) ?? [];
+  if (lineasEj.length !== 5 || !lineasEj.every((r) => r.values.includes(folio) && r.values.includes("Validado")))
+    throw new Error(`Rep. ejecutados y validados: esperadas 5 líneas del ${folio} Validado, hay ${lineasEj.length}`);
+  if (!libro2.getWorksheet("Ejecutados y validados").getRows(2, 1)?.[0]?.values.includes(folio)) throw new Error("Falta el validado en Ejecutados y validados");
+  await adm.goto(base + `#/backlog/${id}`);
+  ok("el Excel trae el backlog validado y sus 5 números de parte en las hojas de ejecutados y validados");
 
   await adm.getByRole("tab", { name: /^Bitácora/ }).click();
   const eventos = await adm.locator(".bitacora .evento").count();

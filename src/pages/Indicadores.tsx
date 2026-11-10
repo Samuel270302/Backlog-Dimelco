@@ -7,7 +7,8 @@ import { exportarAbiertos } from "../lib/exportar";
 import { BarrasHorizontales, GraficaSemanal } from "../components/Graficas";
 import { useAvisos } from "../components/Avisos";
 import { fNum, hoyISO, fFecha } from "../lib/fmt";
-import { nombrePrioridad } from "../lib/types";
+import { nombrePrioridad, type BacklogRepuesto } from "../lib/types";
+import { supabase } from "../lib/supabase";
 
 const pct = (v: number | null) => (v === null ? "—" : `${Math.round(v * 100)} %`);
 
@@ -56,6 +57,18 @@ export default function Indicadores() {
     }
   }
 
+  // Repuestos de los backlogs en vista, en lotes (la base ya limita por unidad).
+  async function leerRepuestos(): Promise<BacklogRepuesto[]> {
+    const ids = (filas ?? []).map((b) => b.id);
+    const lista: BacklogRepuesto[] = [];
+    for (let i = 0; i < ids.length; i += 100) {
+      const { data, error } = await supabase().from("backlog_repuestos").select("*").in("backlog_id", ids.slice(i, i + 100));
+      if (error) throw error;
+      lista.push(...(data as BacklogRepuesto[]));
+    }
+    return lista;
+  }
+
   async function excel() {
     setOcupado("excel");
     try {
@@ -63,7 +76,8 @@ export default function Indicadores() {
         filas ?? [],
         sem.lista,
         new Map((unidades ?? []).map((u) => [u.id, u.nombre])),
-        `Backlog abierto ${unidad} ${hoy}`
+        `Backlog ${unidad} ${hoy}`,
+        await leerRepuestos()
       );
       if (ruta) avisar(`Excel guardado en ${ruta}`);
     } catch (e) {
@@ -86,7 +100,7 @@ export default function Indicadores() {
         </div>
         <div className="espacio" />
         <button className="boton-plano" disabled={!!ocupado} onClick={excel}>
-          {ocupado === "excel" ? "Exportando…" : "Exportar abiertos a Excel"}
+          {ocupado === "excel" ? "Exportando…" : "Exportar a Excel"}
         </button>
         <button disabled={!!ocupado} onClick={pdf}>
           {ocupado === "pdf" ? "Generando…" : "Reporte semanal PDF"}

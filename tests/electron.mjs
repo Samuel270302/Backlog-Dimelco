@@ -131,7 +131,7 @@ try {
   ok(`reporte semanal PDF A4 horizontal (${Math.round(anchoR)} × ${Math.round(altoR)} pt)`);
 
   // Excel por guardarArchivo.
-  await win.getByRole("button", { name: "Exportar abiertos a Excel" }).click();
+  await win.getByRole("button", { name: "Exportar a Excel" }).click();
   await win.locator(".aviso", { hasText: "Excel guardado en" }).waitFor({ timeout: 30000 });
   const xlsx = join(SALIDA, readdirSync(SALIDA).find((f) => f.endsWith(".xlsx")) ?? "x");
   await esperarArchivo(xlsx);

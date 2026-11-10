@@ -77,7 +77,7 @@ const html = `<!doctype html><html lang="es"><head><meta charset="utf-8"><title>
   <div class="titulo">Control de Backlog</div>
   <div class="sub">Manual del capturador</div>
   <div class="sub" style="font-size:12pt">Registro y seguimiento de backlogs de mantenimiento</div>
-  <div class="datos">Dimelco · versión de la app 0.5.6 · noviembre de 2026</div>
+  <div class="datos">Dimelco · versión de la app 0.5.7 · noviembre de 2026</div>
 </section>
 
 <h1>Contenido</h1>
@@ -384,7 +384,16 @@ ${fig("validado-bloqueado", "Backlog del B1-27 validado: bloqueado para el captu
   <li>vencidos por prioridad;</li>
   <li>ingresos contra cierres por semana en las últimas 12 semanas.</li>
 </ul>
-<p>Botones: <b>Reporte semanal PDF</b> (el mismo reporte que llega por correo los lunes) y <b>Exportar abiertos a Excel</b>.</p>
+<p>Botones: <b>Reporte semanal PDF</b> (el mismo reporte que llega por correo los lunes) y <b>Exportar a Excel</b>. El Excel trae estas hojas:</p>
+<table>
+  <tr><th>Hoja</th><th>Qué trae</th></tr>
+  <tr><td>Backlogs abiertos</td><td>Un backlog por fila: equipo, actividad, sistema, prioridad, estado, fechas, HH, repuestos sin recibir y N° OT.</td></tr>
+  <tr><td>Repuestos de abiertos</td><td>Un número de parte por fila con la actividad de su backlog: ítem, número de parte, descripción, cantidad, stock, componente, observaciones, solicitud, estado del repuesto y fechas.</td></tr>
+  <tr><td>Cerrados últimos 7 días</td><td>Ejecutados y validados de la última semana, con HH estimadas contra reales y si se cerraron en plazo.</td></tr>
+  <tr><td>Ejecutados y validados</td><td>Todos los ejecutados y validados, con fecha de ejecución, HH y N° OT.</td></tr>
+  <tr><td>Rep. ejecutados y validados</td><td>Los números de parte usados en cada trabajo ejecutado o validado, con la actividad, la fecha de ejecución y la OT.</td></tr>
+  <tr><td>Semanas de backlog</td><td>HH pendientes, HH por semana y semanas de backlog por especialidad.</td></tr>
+</table>
 ${fig("indicadores", "Indicadores.")}
 
 <h1>11. Capacidad del taller</h1>
