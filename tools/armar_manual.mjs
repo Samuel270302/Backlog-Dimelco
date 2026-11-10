@@ -183,10 +183,10 @@ ${fig("menu", "Menú del capturador. Arriba, la unidad; abajo, su nombre, Cambia
 
 <h2>4.4 Familias y sistemas</h2>
 <p>Cada equipo pertenece a una <b>familia</b> (Scooptram ST1030, Boomer S1D, PowerROC T35, Furukawa HCR, etc.). Cada familia tiene su lista de <b>sistemas</b>, tomada de los manuales de mantenimiento y de partes del fabricante. Al registrar, la app muestra solo los sistemas de la familia del equipo elegido, más la opción <b>Otro</b>. Si elige Otro, la app pide escribir cuál es el sistema.</p>
-<p>El <b>componente</b> es la pieza o conjunto concreto dentro del sistema (por ejemplo, sistema "Sistema hidráulico", componente "Block de implementos").</p>
+<p>El <b>componente</b> es la pieza o conjunto concreto dentro del sistema (por ejemplo, sistema "Perforadora", componente "Acumulador de entrada COP 1840HE").</p>
 
 <h1>5. Registrar un backlog paso a paso</h1>
-<div class="ejemplo"><b>Ejemplo que se usa en todo el capítulo.</b> En la inspección del Scooptram PS011 (ST1030, Epiroc) se encontró fuga de aceite en el block de implementos. Lo reportó el mecánico Xavier Araica y lo aprobó el supervisor Luis Mena. Hace falta reempacar el block con 3 kits de repuestos; el trabajo lleva 2 mecánicos 4 horas y 1 electromecánico 2 horas. Horómetro: 12 450 h. Aviso SAP: 10458732.</div>
+<div class="ejemplo"><b>Ejemplo que se usa en todo el manual (unidad Explotec).</b> El operador del turno B de la PowerROC T35 TD22008LC (Epiroc) reporta que la perforadora COP 1840HE pierde carga: baja la penetración. El supervisor de mina aprueba registrarlo como backlog. Hay que cambiar la membrana del acumulador de entrada; los repuestos salen de la lista de partes de la COP 1840HE: membrana 3115 2472 00, soporte de membrana 3115 2901 00 (hay 1 en bodega) y juego de juntas tóricas 3115 9153 90. El trabajo lleva 2 mecánicos 3 horas y 1 electromecánico 2 horas. Explotec no usa SAP: la orden se registra como N° OT.</div>
 <p>Pulse <b>Nuevo backlog</b> en el menú. Se abre el formulario, con el mismo orden del formato en papel. Abajo a la derecha, la app va diciendo qué falta para poder registrar ("Falta: equipo, sistema, ...").</p>
 ${fig("nuevo-vacio", "Formulario vacío. El texto marcado en rojo dice qué datos faltan.")}
 
@@ -194,7 +194,7 @@ ${fig("nuevo-vacio", "Formulario vacío. El texto marcado en rojo dice qué dato
 <p><span class="paso">1</span>En <b>Equipo</b>, abra la lista y elija el equipo. Los equipos están agrupados por familia (en negrita) y se muestran como <i>código interno · modelo</i>. Solo aparecen los equipos activos de sus unidades.</p>
 ${fig("nuevo-lista-equipos", "Lista de equipos agrupada por familia.")}
 <p>Al elegirlo, debajo aparecen la familia, la marca, el modelo y el código interno. Confírmelos.</p>
-${fig("nuevo-equipo-elegido", "Equipo PS011 elegido: la app muestra familia, marca, modelo y código interno.")}
+${fig("nuevo-equipo-elegido", "Equipo TD22008LC elegido: la app muestra familia, marca, modelo y código interno.")}
 
 <h2>5.2 Fecha, quién reporta, quién aprueba, tipo de pedido y prioridad</h2>
 <ol>
@@ -212,12 +212,12 @@ ${fig("nuevo-lista-sistemas", "Sistemas de la familia del equipo elegido, más O
 <p>Si el sistema no está en la lista, elija <b>Otro</b> y escriba cuál es en <b>¿Cuál sistema?</b>. Sin ese texto la app no deja registrar.</p>
 ${fig("nuevo-sistema-otro", "Con Otro aparece el campo ¿Cuál sistema?.")}
 <p><span class="paso">8</span><b>Origen</b>: de dónde salió el hallazgo (Inspección, PM, Operador, Falla, Análisis de aceite, Otro).</p>
-<p><span class="paso">9</span><b>Aviso SAP</b>: solo en HEMCO, si existe. En las demás unidades este campo no aparece.</p>
-${fig("nuevo-sistema-origen", "Sistema hidráulico, origen Inspección y aviso SAP.")}
+<p><span class="paso">9</span><b>Aviso SAP</b>: aparece solo en HEMCO, para escribir el aviso si existe. En Explotec, Veta Nueva y Mina La India este campo no aparece.</p>
+${fig("nuevo-sistema-origen", "Sistema Perforadora y origen Operador. En Explotec no aparece el campo Aviso SAP.")}
 
 <h2>5.4 Trabajo</h2>
 <ol>
-  <li><span class="paso">10</span><b>Descripción del trabajo</b>: qué hay que hacer, en una línea clara (mínimo 5 letras). Escriba la acción y la causa: "Reempaque de block de implementos por fugas de aceite", no solo "fuga".</li>
+  <li><span class="paso">10</span><b>Descripción del trabajo</b>: qué hay que hacer, en una línea clara (mínimo 5 letras). Escriba la acción y la causa: "Cambio de membrana del acumulador de entrada de la perforadora COP 1840HE por pérdida de carga", no solo "pierde carga".</li>
   <li><span class="paso">11</span><b>Componente</b>: pieza o conjunto. Mientras escribe, la app sugiere componentes ya usados para que se escriban igual.</li>
   <li><span class="paso">12</span><b>Horómetro (h)</b>: lectura del equipo al detectar. Opcional, pero ayuda a ver la vida del componente.</li>
 </ol>
@@ -229,7 +229,7 @@ ${fig("nuevo-trabajo", "Sección Trabajo completa.")}
   <tr><th>Columna</th><th>Qué escribir</th></tr>
   <tr><td>Ítem</td><td>Lo numera la app.</td></tr>
   <tr><td>Número de parte</td><td>El del fabricante (manual de partes). Obligatorio si no hay código SAP.</td></tr>
-  <tr><td>Código SAP</td><td>Solo en HEMCO.</td></tr>
+  <tr><td>Código SAP</td><td>Solo en HEMCO. En Explotec la columna no aparece.</td></tr>
   <tr><td>Cant/Req</td><td>Cantidad requerida (mayor que 0).</td></tr>
   <tr><td>Stock</td><td>Cuántos hay en bodega, si lo sabe.</td></tr>
   <tr><td>Descripción del repuesto</td><td>Nombre de la pieza.</td></tr>
@@ -241,7 +241,7 @@ ${fig("nuevo-repuestos", "Tres repuestos con número de parte, cantidad, stock y
 
 <h2>5.6 Especialidades y HH</h2>
 <p><span class="paso">14</span>Pulse <b>Agregar especialidad</b> por cada oficio que interviene (Mecánico, Eléctrico, Electromecánico, Hidráulico, Soldador, Llantero). Escriba cuántas <b>Personas</b> y cuántas <b>Horas</b>; la app calcula las HH (personas × horas) y el total arriba a la derecha.</p>
-<div class="ejemplo">2 mecánicos × 4 horas = 8 HH; 1 electromecánico × 2 horas = 2 HH; total 10 HH.</div>
+<div class="ejemplo">2 mecánicos × 3 horas = 6 HH; 1 electromecánico × 2 horas = 2 HH; total 8 HH.</div>
 ${fig("nuevo-hh", "HH por especialidad con el total.")}
 <p>Si no conoce las HH, deje la sección vacía: el planificador las carga al aprobar.</p>
 
@@ -258,7 +258,7 @@ ${fig("nuevo-fotos", "Una foto agregada con el botón y otra pegada con Ctrl+V."
 <p><span class="paso">16</span>En <b>Justificación</b> explique por qué hay que hacer el trabajo y qué pasa si no se hace.</p>
 <p><span class="paso">17</span>Cuando ya no aparezca el texto "Falta: ...", pulse <b>Registrar backlog</b>.</p>
 ${fig("nuevo-justificacion-registrar", "Justificación y botón Registrar backlog.")}
-<p>La app graba todo junto, asigna el <b>folio</b> (por ejemplo BL-HEM-000005: BL, sigla de la unidad y número correlativo), muestra el aviso "Backlog ... registrado" y abre la ficha del backlog.</p>
+<p>La app graba todo junto, asigna el <b>folio</b> (por ejemplo BL-EXP-000005: BL, sigla de la unidad, EXP para Explotec, y número correlativo), muestra el aviso "Backlog ... registrado" y abre la ficha del backlog.</p>
 ${fig("nuevo-completo", "Formulario completo del ejemplo antes de registrar.", "alta")}
 
 <h1>6. La ficha del backlog</h1>
@@ -320,15 +320,15 @@ ${fig("estados-aprobar", "Aprobar y planificar: confirmar la prioridad.")}
 <p>Desde Listo para programar, pulse <b>Programar</b> y complete:</p>
 <ol>
   <li><span class="paso">1</span><b>Fecha programada</b>: el día del trabajo. Puede ser anterior a hoy (para registrar un trabajo que ya se programó), pero no anterior a la fecha de detección del backlog.</li>
-  <li><span class="paso">2</span><b>OT SAP</b> en HEMCO, o <b>N° OT</b> en las demás unidades (obligatorio).</li>
+  <li><span class="paso">2</span><b>N° OT</b> en Explotec y las demás unidades, u <b>OT SAP</b> en HEMCO (obligatorio).</li>
   <li><span class="paso">3</span>Marque <b>Aprovechar la parada de un PM</b> si se hará junto con un preventivo.</li>
 </ol>
-${fig("estados-programar", "Programar: fecha, número de OT y si aprovecha un PM.")}
+${fig("estados-programar", "Programar la reparación de la luz de trabajo del B1-31 (PowerROC T50): fecha, N° OT y si aprovecha un PM.")}
 <p>También se programa arrastrando la tarjeta desde "Listos para programar" hasta el día en el <b>Calendario</b> (8.3).</p>
 
 <h2>7.4 Reprogramar o quitar del calendario</h2>
 <p><b>Reprogramar</b> cambia la fecha de un backlog Programado: pide la fecha nueva (desde la fecha de detección, aunque sea anterior a hoy) y el motivo, mantiene la OT y suma una reprogramación. En el calendario se hace arrastrando la tarjeta a otro día. <b>Quitar del calendario</b> lo devuelve a Listo para programar, también con motivo.</p>
-${fig("estados-reprogramar", "Reprogramar: fecha nueva y motivo.")}
+${fig("estados-reprogramar", "Reprogramar el B1-31: fecha nueva y motivo.")}
 
 <h2>7.5 Volver un paso atrás</h2>
 <p>Si algo cambió (falta información, cambió la prioridad de producción, el trabajo quedó mal hecho), use el botón de paso atrás del estado actual. El cuadro pide el <b>motivo</b>; en la bitácora queda como "Retroceso" con ese motivo.</p>
@@ -348,7 +348,7 @@ ${fig("kanban-tarjeta", "Tarjeta desplegada.")}
 
 <h2>8.2 Por equipo</h2>
 <p>Clic en un equipo para ver sus backlogs abiertos. <b>Historial del equipo</b> abre todos sus backlogs, abiertos y cerrados, con las HH por sistema. Use los filtros de arriba para buscar un equipo, ver una familia o solo los equipos con vencidos.</p>
-${fig("por-equipo-desplegado", "Equipo PS011 desplegado con su backlog.")}
+${fig("por-equipo-desplegado", "Equipo TD22008LC desplegado con su backlog.")}
 
 <h2>8.3 Calendario</h2>
 <p>Muestra la semana de lunes a domingo con los trabajos programados por equipo y día, y abajo las barras de HH programadas contra la capacidad del taller por especialidad. Para programar, arrastre una tarjeta desde "Listos para programar" hasta el día (pide la OT); para reprogramar, arrastre la tarjeta programada a otro día (pide el motivo). Use las flechas para cambiar de semana y <b>Hoy</b> para volver a la actual.</p>
@@ -360,12 +360,12 @@ ${fig("calendario", "Calendario semanal.")}
   <li><span class="paso">1</span>Abra la ficha del backlog (desde el Kanban, columna Programado, o desde el calendario).</li>
   <li><span class="paso">2</span>Vaya a la pestaña <b>HH</b>. En <b>HH reales</b>, elija la especialidad, escriba personas y horas trabajadas de verdad, y pulse <b>Agregar</b>. Repita por cada especialidad.</li>
 </ol>
-${fig("ejecutar-hh-reales", "Carga de HH reales: 2 mecánicos × 3,5 horas.")}
+${fig("ejecutar-hh-reales", "Carga de HH reales del B1-27 (XQZ152): 2 mecánicos × 4,5 horas.")}
 <ol start="3">
   <li><span class="paso">3</span>Pulse <b>Marcar ejecutado</b>. En el cuadro, confirme la <b>fecha de ejecución</b> (por defecto hoy) y escriba un comentario con lo que se hizo.</li>
   <li><span class="paso">4</span>Pulse <b>Marcar ejecutado</b> en el cuadro para confirmar.</li>
 </ol>
-${fig("ejecutar-dialogo", "Cuadro Marcar ejecutado con fecha y comentario.")}
+${fig("ejecutar-dialogo", "Marcar ejecutado el cambio de rodillos del B1-27: fecha y comentario.")}
 <p>El backlog pasa a <b>Ejecutado</b>.</p>
 ${fig("ejecutar-resultado", "Backlog en estado Ejecutado.")}
 <div class="nota">Cargue las HH reales antes de marcar ejecutado: con ellas se compara lo estimado con lo real en los indicadores y en el reporte semanal.</div>
@@ -373,7 +373,7 @@ ${fig("ejecutar-resultado", "Backlog en estado Ejecutado.")}
 <p>Revise que el trabajo quedó bien (prueba del equipo, HH reales, repuestos usados) y pulse <b>Validar</b>. El cuadro avisa que después ya no se podrá cambiar.</p>
 ${fig("validar-dialogo", "Validar: el cuadro avisa que el backlog quedará bloqueado.")}
 <p>Un backlog validado muestra la barra completa (5 de 5) y, para el capturador, solo el botón Imprimir formato. Si hay que corregir algo, pida al administrador que lo revierta a Ejecutado.</p>
-${fig("validado-bloqueado", "Backlog validado: bloqueado para el capturador.")}
+${fig("validado-bloqueado", "Backlog del B1-27 validado: bloqueado para el capturador.")}
 
 <h1>10. Indicadores y reporte semanal</h1>
 <p>La pantalla <b>Indicadores</b> muestra, para su unidad:</p>

@@ -1,5 +1,5 @@
 // Capturas para el manual del capturador (docs/manual). Recorre la app real con la
-// semilla de prueba como «Carlos Capturador» (HEMCO) y guarda cada pantalla.
+// semilla de prueba como «Planeador Explotec» (Explotec, sin SAP) y guarda cada pantalla.
 // Uso: tests/e2e.sh manual_capturador.mjs   y luego   node tools/armar_manual.mjs
 import { createRequire } from "node:module";
 import { createServer } from "node:http";
@@ -39,7 +39,7 @@ const rest = await iniciarServidorRest({
   puerto: PUERTO_REST,
 });
 const base = `http://localhost:${PUERTO_APP}/`;
-const CAP = { id: "00000000-0000-0000-0000-00000000000c", email: "cap@prueba" };
+const CAP = { id: "00000000-0000-0000-0000-00000000000f", email: "planeador.explotec@grupodimelco.com" };
 
 const navegador = await chromium.launch();
 let n = 0;
@@ -48,6 +48,8 @@ async function contexto({ conSesion = true, ancho = 1366, alto = 860, movil = fa
   const ctx = await navegador.newContext({
     viewport: { width: ancho, height: alto },
     deviceScaleFactor: 2,
+    locale: "es-NI",
+    timezoneId: "America/Managua",
     ...(movil ? { isMobile: true, hasTouch: true } : {}),
   });
   const sesion = {
@@ -114,7 +116,7 @@ async function abrirLista(loc, filas = 8) {
   await loc.evaluate((s, f) => {
     const filas = Math.min(f, s.options.length + s.querySelectorAll("optgroup").length);
     s.setAttribute("size", String(filas));
-    s.style.height = `${filas * 26 + 10}px`;
+    s.style.height = `${filas * 17 + 8}px`;
   }, filas);
 }
 async function cerrarLista(loc) {
@@ -141,7 +143,7 @@ try {
   const login = await contexto({ conSesion: false });
   await login.goto(base);
   await login.getByRole("button", { name: "Entrar" }).waitFor();
-  await login.getByLabel("Correo").fill("planeador.martha@grupodimelco.com");
+  await login.getByLabel("Correo").fill("planeador.explotec@grupodimelco.com");
   await login.getByLabel("Contraseña").fill("••••••••••");
   await marcar(login, login.locator("form, .tarjeta-login").first());
   await foto(login, "login");
@@ -166,20 +168,20 @@ try {
   await marcar(p, equipo);
   await foto(p, "nuevo-lista-equipos", { loc: p.locator(".panel-formulario").first() });
   await cerrarLista(equipo);
-  await equipo.selectOption({ label: "PS011 · ST1030" });
+  await equipo.selectOption({ label: "TD22008LC · PowerROC T35" });
   await p.locator(".datos-equipo", { hasText: "Epiroc" }).waitFor();
   await marcar(p, p.locator(".datos-equipo"));
   await foto(p, "nuevo-equipo-elegido", { loc: p.locator(".panel-formulario").first() });
 
-  await p.getByLabel("Reportado por").fill("Xavier Araica");
-  await p.getByLabel("Aprobado por").fill("Luis Mena");
+  await p.getByLabel("Reportado por").fill("Operador turno B");
+  await p.getByLabel("Aprobado por").fill("Supervisor de mina");
   await p.getByText("Urgente", { exact: true }).click();
   await p.getByLabel("Prioridad").selectOption("P2");
   await marcar(p, p.getByLabel("Reportado por"), p.getByLabel("Aprobado por"), p.locator(".opciones-radio"), p.getByLabel("Prioridad"));
   await foto(p, "nuevo-encabezado", { loc: p.locator(".panel-formulario").first() });
 
   const sistema = p.getByLabel("Sistema", { exact: true });
-  await abrirLista(sistema, 6);
+  await abrirLista(sistema, 19);
   await marcar(p, sistema);
   await foto(p, "nuevo-lista-sistemas", { loc: p.locator(".panel-formulario").first() });
   await cerrarLista(sistema);
@@ -187,23 +189,21 @@ try {
   await p.getByLabel("¿Cuál sistema?").fill("Sistema de supresión de incendios");
   await marcar(p, sistema, p.getByLabel("¿Cuál sistema?"));
   await foto(p, "nuevo-sistema-otro", { loc: p.locator(".panel-formulario").first() });
-  await sistema.selectOption({ label: "Sistema hidráulico" });
-  await p.getByLabel("Origen").selectOption("Inspección");
-  await p.getByLabel("Aviso SAP (si existe)").fill("10458732");
-  await marcar(p, sistema, p.getByLabel("Origen"), p.getByLabel("Aviso SAP (si existe)"));
+  await sistema.selectOption({ label: "Perforadora" });
+  await p.getByLabel("Origen").selectOption("Operador");
+  await marcar(p, sistema, p.getByLabel("Origen"));
   await foto(p, "nuevo-sistema-origen", { loc: p.locator(".panel-formulario").first() });
 
   const trabajo = p.locator(".panel-formulario", { has: p.getByRole("heading", { name: "Trabajo" }) });
-  await p.getByLabel("Descripción del trabajo").fill("Reempaque de block de implementos por fugas de aceite");
-  await p.getByLabel("Componente", { exact: true }).fill("Block de implementos");
-  await p.getByLabel("Horómetro (h)").fill("12450");
+  await p.getByLabel("Descripción del trabajo").fill("Cambio de membrana del acumulador de entrada de la perforadora COP 1840HE por pérdida de carga");
+  await p.getByLabel("Componente", { exact: true }).fill("Acumulador de entrada COP 1840HE");
   await marcar(p, trabajo);
   await foto(p, "nuevo-trabajo", { loc: trabajo });
 
   const REP = [
-    ["6060003007", "2", "", "Juego de cierres EOD"],
-    ["6060013890", "2", "", "Kit de retenes (dirección)"],
-    ["6060015161", "4", "1", "Kit de sellos"],
+    ["3115 2472 00", "1", "", "Membrana del acumulador de entrada"],
+    ["3115 2901 00", "1", "1", "Soporte de membrana"],
+    ["3115 9153 90", "1", "", "Juego de juntas tóricas COP 1840HE"],
   ];
   for (const [i, [parte, cant, stock, desc]] of REP.entries()) {
     await p.getByRole("button", { name: "Agregar repuesto" }).click();
@@ -211,9 +211,9 @@ try {
     await p.getByLabel(`Cantidad ítem ${i + 1}`).fill(cant);
     if (stock) await p.getByLabel(`Stock ítem ${i + 1}`).fill(stock);
     await p.getByLabel(`Descripción ítem ${i + 1}`).fill(desc);
-    await p.getByLabel(`Componente ítem ${i + 1}`).fill("Block de implementos");
+    await p.getByLabel(`Componente ítem ${i + 1}`).fill("Acumulador de entrada COP 1840HE");
   }
-  await p.getByLabel("Observaciones ítem 3").fill("Hay 1 en bodega");
+  await p.getByLabel("Observaciones ítem 2").fill("Hay 1 en bodega");
   const repuestos = p.locator(".panel-formulario", { has: p.getByRole("heading", { name: "Repuestos" }) });
   await marcar(p, p.getByRole("button", { name: "Agregar repuesto" }));
   await foto(p, "nuevo-repuestos", { loc: repuestos });
@@ -221,7 +221,7 @@ try {
   await p.getByRole("button", { name: "Agregar especialidad" }).click();
   await p.locator(".fila-hh").nth(0).getByLabel("Especialidad").selectOption({ label: "Mecánico" });
   await p.locator(".fila-hh").nth(0).getByLabel("Personas").fill("2");
-  await p.locator(".fila-hh").nth(0).getByLabel("Horas").fill("4");
+  await p.locator(".fila-hh").nth(0).getByLabel("Horas").fill("3");
   await p.getByRole("button", { name: "Agregar especialidad" }).click();
   await p.locator(".fila-hh").nth(1).getByLabel("Especialidad").selectOption({ label: "Electromecánico" });
   await p.locator(".fila-hh").nth(1).getByLabel("Personas").fill("1");
@@ -231,9 +231,9 @@ try {
   await foto(p, "nuevo-hh", { loc: hh });
 
   await p.getByLabel("Archivos de fotos").setInputFiles([
-    { name: "fuga-block.png", mimeType: "image/png", buffer: await imagenEjemplo("Fuga en block<br>de implementos", "#7a3b1d") },
+    { name: "acumulador-cop1840.png", mimeType: "image/png", buffer: await imagenEjemplo("Acumulador de entrada<br>COP 1840HE", "#7a3b1d") },
   ]);
-  const pegada = await imagenEjemplo("Vista general<br>PS011", "#1d4f7a");
+  const pegada = await imagenEjemplo("Vista general<br>TD22008LC", "#1d4f7a");
   await p.evaluate((b64) => {
     const bytes = Uint8Array.from(atob(b64), (c) => c.charCodeAt(0));
     const dt = new DataTransfer();
@@ -246,7 +246,7 @@ try {
   await foto(p, "nuevo-fotos", { loc: fotos });
 
   await p.getByPlaceholder("Por qué hay que hacer el trabajo").fill(
-    "Fugas de aceite en el block de implementos; si no se corrige se pierde presión de levante y hay riesgo de daño a la bomba."
+    "La perforadora pierde carga en el acumulador de entrada; baja la penetración y, si sigue operando, se dañan las juntas y el pistón."
   );
   await marcar(p, p.getByRole("button", { name: "Registrar backlog" }));
   await foto(p, "nuevo-justificacion-registrar", { loc: p.locator(".pagina-formulario") });
@@ -268,9 +268,9 @@ try {
   await p.waitForFunction(() => [...document.querySelectorAll(".rejilla-fotos img")].every((i) => i.complete && i.naturalWidth > 0));
   await foto(p, "ficha-fotos");
   await p.getByRole("tab", { name: /^Bitácora/ }).click();
-  await p.getByLabel("Comentario").fill("Se solicitó cotización de los kits a bodega central");
+  await p.getByLabel("Comentario").fill("Se solicitó la membrana y el juego de juntas a bodega");
   await p.getByRole("button", { name: "Comentar" }).click();
-  await p.locator(".evento-texto", { hasText: "cotización" }).waitFor();
+  await p.locator(".evento-texto", { hasText: "membrana y el juego" }).waitFor();
   await marcar(p, p.locator(".comentar"));
   await foto(p, "ficha-bitacora");
 
@@ -285,7 +285,7 @@ try {
 
   // Borrar (se cancela)
   await p.getByRole("button", { name: "Borrar", exact: true }).click();
-  await p.getByRole("dialog").getByLabel("Motivo del borrado").fill("Registrado dos veces (duplicado de BL-HEM-000002)");
+  await p.getByRole("dialog").getByLabel("Motivo del borrado").fill("Registrado dos veces (duplicado de otro folio)");
   await foto(p, "borrar-dialogo");
   await p.getByRole("dialog").getByRole("button", { name: "Cancelar" }).click();
 
@@ -303,10 +303,10 @@ try {
   await foto(p, "estados-retroceso");
   await p.getByRole("dialog").getByRole("button", { name: "Cancelar" }).click();
 
-  // Programar y reprogramar (semilla: JU005 luminaria, Identificado y sin repuestos)
+  // Programar y reprogramar (semilla: B1-31 luz de trabajo, Identificado y sin repuestos)
   const manana = new Date(Date.now() + 86400000).toISOString().slice(0, 10);
   const pasado = new Date(Date.now() + 2 * 86400000).toISOString().slice(0, 10);
-  await p.goto(base + "#/backlog/30000000-0000-0000-0000-000000000003");
+  await p.goto(base + "#/backlog/60000000-0000-0000-0000-000000000002");
   await p.locator(".ficha-folio .etiqueta-estado", { hasText: "Identificado" }).waitFor();
   await acciones.getByRole("button", { name: "Aprobar y planificar", exact: true }).click();
   await p.getByRole("dialog").getByRole("button", { name: "Aprobar y planificar", exact: true }).click();
@@ -317,7 +317,7 @@ try {
   await acciones.getByRole("button", { name: "Programar", exact: true }).click();
   const dProg = p.getByRole("dialog");
   await dProg.getByLabel("Fecha programada").fill(manana);
-  await dProg.getByLabel("OT SAP").fill("4002001");
+  await dProg.getByLabel("N° OT").fill("OT-EXP-0431");
   await foto(p, "estados-programar");
   await dProg.getByRole("button", { name: "Programar", exact: true }).click();
   await p.locator(".ficha-folio .etiqueta-estado", { hasText: "Programado" }).waitFor();
@@ -333,7 +333,7 @@ try {
   await p.locator(".tarjeta-kanban").first().waitFor();
   await p.waitForTimeout(500);
   await foto(p, "kanban");
-  const tarjeta = p.locator(".tarjeta-kanban", { hasText: "Reempaque de block" });
+  const tarjeta = p.locator(".tarjeta-kanban", { hasText: "Cambio de membrana" });
   await tarjeta.click();
   await p.waitForTimeout(500);
   await marcar(p, tarjeta);
@@ -342,26 +342,26 @@ try {
   // Por equipo desplegado
   await p.goto(base + "#/flota");
   await p.getByRole("heading", { name: "Por equipo" }).waitFor();
-  const ps011 = p.locator(".tarjeta-equipo, article", { hasText: "PS011" }).first();
+  const ps011 = p.locator(".tarjeta-equipo, article", { hasText: "TD22008LC" }).first();
   await ps011.click().catch(() => {});
   await p.waitForTimeout(500);
   await foto(p, "por-equipo-desplegado");
 
-  // Ejecutar un backlog programado (semilla: JU005 centralizador)
-  await p.goto(base + "#/backlog/30000000-0000-0000-0000-000000000004");
+  // Ejecutar un backlog programado (semilla: B1-27 rodillos de oruga)
+  await p.goto(base + "#/backlog/60000000-0000-0000-0000-000000000003");
   await p.locator(".ficha-folio .etiqueta-estado", { hasText: "Programado" }).waitFor();
   await p.getByRole("tab", { name: /^HH/ }).click();
   const reales = p.locator(".bloque-ficha", { has: p.getByRole("heading", { name: "HH reales" }) });
   await reales.getByLabel("Especialidad nueva").selectOption({ label: "Mecánico" });
   await reales.getByLabel("Personas nuevas").fill("2");
-  await reales.getByLabel("Horas nuevas").fill("3.5");
+  await reales.getByLabel("Horas nuevas").fill("4.5");
   await marcar(p, reales);
   await foto(p, "ejecutar-hh-reales");
   await reales.getByRole("button", { name: "Agregar" }).click();
-  await reales.getByText("7", { exact: true }).first().waitFor();
+  await reales.getByText("9", { exact: true }).first().waitFor();
   await p.locator(".ficha-acciones").getByRole("button", { name: "Marcar ejecutado", exact: true }).click();
   const dlg = p.getByRole("dialog");
-  await dlg.getByLabel(/Comentario/).fill("Se cambió el centralizador y se probó la perforación");
+  await dlg.getByLabel(/Comentario/).fill("Se cambiaron 3 rodillos inferiores y se probó el desplazamiento");
   await foto(p, "ejecutar-dialogo");
   await dlg.getByRole("button", { name: "Marcar ejecutado", exact: true }).click();
   await p.locator(".ficha-folio .etiqueta-estado", { hasText: "Ejecutado" }).waitFor();
@@ -387,7 +387,7 @@ try {
   await p.waitForTimeout(800);
   await foto(p, "indicadores");
   await p.goto(base + "#/capacidad");
-  await p.getByRole("button", { name: "Cambiar Mecánico HEMCO" }).click();
+  await p.getByRole("button", { name: "Cambiar Mecánico Explotec" }).click();
   await p.getByLabel("Personas Mecánico").fill("3");
   await p.getByLabel("Horas por turno Mecánico").fill("10");
   await p.getByLabel("Turnos Mecánico").fill("2");

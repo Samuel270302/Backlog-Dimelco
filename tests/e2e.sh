@@ -18,7 +18,7 @@ export PGOPTIONS="-c client_min_messages=warning"
 PSQL=(psql -U postgres -d postgres -v ON_ERROR_STOP=1 -q -X)
 "${PSQL[@]}" -f "$RAIZ/tools/base_local.sql"
 for f in "$RAIZ"/supabase/migrations/*.sql; do "${PSQL[@]}" -f "$f"; done
-"${PSQL[@]}" -f "$RAIZ/tests/semilla_e2e.sql"
+"${PSQL[@]}" -f "$RAIZ/tests/${SEMILLA:-semilla_e2e.sql}"
 GUION="${1:-flujo_backlog.mjs}"
 if [ "${SIN_BUILD:-}" != "1" ]; then
   case "$GUION" in
