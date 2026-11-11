@@ -396,6 +396,78 @@ update backlog_repuestos set cantidad = 4 where id = '70000000-0000-0000-0000-00
 select pruebas.igual((select cantidad from backlog_repuestos where id = '70000000-0000-0000-0000-000000000001'), 4::numeric, 'al volver a Listo se editan de nuevo');
 select set_config('request.jwt.claims', '{"sub":"00000000-0000-0000-0000-00000000000a"}', false);
 
+
+-- Preventivos programados a mano y N° de OT automático (021).
+select set_config('request.jwt.claims', '{"sub":"00000000-0000-0000-0000-00000000000d"}', false);
+insert into preventivos (id, equipo_id, actividad, fecha_programada, horometro_programado)
+values ('80000000-0000-0000-0000-000000000001', '10000000-0000-0000-0000-000000000002', 'PM 250 h motor diésel', '2026-11-04', 1250);
+select pruebas.igual((select folio || ' ' || n_ot || ' ' || estado from preventivos where id = '80000000-0000-0000-0000-000000000001'),
+  'PM-VTN-000001 OT-VTN-000001 Programado', 'preventivo sin SAP: folio y OT automáticos');
+-- Un backlog de la misma unidad programado sin OT toma el número siguiente.
+insert into backlogs (id, equipo_id, sistema_id, descripcion, origen, prioridad, reportado_por, aprobado_por)
+values ('20000000-0000-0000-0000-0000000000f1', '10000000-0000-0000-0000-000000000002', (select id from sistemas where nombre = 'Frenos'), 'Cambio de manguera de freno', 'PM', 'P3', 'A', 'B');
+insert into backlog_hh (backlog_id, especialidad_id, tipo, personas, horas)
+values ('20000000-0000-0000-0000-0000000000f1', (select id from especialidades where nombre = 'Mecánico'), 'estimada', 1, 2);
+select cambiar_estado_backlog('20000000-0000-0000-0000-0000000000f1', 'En planificación');
+select cambiar_estado_backlog('20000000-0000-0000-0000-0000000000f1', 'Listo para programar');
+select pruebas.espera_error($$select cambiar_estado_backlog('20000000-0000-0000-0000-0000000000f1', 'Programado', '{}')$$, 'indique fecha programada');
+select cambiar_estado_backlog('20000000-0000-0000-0000-0000000000f1', 'Programado', '{"fecha_programada":"2026-11-04"}');
+select pruebas.igual((select ot_sap from backlogs where id = '20000000-0000-0000-0000-0000000000f1'), 'OT-VTN-000002', 'backlog sin SAP: OT automática del mismo correlativo');
+select cambiar_estado_backlog('20000000-0000-0000-0000-0000000000f1', 'Programado', '{"fecha_programada":"2026-11-05","motivo":"Equipo en producción"}');
+select pruebas.igual((select ot_sap from backlogs where id = '20000000-0000-0000-0000-0000000000f1'), 'OT-VTN-000002', 'reprogramar no cambia la OT');
+-- Edición directa: solo datos; la fecha y el estado van por la función.
+update preventivos set actividad = 'PM 250 h motor diésel y compresor', observaciones = 'Llevar filtros' where id = '80000000-0000-0000-0000-000000000001';
+select pruebas.espera_error($$update preventivos set fecha_programada = '2026-11-06' where id = '80000000-0000-0000-0000-000000000001'$$, 'Reprogramar');
+select pruebas.espera_error($$update preventivos set estado = 'Ejecutado' where id = '80000000-0000-0000-0000-000000000001'$$, 'Reprogramar');
+select pruebas.espera_error($$select cambiar_estado_preventivo('80000000-0000-0000-0000-000000000001', 'Programado', '{"fecha_programada":"2026-11-06"}')$$, 'motivo de la reprogramación');
+select pruebas.espera_error($$select cambiar_estado_preventivo('80000000-0000-0000-0000-000000000001', 'Programado', '{"fecha_programada":"2026-11-04","motivo":"Misma fecha"}')$$, 'distinta a la actual');
+select cambiar_estado_preventivo('80000000-0000-0000-0000-000000000001', 'Programado', '{"fecha_programada":"2026-11-01","motivo":"Se adelantó por parada del equipo"}');
+select pruebas.igual((select fecha_programada::text || ' ' || reprogramaciones from preventivos where id = '80000000-0000-0000-0000-000000000001'), '2026-11-01 1', 'preventivo reprogramado a fecha pasada');
+insert into preventivo_materiales (id, preventivo_id, numero_parte, descripcion, cantidad, um) values
+  ('81000000-0000-0000-0000-000000000001', '80000000-0000-0000-0000-000000000001', '1R-0750', 'Filtro de combustible', 2, 'un'),
+  ('81000000-0000-0000-0000-000000000002', '80000000-0000-0000-0000-000000000001', null, 'Aceite 15W40', 20, 'L');
+select pruebas.igual((select string_agg(item::text, ',' order by item) from preventivo_materiales where preventivo_id = '80000000-0000-0000-0000-000000000001'), '1,2', 'ítems de materiales del preventivo');
+select pruebas.espera_error($$select cambiar_estado_preventivo('80000000-0000-0000-0000-000000000001', 'Ejecutado', '{}')$$, 'fecha de ejecución');
+select pruebas.espera_error($$select cambiar_estado_preventivo('80000000-0000-0000-0000-000000000001', 'Ejecutado', '{"fecha_ejecucion":"2026-11-03"}')$$, 'no puede ser futura');
+select cambiar_estado_preventivo('80000000-0000-0000-0000-000000000001', 'Ejecutado', '{"fecha_ejecucion":"2026-11-01","horometro_ejecucion":"1262","ejecutado_por":"Mecánico turno A","comentario":"Sin novedades"}');
+select pruebas.igual((select estado || ' ' || fecha_ejecucion || ' ' || horometro_ejecucion || ' ' || ejecutado_por || ' ' || materiales_total from v_preventivos where id = '80000000-0000-0000-0000-000000000001'),
+  'Ejecutado 2026-11-01 1262 Mecánico turno A 2', 'preventivo ejecutado con materiales');
+-- Ejecutado: bloqueado para el capturador.
+select pruebas.espera_error($$update preventivos set actividad = 'Otra' where id = '80000000-0000-0000-0000-000000000001'$$, 'no se edita');
+select pruebas.espera_error($$update preventivo_materiales set cantidad = 3 where id = '81000000-0000-0000-0000-000000000001'$$, 'solo el administrador cambia sus materiales');
+select pruebas.espera_error($$insert into preventivo_materiales (preventivo_id, descripcion, cantidad) values ('80000000-0000-0000-0000-000000000001', 'Grasa', 1)$$, 'solo el administrador cambia sus materiales');
+select pruebas.espera_error($$select cambiar_estado_preventivo('80000000-0000-0000-0000-000000000001', 'Programado', '{"motivo":"Corregir"}')$$, 'solo el administrador puede revertirlo');
+-- HEMCO: la OT es la de SAP, escrita; cada unidad ve lo suyo; el invitado no escribe.
+select set_config('request.jwt.claims', '{"sub":"00000000-0000-0000-0000-00000000000c"}', false);
+select pruebas.igual((select count(*) from v_preventivos)::int, 0, 'capturador de HEMCO no ve preventivos de Veta Nueva');
+select pruebas.espera_error($$insert into preventivos (equipo_id, actividad, fecha_programada) values ('10000000-0000-0000-0000-000000000001', 'PM 500 h', '2026-11-05')$$, 'OT de SAP');
+select pruebas.espera_error($$insert into preventivos (equipo_id, actividad, fecha_programada, n_ot) values ('10000000-0000-0000-0000-000000000002', 'PM 500 h', '2026-11-05', '1')$$, 'row-level security');
+insert into preventivos (id, equipo_id, actividad, fecha_programada, n_ot)
+values ('80000000-0000-0000-0000-000000000002', '10000000-0000-0000-0000-000000000001', 'PM 500 h motor diésel', '2026-11-05', '4500123');
+select pruebas.igual((select folio || ' ' || n_ot from preventivos where id = '80000000-0000-0000-0000-000000000002'), 'PM-HEM-000001 4500123', 'preventivo de HEMCO con OT de SAP');
+select pruebas.espera_error($$update preventivos set n_ot = ' ' where id = '80000000-0000-0000-0000-000000000002'$$, 'sin N° de OT');
+select pruebas.espera_error($$select cambiar_estado_preventivo('80000000-0000-0000-0000-000000000002', 'Anulado', '{}')$$, 'motivo de la anulación');
+select set_config('request.jwt.claims', '{"sub":"00000000-0000-0000-0000-00000000000a"}', false);
+update perfiles set unidad_id = (select id from unidades where sigla = 'HEM') where correo = 'inv.hem@prueba';
+select set_config('request.jwt.claims', '{"sub":"00000000-0000-0000-0000-00000000000e"}', false);
+select pruebas.igual((select count(*) from v_preventivos)::int, 1, 'invitado ve los preventivos de su unidad');
+select pruebas.espera_error($$insert into preventivos (equipo_id, actividad, fecha_programada, n_ot) values ('10000000-0000-0000-0000-000000000001', 'PM 250 h', '2026-11-05', '2')$$, 'row-level security');
+select pruebas.espera_error($$select cambiar_estado_preventivo('80000000-0000-0000-0000-000000000002', 'Anulado', '{"motivo":"Prueba"}')$$, 'Sin permiso');
+select pruebas.espera_error($$insert into preventivo_materiales (preventivo_id, descripcion, cantidad) values ('80000000-0000-0000-0000-000000000002', 'Grasa', 1)$$, 'row-level security');
+select set_config('request.jwt.claims', '{"sub":"00000000-0000-0000-0000-00000000000c"}', false);
+select cambiar_estado_preventivo('80000000-0000-0000-0000-000000000002', 'Anulado', '{"motivo":"Se programó dos veces"}');
+select pruebas.espera_error($$select cambiar_estado_preventivo('80000000-0000-0000-0000-000000000002', 'Programado', '{"motivo":"Sí va"}')$$, 'solo el administrador puede revertirlo');
+-- Admin: corrige materiales de un ejecutado y revierte.
+select set_config('request.jwt.claims', '{"sub":"00000000-0000-0000-0000-00000000000a"}', false);
+update preventivo_materiales set cantidad = 3 where id = '81000000-0000-0000-0000-000000000001';
+select pruebas.espera_error($$select cambiar_estado_preventivo('80000000-0000-0000-0000-000000000001', 'Programado', '{}')$$, 'motivo para volver');
+select cambiar_estado_preventivo('80000000-0000-0000-0000-000000000001', 'Programado', '{"motivo":"Faltó el filtro de aire"}');
+select pruebas.igual((select estado || ' ' || coalesce(fecha_ejecucion::text, '-') from preventivos where id = '80000000-0000-0000-0000-000000000001'), 'Programado -', 'admin vuelve el preventivo a Programado');
+select cambiar_estado_preventivo('80000000-0000-0000-0000-000000000002', 'Programado', '{"motivo":"Sí corresponde"}');
+select pruebas.igual((select string_agg(tipo, ',' order by creado_en, id) from preventivo_eventos where preventivo_id = '80000000-0000-0000-0000-000000000001'),
+  'registro,reprogramación,ejecución,reversión', 'bitácora del preventivo');
+select pruebas.igual((select count(*) from v_backlog where folio like 'PM-%')::int, 0, 'los preventivos no entran en v_backlog');
+
 reset role;
 \o
 select 'Bitácora del BL-HEM-000001:' as titulo;

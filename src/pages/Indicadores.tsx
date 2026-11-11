@@ -4,9 +4,10 @@ import { useNombreUnidad, useUnidades } from "../lib/unidad";
 import { antiguedad, resumen, semanal, semanasPorEspecialidad, vencidosPorPrioridad } from "../lib/indicadores";
 import { reporteSemanal } from "../lib/reporte";
 import { exportarAbiertos } from "../lib/exportar";
+import { leerMaterialesPreventivos, usePreventivos } from "../lib/preventivos";
 import { BarrasHorizontales, GraficaSemanal } from "../components/Graficas";
 import { useAvisos } from "../components/Avisos";
-import { fNum, hoyISO, fFecha } from "../lib/fmt";
+import { fNum, hoyISO, fFecha, lunesDe, sumarDiasISO } from "../lib/fmt";
 import { nombrePrioridad, type BacklogRepuesto } from "../lib/types";
 import { supabase } from "../lib/supabase";
 
@@ -43,6 +44,13 @@ export default function Indicadores() {
     };
   }, [filas, semanasBd, hoy]);
   const { r, sem, ant, venc, semanas } = datos;
+  // Preventivos de la semana en curso (no anulados): ejecutados contra programados.
+  const { data: preventivos } = usePreventivos();
+  const pmSemana = useMemo(() => {
+    const lunes = lunesDe(hoy);
+    const domingo = sumarDiasISO(lunes, 6);
+    return (preventivos ?? []).filter((p) => p.estado !== "Anulado" && p.fecha_programada >= lunes && p.fecha_programada <= domingo);
+  }, [preventivos, hoy]);
   const porHh = sem.lista.filter((s) => s.hhPendientes > 0).sort((a, b) => b.hhPendientes - a.hhPendientes);
 
   async function pdf() {
@@ -77,7 +85,9 @@ export default function Indicadores() {
         sem.lista,
         new Map((unidades ?? []).map((u) => [u.id, u.nombre])),
         `Backlog ${unidad} ${hoy}`,
-        await leerRepuestos()
+        await leerRepuestos(),
+        preventivos ?? [],
+        await leerMaterialesPreventivos((preventivos ?? []).map((p) => p.id))
       );
       if (ruta) avisar(`Excel guardado en ${ruta}`);
     } catch (e) {
@@ -118,6 +128,12 @@ export default function Indicadores() {
         <Tile valor={String(r.vencidos)} etiqueta="Vencidos" nota={r.abiertos ? `${pct(r.vencidos / r.abiertos)} de los abiertos` : undefined} alerta={r.vencidos > 0} />
         <Tile valor={pct(r.pctProgramado)} etiqueta="HH pendientes ya programadas" nota={`${fNum(r.hhProgramadas)} HH`} />
         <Tile valor={pct(r.pctEnPlazo)} etiqueta="Cerrados dentro del plazo" nota={`${r.cierresEnPlazo4} de ${r.cierres4} en 4 semanas`} />
+        <Tile
+          valor={`${pmSemana.filter((p) => p.estado === "Ejecutado").length} / ${pmSemana.length}`}
+          etiqueta="Preventivos de la semana"
+          nota="Ejecutados / programados (lunes a domingo)"
+          alerta={pmSemana.some((p) => p.estado === "Programado" && p.fecha_programada < hoy)}
+        />
       </div>
 
       <div className="rejilla-indicadores">

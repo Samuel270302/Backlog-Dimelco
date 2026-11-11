@@ -14,12 +14,12 @@ const FILAS_MINIMAS_REPUESTOS = 8;
 // Logo que va a la par del de Dimelco, por nombre de unidad.
 const LOGOS_UNIDAD: Record<string, string> = { Explotec: logoExplotec };
 
-const celdaLogos = (logo: string, logoUnidad: string, unidad: string) =>
+export const celdaLogos = (logo: string, logoUnidad: string, unidad: string) =>
   `<td class="logo${logoUnidad ? " doble" : ""}">${logo ? `<img src="${logo}" alt="Dimelco">` : "Dimelco"}${
     logoUnidad ? `<img src="${logoUnidad}" alt="${esc(unidad)}">` : ""
   }</td>`;
 
-const esc = (v: unknown) =>
+export const esc = (v: unknown) =>
   String(v ?? "")
     .replaceAll("&", "&amp;")
     .replaceAll("<", "&lt;")
@@ -52,37 +52,9 @@ export interface DatosFormato {
   fotos?: FotoConUrl[];
 }
 
-// imagenes: id de foto -> data URL ya incrustable.
-export function armarFormato(d: DatosFormato, logo: string, imagenes: Map<string, string> = new Map(), logoUnidad = ""): string {
-  const { b } = d;
-  const nombre = (id: string | null) => d.perfiles.find((p) => p.user_id === id)?.nombre ?? "";
-  const sap = b.usa_sap;
-  const marca = (si: boolean) => (si ? "&#9746;" : "&#9744;");
-
-  const repuestos = [...d.repuestos].sort((a, b2) => a.item - b2.item);
-  const filasRep = repuestos.map(
-    (r) => `<tr>
-      <td class="n">${r.item}</td><td>${esc(r.numero_parte)}</td>${sap ? `<td>${esc(r.cod_sap)}</td>` : ""}
-      <td class="n">${fNum(r.cantidad, 2)}</td><td class="n">${fNum(r.stock, 2)}</td>
-      <td>${esc(r.descripcion)}</td><td>${esc(r.componente)}</td><td>${esc(r.observaciones)}</td></tr>`
-  );
-  for (let i = repuestos.length; i < FILAS_MINIMAS_REPUESTOS; i++) {
-    filasRep.push(`<tr class="vacia"><td class="n">${i + 1}</td>${"<td></td>".repeat(sap ? 7 : 6)}</tr>`);
-  }
-
-  const estimadas = d.hh.filter((h) => h.tipo === "estimada");
-  const nombreEsp = (id: string) => d.especialidades.find((e) => e.id === id)?.nombre ?? "";
-  const totalHh = estimadas.reduce((s, h) => s + Number(h.hh), 0);
-  const filasHh = estimadas.length
-    ? estimadas
-        .map((h) => `<tr><td>${esc(nombreEsp(h.especialidad_id))}</td><td class="n">${fNum(h.personas)}</td><td class="n">${fNum(h.horas)}</td><td class="n">${fNum(h.hh)}</td></tr>`)
-        .join("") + `<tr class="total"><td colspan="3">Total</td><td class="n">${fNum(totalHh)}</td></tr>`
-    : `<tr><td colspan="4" class="gris">Sin HH estimadas</td></tr>`;
-
-  return `<!doctype html><html lang="es"><head><meta charset="utf-8">
-<title>${esc(b.folio)} ${esc(b.descripcion)}</title>
-<style>
-  * { box-sizing: border-box; }
+// Estilos comunes a todo lo que se imprime en A4 vertical: formato del backlog, OT de
+// preventivo y paquete de órdenes.
+const ESTILOS = `  * { box-sizing: border-box; }
   body { font-family: "Segoe UI", Arial, sans-serif; font-size: 11px; color: #1c1c1c; margin: 0; }
   .hoja { padding: 14px 18px; }
   table { border-collapse: collapse; width: 100%; }
@@ -114,8 +86,50 @@ export function armarFormato(d: DatosFormato, logo: string, imagenes: Map<string
   .imagen .datos { background: #e9e9e9; padding: 4px 6px; font-size: 10.5px; }
   .imagen img { display: block; width: 100%; max-height: 300px; object-fit: contain; background: #fff; }
   @media print { @page { size: A4 portrait; margin: 10mm; } .hoja { padding: 0; } }
-</style></head><body><div class="hoja">
-<table class="enc"><tr>
+  .salto { page-break-before: always; padding-top: 6px; }
+  .casillas td { height: 26px; }
+  .aviso-adjuntos { margin-top: 8px; border: 1px solid #555; padding: 6px 8px; font-weight: 600; }
+  .caratula-dato { font-size: 13px; }
+`;
+
+// Documento A4 con uno o varios cuerpos; cada cuerpo después del primero empieza hoja.
+export function documentoImprimible(titulo: string, ...cuerpos: string[]): string {
+  return `<!doctype html><html lang="es"><head><meta charset="utf-8">
+<title>${esc(titulo)}</title>
+<style>
+${ESTILOS}</style></head><body>${cuerpos
+    .map((c, i) => `<div class="hoja${i > 0 ? " salto" : ""}">\n${c}\n</div>`)
+    .join("\n")}</body></html>`;
+}
+
+// Cuerpo del formato de un backlog. imagenes: id de foto -> data URL ya incrustable.
+export function cuerpoFormato(d: DatosFormato, logo: string, imagenes: Map<string, string> = new Map(), logoUnidad = ""): string {
+  const { b } = d;
+  const nombre = (id: string | null) => d.perfiles.find((p) => p.user_id === id)?.nombre ?? "";
+  const sap = b.usa_sap;
+  const marca = (si: boolean) => (si ? "&#9746;" : "&#9744;");
+
+  const repuestos = [...d.repuestos].sort((a, b2) => a.item - b2.item);
+  const filasRep = repuestos.map(
+    (r) => `<tr>
+      <td class="n">${r.item}</td><td>${esc(r.numero_parte)}</td>${sap ? `<td>${esc(r.cod_sap)}</td>` : ""}
+      <td class="n">${fNum(r.cantidad, 2)}</td><td class="n">${fNum(r.stock, 2)}</td>
+      <td>${esc(r.descripcion)}</td><td>${esc(r.componente)}</td><td>${esc(r.observaciones)}</td></tr>`
+  );
+  for (let i = repuestos.length; i < FILAS_MINIMAS_REPUESTOS; i++) {
+    filasRep.push(`<tr class="vacia"><td class="n">${i + 1}</td>${"<td></td>".repeat(sap ? 7 : 6)}</tr>`);
+  }
+
+  const estimadas = d.hh.filter((h) => h.tipo === "estimada");
+  const nombreEsp = (id: string) => d.especialidades.find((e) => e.id === id)?.nombre ?? "";
+  const totalHh = estimadas.reduce((s, h) => s + Number(h.hh), 0);
+  const filasHh = estimadas.length
+    ? estimadas
+        .map((h) => `<tr><td>${esc(nombreEsp(h.especialidad_id))}</td><td class="n">${fNum(h.personas)}</td><td class="n">${fNum(h.horas)}</td><td class="n">${fNum(h.hh)}</td></tr>`)
+        .join("") + `<tr class="total"><td colspan="3">Total</td><td class="n">${fNum(totalHh)}</td></tr>`
+    : `<tr><td colspan="4" class="gris">Sin HH estimadas</td></tr>`;
+
+  return `<table class="enc"><tr>
   ${celdaLogos(logo, logoUnidad, d.unidad)}
   <td class="titulo">MANTENIMIENTO CORRECTIVO PROGRAMADO</td>
   <td class="datos"><span class="et">N°</span><b>${esc(b.folio)}</b><br><span class="et">Fecha</span>${fFecha(b.fecha_deteccion)}<br><span class="et">Unidad</span>${esc(d.unidad)}</td>
@@ -158,8 +172,11 @@ export function armarFormato(d: DatosFormato, logo: string, imagenes: Map<string
   <div class="firma"><div class="quien">${esc(b.aprobado_por)}</div><div class="linea">Aprobado por</div></div>
 </div>
 <div class="pie">Control de Backlog · Dimelco · ${esc(b.folio)}</div>
-${hojaImagenes(d, logo, imagenes, logoUnidad)}
-</div></body></html>`;
+${hojaImagenes(d, logo, imagenes, logoUnidad)}`;
+}
+
+export function armarFormato(d: DatosFormato, logo: string, imagenes: Map<string, string> = new Map(), logoUnidad = ""): string {
+  return documentoImprimible(`${d.b.folio} ${d.b.descripcion}`, cuerpoFormato(d, logo, imagenes, logoUnidad));
 }
 
 // Hoja 2 del formato: primero las fotos de repuestos por ítem, luego las generales.
@@ -212,23 +229,43 @@ export function escribirParaImprimir(v: Window, html: string) {
   v.document.close();
 }
 
+// Logos ya incrustables: Dimelco y, si corresponde, el de la unidad.
+export async function logosPara(unidad: string): Promise<{ logo: string; logoUnidad: string }> {
+  return {
+    logo: await comoDataUrl(logoDimelco),
+    logoUnidad: LOGOS_UNIDAD[unidad] ? await comoDataUrl(LOGOS_UNIDAD[unidad]) : "",
+  };
+}
+
+// Navegador: diálogo de impresión ("Guardar como PDF"). Escritorio: guarda el PDF y
+// devuelve la ruta.
+export async function entregarImpresion(ventana: Window | null, html: string, nombre: string): Promise<string | null> {
+  if (ventana) {
+    escribirParaImprimir(ventana, html);
+    return null;
+  }
+  const nombreArchivo = nombre.replace(/[\\/:*?"<>|]+/g, " ").slice(0, 120) + ".pdf";
+  return (window as unknown as { appInfo: Required<AppInfo> }).appInfo.guardarPdf(html, nombreArchivo, true);
+}
+
+// Fotos de un backlog como data URL (id de foto -> imagen).
+export async function incrustarFotos(fotos: FotoConUrl[] | undefined): Promise<Map<string, string>> {
+  const imagenes = new Map<string, string>();
+  for (const f of fotos ?? []) {
+    if (!f.url) continue;
+    const dataUrl = await comoDataUrl(f.url);
+    if (dataUrl) imagenes.set(f.id, dataUrl);
+  }
+  return imagenes;
+}
+
 export async function imprimirFormato(d: DatosFormato): Promise<string | null> {
   const ventana = abrirVentanaImpresion();
   try {
-    const imagenes = new Map<string, string>();
-    for (const f of d.fotos ?? []) {
-      if (!f.url) continue;
-      const dataUrl = await comoDataUrl(f.url);
-      if (dataUrl) imagenes.set(f.id, dataUrl);
-    }
-    const logoUnidad = LOGOS_UNIDAD[d.unidad] ? await comoDataUrl(LOGOS_UNIDAD[d.unidad]) : "";
-    const html = armarFormato(d, await comoDataUrl(logoDimelco), imagenes, logoUnidad);
-    if (ventana) {
-      escribirParaImprimir(ventana, html); // navegador: diálogo de impresión ("Guardar como PDF")
-      return null;
-    }
-    const nombreArchivo = `${d.b.folio} ${d.b.cod_interno} ${d.b.descripcion}`.replace(/[\\/:*?"<>|]+/g, " ").slice(0, 120) + ".pdf";
-    return (window as unknown as { appInfo: Required<AppInfo> }).appInfo.guardarPdf(html, nombreArchivo, true);
+    const imagenes = await incrustarFotos(d.fotos);
+    const { logo, logoUnidad } = await logosPara(d.unidad);
+    const html = armarFormato(d, logo, imagenes, logoUnidad);
+    return await entregarImpresion(ventana, html, `${d.b.folio} ${d.b.cod_interno} ${d.b.descripcion}`);
   } catch (e) {
     ventana?.close();
     throw e;

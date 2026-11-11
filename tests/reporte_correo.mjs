@@ -37,7 +37,7 @@ try {
   const libro = new ExcelJS.Workbook();
   await libro.xlsx.readFile(join(SALIDA, archivos.find((f) => f.endsWith(".xlsx"))));
   const hojas = libro.worksheets.map((h) => h.name).join(" | ");
-  if (hojas !== "Backlogs abiertos | Repuestos de abiertos | Cerrados últimos 7 días | Ejecutados y validados | Rep. ejecutados y validados | Semanas de backlog") throw new Error(`Hojas: ${hojas}`);
+  if (hojas !== "Backlogs abiertos | Repuestos de abiertos | Cerrados últimos 7 días | Ejecutados y validados | Rep. ejecutados y validados | Semanas de backlog | Preventivos | Materiales de preventivos") throw new Error(`Hojas: ${hojas}`);
   if (libro.getWorksheet("Backlogs abiertos").rowCount !== 6) throw new Error("El Excel no trae los 5 abiertos");
   const repAb = libro.getWorksheet("Repuestos de abiertos");
   const partes = repAb.getRows(2, repAb.rowCount - 1).map((r) => r.values.filter((v) => typeof v === "string").join(" "));

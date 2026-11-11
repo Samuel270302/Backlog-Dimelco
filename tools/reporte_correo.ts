@@ -20,7 +20,7 @@ import { armarReporte } from "../src/lib/reporte";
 import { armarLibroBacklog, cerradosUltimos7 } from "../src/lib/exportar";
 import { esAbierto, resumen, semanasPorEspecialidad } from "../src/lib/indicadores";
 import { fFecha, fNum, lunesDe } from "../src/lib/fmt";
-import type { BacklogFila, BacklogRepuesto, SemanasBacklog } from "../src/lib/types";
+import type { BacklogFila, BacklogRepuesto, SemanasBacklog, Preventivo, PreventivoMaterial } from "../src/lib/types";
 
 // Mismos formatos que entrega PostgREST a la app: fechas y marcas de tiempo como texto,
 // numeric y bigint como número.
@@ -57,7 +57,9 @@ async function leerBase() {
     const repuestos = (
       await cliente.query("select r.* from backlog_repuestos r join backlogs b on b.id = r.backlog_id where b.borrado_en is null")
     ).rows as BacklogRepuesto[];
-    return { filas, semanas, unidades, repuestos };
+    const preventivos = (await cliente.query("select * from v_preventivos")).rows as Preventivo[];
+    const materialesPm = (await cliente.query("select * from preventivo_materiales")).rows as PreventivoMaterial[];
+    return { filas, semanas, unidades, repuestos, preventivos, materialesPm };
   } finally {
     await cliente.end();
   }
@@ -110,11 +112,11 @@ async function pdfDesdeHtml(html: string): Promise<Buffer> {
 
 async function main() {
   const hoy = hoyNicaragua();
-  const { filas, semanas, unidades, repuestos } = await leerBase();
+  const { filas, semanas, unidades, repuestos, preventivos, materialesPm } = await leerBase();
   const semanasTodas = semanasPorEspecialidad(semanas);
   const html = armarReporte({ filas, semanas: semanasTodas, unidad: "Todas las unidades", hoy }, logoDimelco);
   const pdf = await pdfDesdeHtml(html);
-  const xlsx = Buffer.from(await armarLibroBacklog(filas, semanasTodas.lista, new Map(unidades.map((u) => [u.id, u.nombre])), hoy, repuestos));
+  const xlsx = Buffer.from(await armarLibroBacklog(filas, semanasTodas.lista, new Map(unidades.map((u) => [u.id, u.nombre])), hoy, repuestos, preventivos, materialesPm));
   const cuerpo = cuerpoCorreo(filas, semanas, unidades, hoy);
   const asunto = `Reporte semanal de backlog · semana del ${fFecha(lunesDe(hoy))}`;
   const adjuntos = [

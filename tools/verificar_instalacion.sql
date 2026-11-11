@@ -42,6 +42,11 @@ with chequeos(orden, punto, ok, si_falta) as (
   (6.97, 'Materiales bloqueados desde Programado (020)',
       exists (select 1 from pg_proc where proname = 'tg_repuestos_hasta_listo'),
       'Ejecutar 020_repuestos_hasta_listo.sql'),
+  (6.98, 'Preventivos y N° de OT automático (021)',
+      exists (select 1 from pg_proc where proname = 'cambiar_estado_preventivo')
+      and exists (select 1 from pg_proc where proname = 'cambiar_estado_backlog' and prosrc like '%siguiente_correlativo%')
+      and to_regclass('public.v_preventivos') is not null,
+      'Ejecutar 021_preventivos.sql'),
   (7, 'Bucket privado backlog-fotos',
       exists (select 1 from storage.buckets where id = 'backlog-fotos' and not public),
       'Ejecutar 007_storage.sql (Storage debe estar habilitado en el proyecto)'),

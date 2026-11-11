@@ -207,3 +207,56 @@ export interface SemanasBacklog {
   hh_semana: number | null;
   semanas: number | null;
 }
+
+// Preventivos programados a mano (021). No son backlogs: sin prioridad, sistema ni HH.
+export type EstadoPreventivo = "Programado" | "Ejecutado" | "Anulado";
+
+export interface Preventivo {
+  id: string;
+  folio: string;
+  unidad_id: string;
+  equipo_id: string;
+  actividad: string;
+  fecha_programada: string;
+  horometro_programado: number | null;
+  n_ot: string;
+  observaciones: string | null;
+  estado: EstadoPreventivo;
+  fecha_ejecucion: string | null;
+  horometro_ejecucion: number | null;
+  ejecutado_por: string | null;
+  comentario_cierre: string | null;
+  reprogramaciones: number;
+  motivo_anulacion: string | null;
+  creado_por: string | null;
+  creado_en: string;
+  // De v_preventivos.
+  cod_interno: string;
+  modelo: string;
+  marca: string | null;
+  flota: string | null;
+  unidad: string;
+  usa_sap: boolean;
+  materiales_total: number;
+}
+
+export interface PreventivoMaterial {
+  id: string;
+  preventivo_id: string;
+  item: number;
+  numero_parte: string | null;
+  cod_sap: string | null;
+  descripcion: string;
+  cantidad: number;
+  um: string | null;
+  observaciones: string | null;
+}
+
+export interface PreventivoEvento {
+  id: string;
+  preventivo_id: string;
+  tipo: "registro" | "reprogramación" | "ejecución" | "anulación" | "reversión";
+  texto: string | null;
+  usuario: string | null;
+  creado_en: string;
+}

@@ -421,7 +421,7 @@ try {
   const mec = libro.getWorksheet("Semanas de backlog").getRows(2, 10).find((r) => r.getCell(1).value === "Mecánico");
   if (Math.abs(mec.getCell(4).value - 0.85) > 1e-9) throw new Error("Excel: semanas de Mecánico distinto de 0,85");
   const hojasXlsx = libro.worksheets.map((h) => h.name).join(" | ");
-  if (hojasXlsx !== "Backlogs abiertos | Repuestos de abiertos | Cerrados últimos 7 días | Ejecutados y validados | Rep. ejecutados y validados | Semanas de backlog") throw new Error(`Hojas del Excel: ${hojasXlsx}`);
+  if (hojasXlsx !== "Backlogs abiertos | Repuestos de abiertos | Cerrados últimos 7 días | Ejecutados y validados | Rep. ejecutados y validados | Semanas de backlog | Preventivos | Materiales de preventivos") throw new Error(`Hojas del Excel: ${hojasXlsx}`);
   const repAb = libro.getWorksheet("Repuestos de abiertos");
   const filaParte = repAb.getRows(2, repAb.rowCount - 1).find((r) => r.values.includes("6060003007"));
   if (!filaParte || !filaParte.values.includes("Reempaque de block de implementos por fugas de aceite"))
@@ -691,6 +691,190 @@ try {
   if (prog !== enDias(-1)) throw new Error(`Fecha programada ${prog}, esperada ${enDias(-1)}`);
   await capK.context().close();
   ok("desde el Kanban se programa ayer (fecha de detección); antes de la detección no deja");
+
+  // 7. Preventivos programados a mano (021). Veta Nueva no usa SAP: la app numera la OT.
+  const pedirComo = (quien, ruta, opciones = {}) =>
+    fetch(`http://localhost:${PUERTO_REST}/rest/v1/${ruta}`, {
+      ...opciones,
+      headers: { authorization: `Bearer ${token(USUARIOS[quien])}`, "content-type": "application/json", ...(opciones.headers ?? {}) },
+    });
+  const pv = await abrir("capVtn");
+  await pv.goto(base + "#/preventivos");
+  await pv.getByRole("heading", { name: "Preventivos", exact: true }).waitFor();
+  await pv.getByRole("button", { name: "Programar preventivo" }).click();
+  const dPm = pv.getByRole("dialog");
+  await dPm.getByLabel("Equipo del preventivo").selectOption({ label: "PS090 · ST7" });
+  if (await dPm.getByText("OT SAP").count()) throw new Error("Veta Nueva ve OT SAP al programar un preventivo");
+  await dPm.locator(".nota", { hasText: "Falta: actividad" }).waitFor();
+  await dPm.getByLabel("Actividad del preventivo").fill("PM 250 h motor diésel");
+  await dPm.getByLabel("Horómetro programado").fill("1250");
+  if ((await dPm.getByLabel("Fecha programada del preventivo").inputValue()) !== enDias(0)) throw new Error("El preventivo no propone la fecha de hoy");
+  await dPm.getByRole("button", { name: "Programar", exact: true }).click();
+  await aviso(pv, "PM-VTN-000001 programado · OT OT-VTN-000001");
+  const filaPm = pv.locator(".tabla-preventivos tbody tr", { hasText: "PM-VTN-000001" });
+  await filaPm.locator("td", { hasText: "OT-VTN-000001" }).waitFor();
+  await pv.screenshot({ path: join(SALIDA, "preventivos.png") });
+  ok("Veta Nueva programa un preventivo sin escribir OT: folio PM-VTN-000001 y OT-VTN-000001 automáticos");
+
+  // Calendario: tarjeta PM en la celda del equipo; arrastrarla a otro día pide motivo.
+  await pv.goto(base + "#/calendario");
+  const tarjetaPm = pv.locator(".grilla-semana").getByLabel("PM-VTN-000001 PS090");
+  await tarjetaPm.waitFor();
+  if (!(await tarjetaPm.locator(".etiqueta-pm").count())) throw new Error("La tarjeta del preventivo no lleva la etiqueta PM");
+  const diaPm = lunesIso(enDias(1)) === lunesIso(enDias(0)) ? enDias(1) : enDias(-1);
+  await tarjetaPm.dragTo(pv.getByRole("columnheader", { name: `Día ${ddmm(diaPm)}` }));
+  const dRe = pv.getByRole("dialog");
+  await dRe.waitFor();
+  if ((await dRe.getByLabel("Nueva fecha programada").inputValue()) !== diaPm) throw new Error("Reprogramar el preventivo no trae la fecha del día soltado");
+  if (!(await dRe.getByRole("button", { name: "Reprogramar", exact: true }).isDisabled())) throw new Error("Deja reprogramar el preventivo sin motivo");
+  await dRe.getByLabel("Motivo").fill("Equipo en producción");
+  await dRe.getByRole("button", { name: "Reprogramar", exact: true }).click();
+  await aviso(pv, `PM-VTN-000001: reprogramado al ${ddmm(diaPm)}`);
+  // Desde la celda: "+ PM" abre el cuadro con el equipo y el día puestos.
+  await pv.getByRole("button", { name: `Programar preventivo PS090 ${ddmm(diaPm)}` }).click({ force: true });
+  const dCelda = pv.getByRole("dialog");
+  if ((await dCelda.getByLabel("Fecha programada del preventivo").inputValue()) !== diaPm) throw new Error("+ PM no trae el día de la celda");
+  if ((await dCelda.getByLabel("Equipo del preventivo").locator("option:checked").textContent()) !== "PS090 · ST7") throw new Error("+ PM no trae el equipo de la fila");
+  await dCelda.getByRole("button", { name: "Cancelar" }).click();
+  await pv.screenshot({ path: join(SALIDA, "calendario-preventivo.png") });
+  ok("el preventivo sale en el calendario con la etiqueta PM, se reprograma arrastrando con motivo y «+ PM» propone equipo y día");
+
+  // Un correctivo de Veta Nueva programado sin OT toma el número siguiente y sale «con PM».
+  const blVtn = "30000000-0000-0000-0000-000000000005";
+  const espMec = (await (await pedirComo("admin", "especialidades?select=id&nombre=eq.Mecánico")).json())[0].id;
+  let rr = await pedirComo("capVtn", "backlog_hh", { method: "POST", body: JSON.stringify({ backlog_id: blVtn, especialidad_id: espMec, tipo: "estimada", personas: 1, horas: 3 }) });
+  if (!rr.ok) throw new Error(`HH del backlog de Veta Nueva: ${rr.status} ${await rr.text()}`);
+  for (const estado of ["En planificación", "Listo para programar"]) {
+    rr = await pedirComo("capVtn", "rpc/cambiar_estado_backlog", { method: "POST", body: JSON.stringify({ p_id: blVtn, p_estado: estado, p_datos: {} }) });
+    if (!rr.ok) throw new Error(`Backlog de Veta Nueva a ${estado}: ${rr.status} ${await rr.text()}`);
+  }
+  await pv.goto(base + `#/backlog/${blVtn}`);
+  await esperarEstado(pv, "Listo para programar");
+  await transicion(pv, "Programar", async (d) => {
+    await d.getByText("N° OT (opcional)").waitFor();
+    await d.getByLabel("Fecha programada").fill(diaPm);
+    if (await d.getByRole("button", { name: "Programar", exact: true }).isDisabled()) throw new Error("Fuera de SAP no deja programar sin OT");
+  });
+  await esperarEstado(pv, "Programado");
+  const otBl = (await (await pedirComo("admin", `backlogs?select=ot_sap&id=eq.${blVtn}`)).json())[0].ot_sap;
+  if (otBl !== "OT-VTN-000002") throw new Error(`OT del backlog de Veta Nueva: ${otBl}`);
+  await pv.goto(base + "#/calendario");
+  await pv.locator(".grilla-semana").getByLabel("BL-VTN-000001 PS090").locator(".tc-pm", { hasText: "con PM" }).waitFor();
+  ok("un correctivo sin SAP programado sin OT recibe OT-VTN-000002 y en el calendario sale «con PM»");
+
+  // Cierre: fecha, horómetro, ejecutado por y materiales utilizados.
+  await pv.goto(base + "#/preventivos");
+  await pv.getByRole("link", { name: "PM-VTN-000001" }).click();
+  await pv.getByRole("heading", { name: "PS090 · PM 250 h motor diésel" }).waitFor();
+  const idPm = pv.url().split("/preventivo/")[1];
+  await pv.getByLabel("Observaciones", { exact: true }).fill("Llevar filtros del kit de 250 h");
+  await pv.getByLabel("Observaciones", { exact: true }).blur();
+  await pv.locator(".ficha-acciones").getByRole("button", { name: "Marcar ejecutado" }).click();
+  const dEj = pv.getByRole("dialog");
+  await dEj.waitFor();
+  const material = async (parte, desc, cant, um, item) => {
+    await dEj.getByLabel("Número de parte del material nuevo").fill(parte);
+    await dEj.getByLabel("Descripción del material nuevo").fill(desc);
+    await dEj.getByLabel("Cantidad del material nuevo").fill(cant);
+    await dEj.getByLabel("Unidad del material nuevo").fill(um);
+    await dEj.getByRole("button", { name: "Agregar" }).click();
+    await dEj.getByLabel(`Descripción material ${item}`).waitFor();
+  };
+  await material("1R-0739", "Filtro de aceite de motor", "2", "un", 1);
+  await material("", "Aceite 15W40", "20", "L", 2);
+  if (await dEj.getByRole("columnheader", { name: "Código SAP" }).count()) throw new Error("Veta Nueva ve Código SAP en los materiales");
+  const fechaEj = diaPm <= enDias(0) ? diaPm : enDias(0);
+  if ((await dEj.getByLabel("Fecha de ejecución del preventivo").inputValue()) !== fechaEj) throw new Error("La fecha de ejecución propuesta no es la esperada");
+  await dEj.getByLabel("Horómetro al ejecutar").fill("1262");
+  await dEj.getByLabel("Ejecutado por").fill("Mecánico turno A");
+  await dEj.getByLabel("Comentario de cierre").fill("Sin novedades");
+  await pv.screenshot({ path: join(SALIDA, "preventivo-ejecutar.png") });
+  await dEj.getByRole("button", { name: "Marcar ejecutado", exact: true }).click();
+  await esperarEstado(pv, "Ejecutado");
+  await pv.getByRole("button", { name: "Programar el siguiente" }).waitFor();
+  if (await pv.locator(".ficha-acciones").getByRole("button", { name: "Marcar ejecutado" }).count()) throw new Error("El capturador aún puede ejecutar un preventivo ejecutado");
+  if (await pv.locator(".ficha-acciones").getByRole("button", { name: "Volver a programado" }).count()) throw new Error("El capturador puede revertir un preventivo ejecutado");
+  if (await pv.getByLabel("Descripción material 1").count()) throw new Error("El capturador puede editar materiales de un preventivo ejecutado");
+  const pmBd = (await (await pedirComo("admin", `v_preventivos?select=*&id=eq.${idPm}`)).json())[0];
+  if (pmBd.estado !== "Ejecutado" || pmBd.fecha_ejecucion !== fechaEj || Number(pmBd.horometro_ejecucion) !== 1262 || pmBd.materiales_total !== 2 ||
+      pmBd.ejecutado_por !== "Mecánico turno A" || pmBd.observaciones !== "Llevar filtros del kit de 250 h" || pmBd.reprogramaciones !== 1)
+    throw new Error(`Preventivo en la base: ${JSON.stringify(pmBd)}`);
+  await pv.screenshot({ path: join(SALIDA, "preventivo-ficha.png"), fullPage: true });
+  ok("el capturador cierra el preventivo con horómetro, responsable y 2 materiales; ejecutado queda bloqueado para él");
+
+  // OT impresa: datos, materiales y el renglón de la pauta adjunta; sin tareas ni SAP.
+  const [vOt] = await Promise.all([pv.context().waitForEvent("page"), pv.getByRole("button", { name: "Imprimir OT" }).click()]);
+  await vOt.waitForFunction(() => document.title && !document.title.startsWith("Generando"));
+  const htmlOt = await vOt.content();
+  for (const t of ["MANTENIMIENTO PREVENTIVO", "OT-VTN-000001", "PM-VTN-000001", "PM 250 h motor diésel", "1R-0739", "Aceite 15W40",
+                   "Pauta de mantenimiento y listado de filtros adjuntos", "Mecánico turno A</div><div class=\"linea\">Ejecutado por"])
+    if (!htmlOt.includes(t)) throw new Error(`La OT del preventivo no tiene «${t}»`);
+  if (htmlOt.includes("SAP")) throw new Error("La OT de Veta Nueva menciona SAP");
+  if (!htmlOt.includes("data:image/png")) throw new Error("La OT no lleva el logo incrustado");
+  await vOt.setViewportSize({ width: 900, height: 1270 });
+  await vOt.screenshot({ path: join(SALIDA, "ot-preventivo.png"), fullPage: true });
+  await vOt.close();
+  await pv.context().close();
+  ok("la OT impresa del preventivo trae datos, materiales, firma y el renglón de la pauta adjunta");
+
+  // HEMCO: la OT es la de SAP y es obligatoria. Anular pide motivo. El admin revierte.
+  const ph = await abrir("cap");
+  await ph.goto(base + "#/preventivos");
+  await ph.getByRole("button", { name: "Programar preventivo" }).click();
+  const dH = ph.getByRole("dialog");
+  await dH.getByLabel("Equipo del preventivo").selectOption({ label: "PS011 · ST1030" });
+  await dH.getByLabel("Actividad del preventivo").fill("PM 500 h motor diésel");
+  await dH.locator(".nota", { hasText: "Falta: OT SAP" }).waitFor();
+  if (!(await dH.getByRole("button", { name: "Programar", exact: true }).isDisabled())) throw new Error("HEMCO deja programar un preventivo sin OT de SAP");
+  await dH.getByLabel("N° de OT del preventivo").fill("4500777");
+  await dH.getByRole("button", { name: "Programar", exact: true }).click();
+  await aviso(ph, "PM-HEM-000001 programado · OT 4500777");
+  if (await ph.locator(".tabla-preventivos tbody tr", { hasText: "PM-VTN-000001" }).count()) throw new Error("El capturador de HEMCO ve preventivos de Veta Nueva");
+  await ph.getByRole("button", { name: "Anular PM-HEM-000001" }).click();
+  const dAn = ph.getByRole("dialog");
+  if (!(await dAn.getByRole("button", { name: "Anular", exact: true }).isDisabled())) throw new Error("Deja anular el preventivo sin motivo");
+  await dAn.getByLabel("Motivo").fill("Se programó por error");
+  await dAn.getByRole("button", { name: "Anular", exact: true }).click();
+  await aviso(ph, "PM-HEM-000001: Anulado");
+  await ph.getByLabel("Estado de los preventivos").selectOption("Anulado");
+  await ph.locator(".tabla-preventivos tbody tr", { hasText: "PM-HEM-000001" }).waitFor();
+  if (await ph.getByRole("button", { name: "Volver a programado PM-HEM-000001" }).count()) throw new Error("El capturador puede reabrir un preventivo anulado");
+  await ph.context().close();
+  await adm.goto(base + `#/preventivo/${idPm}`);
+  await adm.reload();
+  await adm.locator(".ficha-folio .etiqueta-estado", { hasText: "Ejecutado" }).waitFor();
+  await adm.getByLabel("Cantidad material 1").fill("3");
+  await adm.getByLabel("Cantidad material 1").blur();
+  await adm.locator(".ficha-acciones").getByRole("button", { name: "Volver a programado" }).click();
+  const dRev = adm.getByRole("dialog");
+  await dRev.getByLabel("Motivo").fill("Faltó registrar el filtro de aire");
+  await dRev.getByRole("button", { name: "Volver a programado", exact: true }).click();
+  await adm.locator(".ficha-folio .etiqueta-estado", { hasText: "Programado" }).waitFor();
+  await adm.locator(".bitacora .evento-cambio", { hasText: "Reversión" }).waitFor();
+  const cant1 = (await (await pedirComo("admin", `preventivo_materiales?select=cantidad&preventivo_id=eq.${idPm}&item=eq.1`)).json())[0].cantidad;
+  if (Number(cant1) !== 3) throw new Error(`El admin no pudo corregir el material del ejecutado: ${cant1}`);
+  ok("HEMCO exige la OT de SAP; anular pide motivo; solo el admin corrige materiales de un ejecutado y lo vuelve a Programado");
+
+  // Excel de Indicadores con las hojas de preventivos.
+  await adm.goto(base + "#/indicadores");
+  await adm.getByRole("heading", { name: "Indicadores" }).waitFor();
+  await adm.locator(".tile", { hasText: "Preventivos de la semana" }).waitFor();
+  const [descargaPm] = await Promise.all([adm.waitForEvent("download"), adm.getByRole("button", { name: "Exportar a Excel" }).click()]);
+  const rutaPm = join(SALIDA, "backlog-con-preventivos.xlsx");
+  await descargaPm.saveAs(rutaPm);
+  const libroPm = new (require("exceljs").Workbook)();
+  await libroPm.xlsx.readFile(rutaPm);
+  const hPm = libroPm.getWorksheet("Preventivos");
+  const hMat = libroPm.getWorksheet("Materiales de preventivos");
+  if (!hPm || !hMat) throw new Error(`Faltan las hojas de preventivos: ${libroPm.worksheets.map((h) => h.name).join(" | ")}`);
+  const filasPm = hPm.getRows(2, hPm.rowCount - 1) ?? [];
+  if (filasPm.length !== 2 || !filasPm.some((r) => r.values.includes("PM-VTN-000001") && r.values.includes("OT-VTN-000001")) ||
+      !filasPm.some((r) => r.values.includes("PM-HEM-000001") && r.values.includes("Anulado")))
+    throw new Error(`Hoja Preventivos: ${filasPm.map((r) => r.values.join(",")).join(" / ")}`);
+  const filasMat = hMat.getRows(2, hMat.rowCount - 1) ?? [];
+  if (filasMat.length !== 2 || !filasMat.some((r) => r.values.includes("1R-0739") && r.values.includes("PM 250 h motor diésel")))
+    throw new Error(`Hoja Materiales de preventivos: ${filasMat.length} líneas`);
+  ok("el Excel trae las hojas Preventivos y Materiales de preventivos");
 
   // 6. Vista de celular.
   const movil = await abrir("cap", 390, 844);

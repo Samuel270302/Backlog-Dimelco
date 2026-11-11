@@ -48,7 +48,8 @@ export default function DialogoTransicion({
   if (pide("fecha_programada") && !fechaProg) faltantes.push("fecha programada");
   if (pide("fecha_programada") && fechaProg && fechaMinima && fechaProg < fechaMinima)
     faltantes.push(`fecha programada desde el ${fFecha(fechaMinima)} (detección)`);
-  if (pide("ot_sap") && !ot.trim()) faltantes.push(usaSap ? "OT SAP" : "N° OT");
+  // Fuera de SAP la OT es opcional: si queda vacía, la base asigna el número (021).
+  if (pide("ot_sap") && usaSap && !ot.trim()) faltantes.push("OT SAP");
   if (pide("fecha_ejecucion") && !fechaEjec) faltantes.push("fecha de ejecución");
   if (pide("motivo") && motivo.trim().length < 3) faltantes.push("motivo");
 
@@ -104,8 +105,12 @@ export default function DialogoTransicion({
       )}
       {pide("ot_sap") && (
         <label className="campo">
-          <span>{usaSap ? "OT SAP" : "N° OT"}</span>
-          <input value={ot} onChange={(e) => setOt(e.target.value)} placeholder="Número de orden de trabajo" />
+          <span>{usaSap ? "OT SAP" : "N° OT (opcional)"}</span>
+          <input
+            value={ot}
+            onChange={(e) => setOt(e.target.value)}
+            placeholder={usaSap ? "Número de orden de trabajo" : "Si se deja vacío, la app asigna el número"}
+          />
         </label>
       )}
       {pide("aprovechar_pm") && (

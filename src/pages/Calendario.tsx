@@ -6,10 +6,13 @@ import { lunesDe, useDetalleBacklogs } from "../lib/backlog";
 import { useCambioEstado, useTransicionesPermitidas } from "../components/CambioEstado";
 import { EtiquetaPrioridad } from "../components/Etiquetas";
 import { fFecha, fNum, hoyISO, sumarDiasISO } from "../lib/fmt";
-import type { BacklogFila } from "../lib/types";
+import { usePreventivos } from "../lib/preventivos";
+import { useAccionesPreventivo } from "../components/preventivos/AccionesPreventivo";
+import type { BacklogFila, Preventivo } from "../lib/types";
 
-// Programa semanal: backlogs programados por equipo y día, panel de listos para
-// programar y carga de HH por especialidad contra la capacidad del taller.
+// Programa semanal: backlogs y preventivos programados por equipo y día, panel de listos
+// para programar y carga de HH por especialidad contra la capacidad del taller (los
+// preventivos no llevan HH).
 const DIAS = ["Lun", "Mar", "Mié", "Jue", "Vie", "Sáb", "Dom"];
 const EN_CALENDARIO = ["Programado", "Ejecutado", "Validado"];
 
@@ -35,7 +38,10 @@ export default function Calendario() {
   const { data: capacidad } = useCapacidadVigente();
   const permitidas = useTransicionesPermitidas();
   const cambio = useCambioEstado();
+  const { data: preventivos } = usePreventivos();
+  const pm = useAccionesPreventivo();
   const [arrastrando, setArrastrando] = useState<BacklogFila | null>(null);
+  const [arrastrandoPm, setArrastrandoPm] = useState<Preventivo | null>(null);
   const [sobreDia, setSobreDia] = useState<string | null>(null);
 
   const semana = useMemo(
@@ -45,18 +51,26 @@ export default function Calendario() {
       ),
     [backlogs, lunes, domingo]
   );
+  const pmSemana = useMemo(
+    () => (preventivos ?? []).filter((p) => p.estado !== "Anulado" && p.fecha_programada >= lunes && p.fecha_programada <= domingo),
+    [preventivos, lunes, domingo]
+  );
+  // Equipo y día con preventivo: los correctivos de esa parada se marcan "con PM".
+  const conPm = useMemo(() => new Set(pmSemana.map((p) => `${p.equipo_id}|${p.fecha_programada}`)), [pmSemana]);
   const listos = useMemo(() => (backlogs ?? []).filter((b) => b.estado === "Listo para programar").sort(ordenListos), [backlogs]);
   const { data: detalle } = useDetalleBacklogs(semana.map((b) => b.id));
 
   const filas = useMemo(() => {
-    const m = new Map<string, { cod: string; modelo: string; items: BacklogFila[] }>();
-    for (const b of semana) {
-      const f = m.get(b.equipo_id) ?? { cod: b.cod_interno, modelo: b.modelo, items: [] };
-      f.items.push(b);
-      m.set(b.equipo_id, f);
-    }
+    const m = new Map<string, { cod: string; modelo: string; items: BacklogFila[]; pms: Preventivo[] }>();
+    const fila = (x: { equipo_id: string; cod_interno: string; modelo: string }) => {
+      const f = m.get(x.equipo_id) ?? { cod: x.cod_interno, modelo: x.modelo, items: [], pms: [] };
+      m.set(x.equipo_id, f);
+      return f;
+    };
+    for (const b of semana) fila(b).items.push(b);
+    for (const p of pmSemana) fila(p).pms.push(p);
     return [...m.entries()].sort((a, b) => a[1].cod.localeCompare(b[1].cod));
-  }, [semana]);
+  }, [semana, pmSemana]);
 
   // Carga de la semana por especialidad (HH estimadas de lo programado) contra la capacidad.
   const carga = useMemo(() => {
@@ -87,9 +101,13 @@ export default function Calendario() {
     return undefined;
   }
 
+  // Un preventivo programado se suelta en cualquier otro día: abre Reprogramar.
+  const admiteSoltar = (dia: string) =>
+    (!!arrastrando && !!transicionAlSoltar(arrastrando, dia)) || (!!arrastrandoPm && arrastrandoPm.fecha_programada !== dia);
+
   const zonaDia = (dia: string) => ({
     onDragOver: (e: React.DragEvent) => {
-      if (!arrastrando || !transicionAlSoltar(arrastrando, dia)) return;
+      if (!admiteSoltar(dia)) return;
       e.preventDefault();
       setSobreDia(dia);
     },
@@ -97,8 +115,14 @@ export default function Calendario() {
     onDrop: (e: React.DragEvent) => {
       e.preventDefault();
       const b = arrastrando;
+      const p = arrastrandoPm;
       setArrastrando(null);
+      setArrastrandoPm(null);
       setSobreDia(null);
+      if (p) {
+        if (p.fecha_programada !== dia) pm.abrir(p, "reprogramar", dia);
+        return;
+      }
       if (!b) return;
       const t = transicionAlSoltar(b, dia);
       if (t) cambio.abrir(b, t, dia);
@@ -108,7 +132,7 @@ export default function Calendario() {
     [
       dia === hoy ? "hoy" : "",
       dia < hoy ? "pasado" : "",
-      arrastrando && transicionAlSoltar(arrastrando, dia) ? "admite" : "",
+      admiteSoltar(dia) ? "admite" : "",
       sobreDia === dia ? "sobre" : "",
     ]
       .filter(Boolean)
@@ -130,6 +154,44 @@ export default function Calendario() {
         }
       : {};
 
+  const arrastrePm = (p: Preventivo) =>
+    puedeCapturar && p.estado === "Programado"
+      ? {
+          draggable: true,
+          onDragStart: (e: React.DragEvent) => {
+            e.dataTransfer.setData("text/plain", p.id);
+            e.dataTransfer.effectAllowed = "move";
+            setArrastrandoPm(p);
+          },
+          onDragEnd: () => {
+            setArrastrandoPm(null);
+            setSobreDia(null);
+          },
+        }
+      : {};
+
+  // Tarjeta de un preventivo en la celda de su equipo y día.
+  const tarjetaPm = (p: Preventivo) => (
+    <div
+      key={p.id}
+      className={`tarjeta-cal pm${p.estado === "Ejecutado" ? " hecha" : ""}`}
+      aria-label={`${p.folio} ${p.cod_interno}`}
+      {...arrastrePm(p)}
+    >
+      <div className="tc-linea1">
+        <Link to={`/preventivo/${p.id}`} className="tc-folio" draggable={false}>
+          {p.folio}
+        </Link>
+        <span className="etiqueta-pm">PM</span>
+      </div>
+      <div className="tc-trabajo">{p.actividad}</div>
+      <div className="tc-datos">
+        <span>{p.n_ot.startsWith("OT") ? p.n_ot : `OT ${p.n_ot}`}</span>
+        {p.estado !== "Programado" && <span>{p.estado}</span>}
+      </div>
+    </div>
+  );
+
   return (
     <div className="pagina-calendario">
       <div className="barra-acciones">
@@ -138,6 +200,7 @@ export default function Calendario() {
           Semana del {fFecha(lunes)} al {fFecha(domingo)}
         </span>
         <div className="espacio" />
+        {puedeCapturar && <button onClick={() => pm.programar({ fecha: hoy >= lunes && hoy <= domingo ? hoy : lunes })}>Programar preventivo</button>}
         <button className="boton-plano" onClick={() => setLunes(sumarDiasISO(lunes, -7))} aria-label="Semana anterior">
           ‹ Anterior
         </button>
@@ -220,6 +283,7 @@ export default function Calendario() {
                   </td>
                   {dias.map((d) => (
                     <td key={d} className={claseDia(d)} {...zonaDia(d)}>
+                      {f.pms.filter((p) => p.fecha_programada === d).map(tarjetaPm)}
                       {f.items
                         .filter((b) => b.fecha_programada === d)
                         .map((b) => (
@@ -236,11 +300,21 @@ export default function Calendario() {
                             <div className="tc-datos">
                               <span>{fNum(b.hh_estimadas)} HH</span>
                               {b.ot_sap && <span>OT {b.ot_sap}</span>}
-                              {b.aprovechar_pm && <span className="tc-pm">con PM</span>}
+                              {(b.aprovechar_pm || conPm.has(`${b.equipo_id}|${d}`)) && <span className="tc-pm">con PM</span>}
                               {b.estado !== "Programado" && <span>{b.estado}</span>}
                             </div>
                           </div>
                         ))}
+                      {puedeCapturar && (
+                        <button
+                          className="boton-plano boton-pm-celda"
+                          aria-label={`Programar preventivo ${f.cod} ${fFecha(d)}`}
+                          title="Programar un preventivo para este equipo y día"
+                          onClick={() => pm.programar({ equipo_id: equipoId, fecha: d })}
+                        >
+                          + PM
+                        </button>
+                      )}
                     </td>
                   ))}
                 </tr>
@@ -250,7 +324,7 @@ export default function Calendario() {
                   <td className="col-equipo nota">Sin trabajos</td>
                   {dias.map((d) => (
                     <td key={d} className={`celda-vacia ${claseDia(d)}`} {...zonaDia(d)}>
-                      {arrastrando && transicionAlSoltar(arrastrando, d) ? "Soltar aquí" : ""}
+                      {admiteSoltar(d) ? "Soltar aquí" : ""}
                     </td>
                   ))}
                 </tr>
@@ -295,6 +369,7 @@ export default function Calendario() {
         )}
         {dias.map((d, i) => {
           const del_dia = semana.filter((b) => b.fecha_programada === d).sort((a, b) => a.cod_interno.localeCompare(b.cod_interno));
+          const pm_dia = pmSemana.filter((p) => p.fecha_programada === d).sort((a, b) => a.cod_interno.localeCompare(b.cod_interno));
           return (
             <section key={d} className={`dia-movil${d === hoy ? " hoy" : ""}${d < hoy ? " pasado" : ""}`} aria-label={`Día ${fFecha(d)}`}>
               <header>
@@ -304,7 +379,21 @@ export default function Calendario() {
                 <span>{del_dia.length ? `${fNum(totalDia(d))} HH` : ""}</span>
               </header>
               <div className="lista-dia">
-                {del_dia.length === 0 && <span className="nota">Sin trabajos</span>}
+                {del_dia.length === 0 && pm_dia.length === 0 && <span className="nota">Sin trabajos</span>}
+                {pm_dia.map((p) => (
+                  <Link key={p.id} to={`/preventivo/${p.id}`} className={`tarjeta-cal pm${p.estado === "Ejecutado" ? " hecha" : ""}`}>
+                    <div className="tc-linea1">
+                      <span className="tc-folio">{p.folio}</span>
+                      <b>{p.cod_interno}</b>
+                      <span className="etiqueta-pm">PM</span>
+                    </div>
+                    <div className="tc-trabajo">{p.actividad}</div>
+                    <div className="tc-datos">
+                      <span>{p.n_ot.startsWith("OT") ? p.n_ot : `OT ${p.n_ot}`}</span>
+                      {p.estado !== "Programado" && <span>{p.estado}</span>}
+                    </div>
+                  </Link>
+                ))}
                 {del_dia.map((b) => (
                   <Link
                     key={b.id}
@@ -319,7 +408,7 @@ export default function Calendario() {
                     <div className="tc-datos">
                       <span>{fNum(b.hh_estimadas)} HH</span>
                       {b.ot_sap && <span>OT {b.ot_sap}</span>}
-                      {b.aprovechar_pm && <span className="tc-pm">con PM</span>}
+                      {(b.aprovechar_pm || conPm.has(`${b.equipo_id}|${d}`)) && <span className="tc-pm">con PM</span>}
                       {b.estado !== "Programado" && <span>{b.estado}</span>}
                     </div>
                   </Link>
@@ -331,6 +420,7 @@ export default function Calendario() {
       </div>
       {isLoading && <p className="nota">Cargando…</p>}
       {cambio.dialogo}
+      {pm.dialogo}
     </div>
   );
 }

@@ -29,6 +29,7 @@ const enlaces = [
   { a: "/flota", texto: "Por equipo", icono: <IconoCamion />, captura: false },
   { a: "/kanban", texto: "Kanban", icono: <IconoKanban />, captura: false },
   { a: "/calendario", texto: "Calendario", icono: <IconoCalendario />, captura: false },
+  { a: "/preventivos", texto: "Preventivos", icono: <IconoPrograma />, captura: false },
   { a: "/indicadores", texto: "Indicadores", icono: <IconoIndicadores />, captura: false },
   { a: "/capacidad", texto: "Capacidad del taller", icono: <IconoAjustes />, captura: true },
 ];
@@ -40,6 +41,7 @@ function tituloDe(ruta: string): string {
   if (exacto) return exacto.texto;
   if (ruta.startsWith("/backlog/")) return "Backlog";
   if (ruta.startsWith("/equipo/")) return "Equipo";
+  if (ruta.startsWith("/preventivo/")) return "Preventivo";
   return "Control de Backlog";
 }
 

@@ -1,5 +1,5 @@
 import type ExcelJS from "exceljs";
-import type { BacklogFila, BacklogRepuesto } from "./types";
+import type { BacklogFila, BacklogRepuesto, Preventivo, PreventivoMaterial } from "./types";
 import { etapaDe, nombrePrioridad } from "./types";
 import { esAbierto, type SemanasEspecialidad } from "./indicadores";
 import { hoyISO, sumarDiasISO } from "./fmt";
@@ -49,7 +49,9 @@ export async function armarLibroBacklog(
   semanas: SemanasEspecialidad[],
   unidades: Map<string, string>,
   hoy: string,
-  repuestos: BacklogRepuesto[] = []
+  repuestos: BacklogRepuesto[] = [],
+  preventivos: Preventivo[] = [],
+  materialesPm: PreventivoMaterial[] = []
 ): Promise<ArrayBuffer> {
   const { default: Excel } = await import("exceljs"); // se carga solo al exportar
   const libro = new Excel.Workbook();
@@ -263,6 +265,91 @@ export async function armarLibroBacklog(
   for (const s of semanas) hs.addRow({ esp: s.especialidad, hh: s.hhPendientes, cap: s.hhSemana || null, sem: s.semanas });
   encabezado(hs);
 
+  // Preventivos programados a mano (021) y los materiales que se usaron al ejecutarlos.
+  const pms = [...preventivos].sort((a, b) => b.fecha_programada.localeCompare(a.fecha_programada) || a.folio.localeCompare(b.folio));
+  const hp = libro.addWorksheet("Preventivos");
+  hp.columns = [
+    { header: "Folio", key: "folio", width: 15 },
+    { header: "N° OT", key: "ot", width: 15 },
+    { header: "Unidad", key: "unidad", width: 13 },
+    { header: "Código interno", key: "cod", width: 12 },
+    { header: "Equipo", key: "flota", width: 16 },
+    { header: "Actividad", key: "actividad", width: 40 },
+    { header: "Estado", key: "estado", width: 11 },
+    { header: "Programado", key: "programado", width: 11, style: { numFmt: "dd/mm/yyyy" } },
+    { header: "Ejecutado", key: "ejecucion", width: 11, style: { numFmt: "dd/mm/yyyy" } },
+    { header: "Horómetro programado", key: "h_prog", width: 12 },
+    { header: "Horómetro al ejecutar", key: "h_ejec", width: 12 },
+    { header: "Ejecutado por", key: "por", width: 20 },
+    { header: "Reprogramaciones", key: "reprog", width: 10 },
+    { header: "Materiales", key: "mat", width: 10 },
+    { header: "Observaciones", key: "obs", width: 30 },
+    { header: "Comentario de cierre", key: "cierre", width: 30 },
+  ];
+  for (const p of pms) {
+    hp.addRow({
+      folio: p.folio,
+      ot: p.n_ot,
+      unidad: unidades.get(p.unidad_id) ?? "",
+      cod: p.cod_interno,
+      flota: p.flota,
+      actividad: p.actividad,
+      estado: p.estado,
+      programado: fecha(p.fecha_programada),
+      ejecucion: fecha(p.fecha_ejecucion),
+      h_prog: p.horometro_programado === null ? null : Number(p.horometro_programado),
+      h_ejec: p.horometro_ejecucion === null ? null : Number(p.horometro_ejecucion),
+      por: p.ejecutado_por,
+      reprog: p.reprogramaciones,
+      mat: p.materiales_total,
+      obs: p.observaciones,
+      cierre: p.estado === "Anulado" ? p.motivo_anulacion : p.comentario_cierre,
+    });
+  }
+  encabezado(hp);
+
+  const porPm = new Map(pms.map((p) => [p.id, p]));
+  const hm = libro.addWorksheet("Materiales de preventivos");
+  hm.columns = [
+    { header: "Folio", key: "folio", width: 15 },
+    { header: "N° OT", key: "ot", width: 15 },
+    { header: "Unidad", key: "unidad", width: 13 },
+    { header: "Código interno", key: "cod", width: 12 },
+    { header: "Actividad", key: "actividad", width: 36 },
+    { header: "Estado", key: "estado", width: 11 },
+    { header: "Ejecutado", key: "ejecucion", width: 11, style: { numFmt: "dd/mm/yyyy" } },
+    { header: "Ítem", key: "item", width: 6 },
+    { header: "Número de parte", key: "parte", width: 18 },
+    { header: "Código SAP", key: "sap", width: 12 },
+    { header: "Descripción", key: "desc", width: 34 },
+    { header: "Cantidad", key: "cant", width: 9 },
+    { header: "Unidad de medida", key: "um", width: 9 },
+    { header: "Observaciones", key: "obs", width: 28 },
+  ];
+  const materiales = materialesPm
+    .filter((m) => porPm.has(m.preventivo_id))
+    .sort((a, b) => porPm.get(a.preventivo_id)!.folio.localeCompare(porPm.get(b.preventivo_id)!.folio) || a.item - b.item);
+  for (const m of materiales) {
+    const p = porPm.get(m.preventivo_id)!;
+    hm.addRow({
+      folio: p.folio,
+      ot: p.n_ot,
+      unidad: unidades.get(p.unidad_id) ?? "",
+      cod: p.cod_interno,
+      actividad: p.actividad,
+      estado: p.estado,
+      ejecucion: fecha(p.fecha_ejecucion),
+      item: m.item,
+      parte: m.numero_parte,
+      sap: p.usa_sap ? m.cod_sap : null,
+      desc: m.descripcion,
+      cant: Number(m.cantidad),
+      um: m.um,
+      obs: m.observaciones,
+    });
+  }
+  encabezado(hm);
+
   return (await libro.xlsx.writeBuffer()) as ArrayBuffer;
 }
 
@@ -271,7 +358,9 @@ export async function exportarAbiertos(
   semanas: SemanasEspecialidad[],
   unidades: Map<string, string>,
   titulo: string,
-  repuestos: BacklogRepuesto[] = []
+  repuestos: BacklogRepuesto[] = [],
+  preventivos: Preventivo[] = [],
+  materialesPm: PreventivoMaterial[] = []
 ): Promise<string | null> {
-  return descargar(await armarLibroBacklog(filas, semanas, unidades, hoyISO(), repuestos), `${titulo}.xlsx`);
+  return descargar(await armarLibroBacklog(filas, semanas, unidades, hoyISO(), repuestos, preventivos, materialesPm), `${titulo}.xlsx`);
 }

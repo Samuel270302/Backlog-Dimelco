@@ -4,6 +4,8 @@ import { useBacklogs, useEquipos } from "../lib/queries";
 import { EtiquetaEstado, EtiquetaPrioridad } from "../components/Etiquetas";
 import { ESTADOS_ABIERTOS } from "../lib/types";
 import { fFecha, fNum } from "../lib/fmt";
+import { usePreventivos } from "../lib/preventivos";
+import { EtiquetaEstadoPreventivo } from "../components/preventivos/EtiquetaEstadoPreventivo";
 
 // Historial de backlogs de un equipo y HH por sistema.
 export default function FichaEquipo() {
@@ -11,6 +13,11 @@ export default function FichaEquipo() {
   const { data: equipos, isLoading } = useEquipos();
   const { data: backlogs } = useBacklogs();
   const equipo = equipos?.find((e) => e.id === id);
+  const { data: preventivos } = usePreventivos();
+  const pms = useMemo(
+    () => (preventivos ?? []).filter((p) => p.equipo_id === id).sort((a, b) => b.fecha_programada.localeCompare(a.fecha_programada)),
+    [preventivos, id]
+  );
 
   const lista = useMemo(
     () => (backlogs ?? []).filter((b) => b.equipo_id === id).sort((a, b) => b.fecha_deteccion.localeCompare(a.fecha_deteccion) || b.folio.localeCompare(a.folio)),
@@ -75,6 +82,42 @@ export default function FichaEquipo() {
                     <td className="num">{fNum(x.hhPend)}</td>
                     <td className="num">{x.cerrados}</td>
                     <td className="num">{fNum(x.hhReal)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+
+      <div className="bloque-ficha">
+        <h2>Preventivos ({pms.length})</h2>
+        {pms.length === 0 ? (
+          <p className="nota">Sin preventivos programados para este equipo.</p>
+        ) : (
+          <div className="tabla-marco">
+            <table>
+              <thead>
+                <tr>
+                  <th>Folio</th>
+                  <th>N° OT</th>
+                  <th>Actividad</th>
+                  <th>Programado</th>
+                  <th>Ejecutado</th>
+                  <th>Estado</th>
+                  <th className="num">Materiales</th>
+                </tr>
+              </thead>
+              <tbody>
+                {pms.map((p) => (
+                  <tr key={p.id}>
+                    <td><Link to={`/preventivo/${p.id}`}>{p.folio}</Link></td>
+                    <td>{p.n_ot}</td>
+                    <td>{p.actividad}</td>
+                    <td>{fFecha(p.fecha_programada)}</td>
+                    <td>{fFecha(p.fecha_ejecucion)}</td>
+                    <td><EtiquetaEstadoPreventivo estado={p.estado} /></td>
+                    <td className="num">{p.materiales_total || ""}</td>
                   </tr>
                 ))}
               </tbody>
