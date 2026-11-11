@@ -80,14 +80,17 @@ async function conUrls(fotos: BacklogFoto[]): Promise<FotoConUrl[]> {
   return fotos.map((f) => ({ ...f, url: porRuta.get(f.ruta) ?? null }));
 }
 
+// Fotos de un backlog con su URL firmada, fuera de React (paquete de órdenes).
+export async function leerFotosBacklog(id: string): Promise<FotoConUrl[]> {
+  const { data, error } = await supabase().from("backlog_fotos").select("*").eq("backlog_id", id).order("creado_en");
+  if (error) throw error;
+  return conUrls(data as BacklogFoto[]);
+}
+
 export const useFotosBacklog = (id: string) =>
   useQuery({
     queryKey: ["backlog_fotos", id],
     // Las URL firmadas duran una hora: se renuevan antes de vencer.
     staleTime: (VIGENCIA_URL_S - 300) * 1000,
-    queryFn: async () => {
-      const { data, error } = await supabase().from("backlog_fotos").select("*").eq("backlog_id", id).order("creado_en");
-      if (error) throw error;
-      return conUrls(data as BacklogFoto[]);
-    },
+    queryFn: () => leerFotosBacklog(id),
   });

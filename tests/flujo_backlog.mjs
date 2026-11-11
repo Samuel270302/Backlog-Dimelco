@@ -855,6 +855,45 @@ try {
   if (Number(cant1) !== 3) throw new Error(`El admin no pudo corregir el material del ejecutado: ${cant1}`);
   ok("HEMCO exige la OT de SAP; anular pide motivo; solo el admin corrige materiales de un ejecutado y lo vuelve a Programado");
 
+  // 8. Paquete de órdenes (022): PS090 tiene ese día el preventivo y un correctivo.
+  await adm.goto(base + "#/calendario");
+  await adm.reload();
+  await adm.getByRole("heading", { name: "Calendario" }).waitFor();
+  await adm.getByRole("button", { name: `Paquete PS090 ${ddmm(diaPm)}` }).click();
+  const dPq = adm.getByRole("dialog");
+  await dPq.getByText("El número de paquete se asigna al imprimir").waitFor();
+  if ((await dPq.locator(".tabla-ordenes-paquete tbody tr").count()) !== 2) throw new Error("El paquete de PS090 no muestra sus 2 órdenes");
+  await adm.screenshot({ path: join(SALIDA, "paquete-vista-previa.png") });
+  const [vPq] = await Promise.all([adm.context().waitForEvent("page"), dPq.getByRole("button", { name: "Imprimir paquete" }).click()]);
+  await vPq.waitForFunction(() => document.title && !document.title.startsWith("Generando"));
+  const htmlPq = await vPq.content();
+  for (const t of ["PAQUETE DE ÓRDENES DE TRABAJO", "PQ-VTN-000001", "OT-VTN-000001", "OT-VTN-000002", "PM-VTN-000001", "BL-VTN-000001",
+                   "MANTENIMIENTO PREVENTIVO", "MANTENIMIENTO CORRECTIVO PROGRAMADO", "Fuga de refrigerante en radiador", "PM 250 h motor diésel",
+                   "Pauta de mantenimiento y listado de filtros adjuntos", "Entregado por (planificador)", "Mecánico 1 × 3 h", "Filtro de aceite de motor"])
+    if (!htmlPq.includes(t)) throw new Error(`El paquete no tiene «${t}»`);
+  if ((htmlPq.match(/<div class="hoja/g) ?? []).length !== 3) throw new Error("El paquete debía tener 3 hojas: carátula, preventivo y correctivo");
+  if (!/<span class="et">Paquete<\/span>PQ-VTN-000001/.test(htmlPq)) throw new Error("La OT del preventivo no lleva el N° de paquete");
+  if (htmlPq.includes("SAP")) throw new Error("El paquete de Veta Nueva menciona SAP");
+  await vPq.setViewportSize({ width: 900, height: 1270 });
+  await vPq.locator(".hoja").first().screenshot({ path: join(SALIDA, "paquete-caratula.png") });
+  await vPq.screenshot({ path: join(SALIDA, "paquete.png"), fullPage: true });
+  await vPq.close();
+  await aviso(adm, "PQ-VTN-000001 listo para imprimir");
+  ok("el paquete de PS090 sale con carátula, la OT del preventivo y el formato del correctivo, y toma el número PQ-VTN-000001");
+
+  // Todos los paquetes de un día en un solo PDF; el número de PS090 no cambia.
+  const [vDia] = await Promise.all([adm.context().waitForEvent("page"), adm.getByRole("button", { name: `Imprimir paquetes del ${ddmm(diaPm)}` }).click()]);
+  await vDia.waitForFunction(() => document.title && !document.title.startsWith("Generando"));
+  const htmlDia = await vDia.content();
+  if (!htmlDia.includes("PQ-VTN-000001") || htmlDia.includes("PQ-VTN-000002")) throw new Error("Paquetes del día: PS090 debía conservar PQ-VTN-000001");
+  await vDia.close();
+  await adm.goto(base + "#/paquetes");
+  const filaPq = adm.locator(".tabla-paquetes tbody tr", { hasText: "PQ-VTN-000001" });
+  await filaPq.locator("td", { hasText: "0 de 2 ejecutadas" }).waitFor();
+  await filaPq.locator(".nota", { hasText: "2 impresiones" }).waitFor();
+  await adm.screenshot({ path: join(SALIDA, "paquetes.png") });
+  ok("los paquetes del día salen en un solo PDF y la lista de paquetes muestra el avance y las impresiones");
+
   // Excel de Indicadores con las hojas de preventivos.
   await adm.goto(base + "#/indicadores");
   await adm.getByRole("heading", { name: "Indicadores" }).waitFor();

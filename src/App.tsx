@@ -18,6 +18,7 @@ import FichaEquipo from "./pages/FichaEquipo";
 import Calendario from "./pages/Calendario";
 import Preventivos from "./pages/Preventivos";
 import FichaPreventivo from "./pages/FichaPreventivo";
+import Paquetes from "./pages/Paquetes";
 import Borrados from "./pages/Borrados";
 import Capacidad from "./pages/Capacidad";
 import Indicadores from "./pages/Indicadores";
@@ -68,6 +69,7 @@ function ConRealtime({ esAdmin, puedeCapturar }: { esAdmin: boolean; puedeCaptur
         <Route path="/calendario" element={<Calendario />} />
         <Route path="/preventivos" element={<Preventivos />} />
         <Route path="/preventivo/:id" element={<FichaPreventivo />} />
+        <Route path="/paquetes" element={<Paquetes />} />
         <Route path="/equipo/:id" element={<FichaEquipo />} />
         <Route path="/indicadores" element={<Indicadores />} />
         {esAdmin && <Route path="/equipos" element={<Equipos />} />}

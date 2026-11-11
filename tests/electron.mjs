@@ -143,6 +143,22 @@ try {
   ok("Excel guardado con los 5 backlogs abiertos de la semilla");
 
   await win.screenshot({ path: join(SALIDA, "electron-indicadores.png") });
+
+  // Paquete de órdenes: JU005 tiene un correctivo programado para mañana (semilla).
+  const manana = new Date(Date.now() + 86400000);
+  await win.evaluate(() => (location.hash = "#/calendario"));
+  await win.getByRole("heading", { name: "Calendario" }).waitFor();
+  if (manana.getDay() === 1) await win.getByRole("button", { name: "Semana siguiente" }).click();
+  await win.getByRole("button", { name: /^Paquete JU005 / }).click();
+  await win.getByRole("dialog").getByRole("button", { name: "Imprimir paquete" }).click();
+  await win.locator(".aviso", { hasText: "PQ-HEM-000001 guardado en" }).waitFor({ timeout: 30000 });
+  const pdfPaquete = join(SALIDA, readdirSync(SALIDA).find((f) => /^PQ-HEM-000001 JU005 .*\.pdf$/.test(f)) ?? "x");
+  await esperarArchivo(pdfPaquete);
+  const [anchoP, altoP] = tamanoPagina(pdfPaquete);
+  if (!(anchoP < altoP)) throw new Error(`El paquete debía ser vertical: ${anchoP} × ${altoP}`);
+  const paginas = (readFileSync(pdfPaquete).toString("latin1").match(/\/Type\s*\/Page[^s]/g) ?? []).length;
+  if (paginas < 2) throw new Error(`El paquete debía tener carátula y formato en hojas separadas; tiene ${paginas} página(s)`);
+  ok(`paquete de órdenes guardado como PDF A4 vertical de ${paginas} páginas (carátula y formato del correctivo)`);
   if (errores.length) throw new Error("Errores de página:\n" + errores.join("\n"));
   console.log(`\nPRUEBA ELECTRON OK: ${paso} pasos`);
 } catch (e) {

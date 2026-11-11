@@ -55,7 +55,7 @@ export function cuerpoOtPreventivo(p: Preventivo, materiales: PreventivoMaterial
 </tr></thead><tbody>${filas.join("")}</tbody></table>
 
 <div class="seccion">Observaciones del técnico</div>
-<table><tr><td class="texto">${esc(p.comentario_cierre)}</td></tr></table>
+<table class="caja-alta"><tr><td class="texto">${esc(p.comentario_cierre)}</td></tr></table>
 
 <div class="firmas">
   <div class="firma"><div class="quien">${esc(p.ejecutado_por)}</div><div class="linea">Ejecutado por</div></div>

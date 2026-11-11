@@ -90,6 +90,7 @@ const ESTILOS = `  * { box-sizing: border-box; }
   .casillas td { height: 26px; }
   .aviso-adjuntos { margin-top: 8px; border: 1px solid #555; padding: 6px 8px; font-weight: 600; }
   .caratula-dato { font-size: 13px; }
+  .caja-alta td { height: 64px; }
 `;
 
 // Documento A4 con uno o varios cuerpos; cada cuerpo después del primero empieza hoja.

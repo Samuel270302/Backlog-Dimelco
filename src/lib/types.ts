@@ -260,3 +260,22 @@ export interface PreventivoEvento {
   usuario: string | null;
   creado_en: string;
 }
+
+// Paquete de órdenes de trabajo (022): un equipo y un día. De v_paquetes.
+export interface Paquete {
+  id: string;
+  folio: string;
+  unidad_id: string;
+  equipo_id: string;
+  fecha: string;
+  creado_en: string;
+  impreso_en: string | null;
+  impresiones: number;
+  cod_interno: string;
+  modelo: string;
+  unidad: string;
+  correctivos: number;
+  correctivos_ejecutados: number;
+  preventivos: number;
+  preventivos_ejecutados: number;
+}

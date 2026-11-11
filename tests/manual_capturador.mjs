@@ -319,7 +319,7 @@ try {
   await acciones.getByRole("button", { name: "Programar", exact: true }).click();
   const dProg = p.getByRole("dialog");
   await dProg.getByLabel("Fecha programada").fill(manana);
-  await dProg.getByLabel("N° OT").fill("OT-EXP-0431");
+  await marcar(p, dProg.getByLabel("N° OT"));
   await foto(p, "estados-programar");
   await dProg.getByRole("button", { name: "Programar", exact: true }).click();
   await p.locator(".ficha-folio .etiqueta-estado", { hasText: "Programado" }).waitFor();
@@ -418,6 +418,78 @@ try {
   await m.goto(base + `#/backlog/${id}`);
   await m.waitForTimeout(800);
   await foto(m, "movil-ficha");
+
+  // Preventivos y paquetes (B1-31: tiene el correctivo de la luz de trabajo programado para mañana).
+  const ddmm = (iso) => `${iso.slice(8, 10)}/${iso.slice(5, 7)}/${iso.slice(0, 4)}`;
+  const lunesDe = (iso) => {
+    const d = new Date(iso + "T00:00:00");
+    d.setDate(d.getDate() - ((d.getDay() + 6) % 7));
+    return d.toISOString().slice(0, 10);
+  };
+  await p.goto(base + "#/preventivos");
+  await p.getByRole("heading", { name: "Preventivos", exact: true }).waitFor();
+  await p.getByRole("button", { name: "Programar preventivo" }).click();
+  const dPm = p.getByRole("dialog");
+  await dPm.getByLabel("Equipo del preventivo").selectOption({ label: "B1-31 · PowerROC T50" });
+  await dPm.getByLabel("Actividad del preventivo").fill("PM 500 h motor diésel");
+  await dPm.getByLabel("Fecha programada del preventivo").fill(manana);
+  await dPm.getByLabel("Horómetro programado").fill("4500");
+  await dPm.getByLabel("Observaciones del preventivo").fill("Tomar muestra de aceite antes de drenar");
+  await foto(p, "preventivo-programar");
+  await dPm.getByRole("button", { name: "Programar", exact: true }).click();
+  await aviso(p, "PM-EXP-000001 programado");
+  await p.locator(".aviso").first().waitFor({ state: "detached", timeout: 15000 }).catch(() => {});
+  await marcar(p, p.locator(".tabla-preventivos tbody tr").first());
+  await foto(p, "preventivos-lista");
+
+  await p.goto(base + "#/calendario");
+  await p.getByRole("heading", { name: "Calendario" }).waitFor();
+  if (lunesDe(manana) !== lunesDe(new Date().toISOString().slice(0, 10))) await p.getByRole("button", { name: "Semana siguiente" }).click();
+  const tarjetaPm = p.locator(".grilla-semana").getByLabel("PM-EXP-000001 B1-31");
+  await tarjetaPm.waitFor();
+  const botonPaquete = p.getByRole("button", { name: `Paquete B1-31 ${ddmm(manana)}` });
+  await marcar(p, tarjetaPm, botonPaquete);
+  await foto(p, "calendario-preventivo");
+  await botonPaquete.click();
+  const dPq = p.getByRole("dialog");
+  await dPq.locator(".tabla-ordenes-paquete tbody tr").nth(1).waitFor();
+  await marcar(p, dPq.getByRole("button", { name: "Imprimir paquete" }));
+  await foto(p, "paquete-vista");
+  const [vPq] = await Promise.all([p.context().waitForEvent("page"), dPq.getByRole("button", { name: "Imprimir paquete" }).click()]);
+  await vPq.waitForFunction(() => document.title && !document.title.startsWith("Generando"));
+  await vPq.setViewportSize({ width: 900, height: 1270 });
+  await foto(vPq, "paquete-caratula", { loc: vPq.locator(".hoja").nth(0) });
+  await foto(vPq, "paquete-ot-preventivo", { loc: vPq.locator(".hoja").nth(1) });
+  await vPq.close();
+  await p.goto(base + "#/paquetes");
+  await p.locator(".tabla-paquetes tbody tr").first().waitFor();
+  await p.locator(".aviso").first().waitFor({ state: "detached", timeout: 15000 }).catch(() => {});
+  await foto(p, "paquetes-lista");
+
+  await p.goto(base + "#/preventivos");
+  await p.getByRole("link", { name: "PM-EXP-000001" }).click();
+  await p.getByRole("heading", { name: "B1-31 · PM 500 h motor diésel" }).waitFor();
+  await p.locator(".ficha-acciones").getByRole("button", { name: "Marcar ejecutado" }).click();
+  const dEj = p.getByRole("dialog");
+  const material = async (parte, desc, cant, um, item) => {
+    await dEj.getByLabel("Número de parte del material nuevo").fill(parte);
+    await dEj.getByLabel("Descripción del material nuevo").fill(desc);
+    await dEj.getByLabel("Cantidad del material nuevo").fill(cant);
+    await dEj.getByLabel("Unidad del material nuevo").fill(um);
+    await dEj.getByRole("button", { name: "Agregar" }).click();
+    await dEj.getByLabel(`Descripción material ${item}`).waitFor();
+  };
+  await material("", "Filtro de aceite de motor", "2", "un", 1);
+  await material("", "Filtro de combustible primario", "1", "un", 2);
+  await material("", "Aceite de motor 15W40", "32", "L", 3);
+  await dEj.getByLabel("Horómetro al ejecutar").fill("4512");
+  await dEj.getByLabel("Ejecutado por").fill("Mecánico turno A");
+  await dEj.getByLabel("Comentario de cierre").fill("Sin novedades. Muestra de aceite enviada al laboratorio.");
+  await foto(p, "preventivo-ejecutar");
+  await dEj.getByRole("button", { name: "Marcar ejecutado", exact: true }).click();
+  await p.locator(".ficha-folio .etiqueta-estado", { hasText: "Ejecutado" }).waitFor();
+  await p.locator(".aviso").first().waitFor({ state: "detached", timeout: 15000 }).catch(() => {});
+  await foto(p, "preventivo-ficha", { completa: true });
 
   console.log(`\nMANUAL OK: ${n} capturas en docs/manual/img`);
 } catch (e) {

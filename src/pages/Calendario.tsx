@@ -8,6 +8,7 @@ import { EtiquetaPrioridad } from "../components/Etiquetas";
 import { fFecha, fNum, hoyISO, sumarDiasISO } from "../lib/fmt";
 import { usePreventivos } from "../lib/preventivos";
 import { useAccionesPreventivo } from "../components/preventivos/AccionesPreventivo";
+import { DialogoPaquete, useImprimirPaquetes, type ClavePaquete } from "../components/paquetes/Paquetes";
 import type { BacklogFila, Preventivo } from "../lib/types";
 
 // Programa semanal: backlogs y preventivos programados por equipo y día, panel de listos
@@ -42,6 +43,8 @@ export default function Calendario() {
   const pm = useAccionesPreventivo();
   const [arrastrando, setArrastrando] = useState<BacklogFila | null>(null);
   const [arrastrandoPm, setArrastrandoPm] = useState<Preventivo | null>(null);
+  const [paquete, setPaquete] = useState<ClavePaquete | null>(null);
+  const paquetes = useImprimirPaquetes();
   const [sobreDia, setSobreDia] = useState<string | null>(null);
 
   const semana = useMemo(
@@ -87,6 +90,12 @@ export default function Calendario() {
       .map((e) => ({ id: e.id, nombre: e.nombre, hh: programadas.get(e.id) ?? 0, capacidad: cap.get(e.id) ?? 0 }))
       .filter((x) => x.hh > 0 || x.capacidad > 0);
   }, [semana, detalle, capacidad, especialidades]);
+
+  // Paquetes de un día: uno por equipo con órdenes programadas esa fecha.
+  const clavesDia = (d: string): ClavePaquete[] =>
+    filas
+      .filter(([, f]) => f.items.some((b) => b.fecha_programada === d) || f.pms.some((p) => p.fecha_programada === d))
+      .map(([equipo_id]) => ({ equipo_id, fecha: d }));
 
   const totalDia = (d: string) =>
     semana.filter((b) => b.fecha_programada === d).reduce((s, b) => s + Number(b.hh_estimadas), 0);
@@ -270,6 +279,17 @@ export default function Calendario() {
                 {dias.map((d, i) => (
                   <th key={d} className={claseDia(d)} {...zonaDia(d)} aria-label={`Día ${fFecha(d)}`}>
                     {DIAS[i]} {d.slice(8, 10)}/{d.slice(5, 7)}
+                    {puedeCapturar && clavesDia(d).length > 0 && (
+                      <button
+                        className="boton-plano boton-paquetes-dia"
+                        disabled={paquetes.ocupado}
+                        aria-label={`Imprimir paquetes del ${fFecha(d)}`}
+                        title="Imprimir en un solo PDF los paquetes de todos los equipos de este día"
+                        onClick={() => paquetes.imprimir(clavesDia(d))}
+                      >
+                        Paquetes ({clavesDia(d).length})
+                      </button>
+                    )}
                   </th>
                 ))}
               </tr>
@@ -299,12 +319,22 @@ export default function Calendario() {
                             <div className="tc-trabajo">{b.descripcion}</div>
                             <div className="tc-datos">
                               <span>{fNum(b.hh_estimadas)} HH</span>
-                              {b.ot_sap && <span>OT {b.ot_sap}</span>}
+                              {b.ot_sap && <span>{b.ot_sap.startsWith("OT") ? b.ot_sap : `OT ${b.ot_sap}`}</span>}
                               {(b.aprovechar_pm || conPm.has(`${b.equipo_id}|${d}`)) && <span className="tc-pm">con PM</span>}
                               {b.estado !== "Programado" && <span>{b.estado}</span>}
                             </div>
                           </div>
                         ))}
+                      {(f.items.some((b) => b.fecha_programada === d) || f.pms.some((p) => p.fecha_programada === d)) && (
+                        <button
+                          className="boton-plano boton-paquete"
+                          aria-label={`Paquete ${f.cod} ${fFecha(d)}`}
+                          title="Ver e imprimir el paquete de órdenes de este equipo y día"
+                          onClick={() => setPaquete({ equipo_id: equipoId, fecha: d })}
+                        >
+                          Paquete
+                        </button>
+                      )}
                       {puedeCapturar && (
                         <button
                           className="boton-plano boton-pm-celda"
@@ -377,6 +407,11 @@ export default function Calendario() {
                   {DIAS[i]} {fFecha(d)}
                 </span>
                 <span>{del_dia.length ? `${fNum(totalDia(d))} HH` : ""}</span>
+                {puedeCapturar && clavesDia(d).length > 0 && (
+                  <button className="boton-plano boton-paquetes-movil" disabled={paquetes.ocupado} onClick={() => paquetes.imprimir(clavesDia(d))}>
+                    Paquetes ({clavesDia(d).length})
+                  </button>
+                )}
               </header>
               <div className="lista-dia">
                 {del_dia.length === 0 && pm_dia.length === 0 && <span className="nota">Sin trabajos</span>}
@@ -407,7 +442,7 @@ export default function Calendario() {
                     <div className="tc-trabajo">{b.descripcion}</div>
                     <div className="tc-datos">
                       <span>{fNum(b.hh_estimadas)} HH</span>
-                      {b.ot_sap && <span>OT {b.ot_sap}</span>}
+                      {b.ot_sap && <span>{b.ot_sap.startsWith("OT") ? b.ot_sap : `OT ${b.ot_sap}`}</span>}
                       {(b.aprovechar_pm || conPm.has(`${b.equipo_id}|${d}`)) && <span className="tc-pm">con PM</span>}
                       {b.estado !== "Programado" && <span>{b.estado}</span>}
                     </div>
@@ -421,6 +456,7 @@ export default function Calendario() {
       {isLoading && <p className="nota">Cargando…</p>}
       {cambio.dialogo}
       {pm.dialogo}
+      {paquete && <DialogoPaquete clave={paquete} puedeImprimir={puedeCapturar} onCerrar={() => setPaquete(null)} />}
     </div>
   );
 }

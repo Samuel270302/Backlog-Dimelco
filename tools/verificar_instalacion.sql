@@ -47,6 +47,9 @@ with chequeos(orden, punto, ok, si_falta) as (
       and exists (select 1 from pg_proc where proname = 'cambiar_estado_backlog' and prosrc like '%siguiente_correlativo%')
       and to_regclass('public.v_preventivos') is not null,
       'Ejecutar 021_preventivos.sql'),
+  (6.99, 'Paquetes de órdenes de trabajo (022)',
+      exists (select 1 from pg_proc where proname = 'paquete_de') and to_regclass('public.v_paquetes') is not null,
+      'Ejecutar 022_paquetes.sql'),
   (7, 'Bucket privado backlog-fotos',
       exists (select 1 from storage.buckets where id = 'backlog-fotos' and not public),
       'Ejecutar 007_storage.sql (Storage debe estar habilitado en el proyecto)'),

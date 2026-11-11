@@ -30,6 +30,7 @@ const enlaces = [
   { a: "/kanban", texto: "Kanban", icono: <IconoKanban />, captura: false },
   { a: "/calendario", texto: "Calendario", icono: <IconoCalendario />, captura: false },
   { a: "/preventivos", texto: "Preventivos", icono: <IconoPrograma />, captura: false },
+  { a: "/paquetes", texto: "Paquetes de OT", icono: <IconoHistorial />, captura: false },
   { a: "/indicadores", texto: "Indicadores", icono: <IconoIndicadores />, captura: false },
   { a: "/capacidad", texto: "Capacidad del taller", icono: <IconoAjustes />, captura: true },
 ];

@@ -468,6 +468,26 @@ select pruebas.igual((select string_agg(tipo, ',' order by creado_en, id) from p
   'registro,reprogramación,ejecución,reversión', 'bitácora del preventivo');
 select pruebas.igual((select count(*) from v_backlog where folio like 'PM-%')::int, 0, 'los preventivos no entran en v_backlog');
 
+
+-- Paquetes de órdenes de trabajo (022): equipo y día, número fijo, contenido calculado.
+-- PS de Veta Nueva: preventivo ...01 vuelto a Programado para el 2026-11-01 y backlog ...f1 para el 2026-11-05.
+select set_config('request.jwt.claims', '{"sub":"00000000-0000-0000-0000-00000000000d"}', false);
+select pruebas.espera_error($$select paquete_de('10000000-0000-0000-0000-000000000002', '2026-11-20')$$, 'No hay órdenes programadas');
+select pruebas.igual((select folio from paquete_de('10000000-0000-0000-0000-000000000002', '2026-11-01')), 'PQ-VTN-000001', 'paquete con su número');
+select pruebas.igual((select folio || ' ' || impresiones from paquete_de('10000000-0000-0000-0000-000000000002', '2026-11-01')), 'PQ-VTN-000001 2', 'el mismo equipo y día conserva el número');
+select pruebas.igual((select folio from paquete_de('10000000-0000-0000-0000-000000000002', '2026-11-05')), 'PQ-VTN-000002', 'otro día, otro paquete');
+select pruebas.igual((select preventivos || ' ' || correctivos from v_paquetes where folio = 'PQ-VTN-000001'), '1 0', 'paquete del 01/11: solo el preventivo');
+-- Al reprogramar el preventivo al día del correctivo, cambia de paquete sin tocar nada.
+select cambiar_estado_preventivo('80000000-0000-0000-0000-000000000001', 'Programado', '{"fecha_programada":"2026-11-05","motivo":"Se junta con el correctivo"}');
+select pruebas.igual((select string_agg(folio || ':' || preventivos || '+' || correctivos, ' ' order by folio) from v_paquetes), 'PQ-VTN-000001:0+0 PQ-VTN-000002:1+1', 'la orden reprogramada cambia de paquete');
+select pruebas.espera_error($$insert into paquetes (folio, unidad_id, equipo_id, fecha) select 'X', unidad_id, id, '2026-11-09' from equipos where id = '10000000-0000-0000-0000-000000000002'$$, 'row-level security');
+select set_config('request.jwt.claims', '{"sub":"00000000-0000-0000-0000-00000000000c"}', false);
+select pruebas.igual((select count(*) from v_paquetes)::int, 0, 'capturador de HEMCO no ve paquetes de Veta Nueva');
+select pruebas.espera_error($$select paquete_de('10000000-0000-0000-0000-000000000002', '2026-11-05')$$, 'Sin permiso');
+select set_config('request.jwt.claims', '{"sub":"00000000-0000-0000-0000-00000000000e"}', false);
+select pruebas.espera_error($$select paquete_de('10000000-0000-0000-0000-000000000001', '2026-11-05')$$, 'Sin permiso');
+select set_config('request.jwt.claims', '{"sub":"00000000-0000-0000-0000-00000000000a"}', false);
+
 reset role;
 \o
 select 'Bitácora del BL-HEM-000001:' as titulo;

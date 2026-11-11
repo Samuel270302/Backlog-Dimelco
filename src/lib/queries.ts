@@ -97,6 +97,7 @@ const TABLAS = [
   "preventivos",
   "preventivo_materiales",
   "preventivo_eventos",
+  "paquetes",
   "equipos",
   "sistemas",
   "familias",

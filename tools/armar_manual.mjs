@@ -77,7 +77,7 @@ const html = `<!doctype html><html lang="es"><head><meta charset="utf-8"><title>
   <div class="titulo">Control de Backlog</div>
   <div class="sub">Manual del capturador</div>
   <div class="sub" style="font-size:12pt">Registro y seguimiento de backlogs de mantenimiento</div>
-  <div class="datos">Dimelco · versión de la app 0.5.9 · noviembre de 2026</div>
+  <div class="datos">Dimelco · versión de la app 0.6.1 · noviembre de 2026</div>
 </section>
 
 <h1>Contenido</h1>
@@ -91,6 +91,7 @@ const html = `<!doctype html><html lang="es"><head><meta charset="utf-8"><title>
   <li>Avanzar y retroceder el backlog: aprobar, esperar repuestos, programar, reprogramar</li>
   <li>Seguir los backlogs: Kanban, Por equipo y Calendario</li>
   <li>Cerrar un trabajo: HH reales, Marcar ejecutado y Validar</li>
+  <li>Preventivos y paquetes de órdenes de trabajo</li>
   <li>Indicadores y reporte semanal</li>
   <li>Capacidad del taller</li>
   <li>Uso desde el celular</li>
@@ -112,6 +113,8 @@ const html = `<!doctype html><html lang="es"><head><meta charset="utf-8"><title>
   <li>carga las HH reales de un trabajo terminado;</li>
   <li>edita la capacidad del taller de su unidad;</li>
   <li>borra un backlog mal registrado, dejando el motivo;</li>
+  <li>programa los preventivos a mano, los reprograma y los cierra con los materiales utilizados;</li>
+  <li>arma e imprime el paquete de órdenes de trabajo de cada equipo y día para entregarlo a los técnicos;</li>
   <li>consulta el Kanban, la vista por equipo, el calendario y los indicadores, e imprime el formato y el reporte.</li>
 </ul>
 <div class="nota">Una vez <b>Validado</b>, el backlog queda bloqueado para el capturador: ya no se edita ni se borra. Lo mismo pasa con un backlog <b>Rechazado</b> o <b>Anulado</b>. Solo el administrador puede revertirlos (devolverlos a un estado anterior) o borrarlos. El administrador también administra equipos, familias, sistemas, plazos y usuarios.</div>
@@ -144,9 +147,11 @@ ${fig("inicio-por-equipo", "Pantalla principal: Por equipo.")}
   <tr><td>Nuevo backlog</td><td>Registrar un trabajo pendiente (capítulo 5).</td></tr>
   <tr><td>Por equipo</td><td>Ver los backlogs abiertos de cada equipo (capítulo 8).</td></tr>
   <tr><td>Kanban</td><td>Ver todos los backlogs por etapa (Identificado, Planeado, Programado, Ejecutado, Validado) y moverlos arrastrando la tarjeta.</td></tr>
-  <tr><td>Calendario</td><td>Ver y programar los trabajos de cada día de la semana.</td></tr>
-  <tr><td>Indicadores</td><td>HH acumuladas, antigüedad, vencidos, reporte semanal PDF y Excel (capítulo 10).</td></tr>
-  <tr><td>Capacidad del taller</td><td>HH disponibles por semana de cada especialidad en su unidad (capítulo 11).</td></tr>
+  <tr><td>Calendario</td><td>Ver y programar los trabajos de cada día de la semana, programar preventivos y armar paquetes.</td></tr>
+  <tr><td>Preventivos</td><td>Programar preventivos a mano y cerrarlos con los materiales utilizados (capítulo 10).</td></tr>
+  <tr><td>Paquetes de OT</td><td>Consultar y volver a imprimir los paquetes de órdenes de trabajo (capítulo 10).</td></tr>
+  <tr><td>Indicadores</td><td>HH acumuladas, antigüedad, vencidos, reporte semanal PDF y Excel (capítulo 11).</td></tr>
+  <tr><td>Capacidad del taller</td><td>HH disponibles por semana de cada especialidad en su unidad (capítulo 12).</td></tr>
 </table>
 ${fig("menu", "Menú del capturador. Arriba, la unidad; abajo, su nombre, Cambiar contraseña, Cerrar sesión y el estado de la conexión.", "angosta")}
 <div class="nota">Arriba del menú aparece su unidad. Si el administrador le asignó más de una, ahí verá una lista para elegir una unidad o <b>Todas mis unidades</b>. Abajo, el punto verde con "En línea" indica que la app está conectada; si dice "Reconectando" o "Sin conexión", revise el internet antes de grabar.</div>
@@ -320,10 +325,10 @@ ${fig("estados-aprobar", "Aprobar y planificar: confirmar la prioridad.")}
 <p>Desde Listo para programar, pulse <b>Programar</b> y complete:</p>
 <ol>
   <li><span class="paso">1</span><b>Fecha programada</b>: el día del trabajo. Puede ser anterior a hoy (para registrar un trabajo que ya se programó), pero no anterior a la fecha de detección del backlog.</li>
-  <li><span class="paso">2</span><b>N° OT</b> en Explotec y las demás unidades, u <b>OT SAP</b> en HEMCO (obligatorio).</li>
+  <li><span class="paso">2</span><b>N° OT</b>: en Explotec y las demás unidades sin SAP es opcional. Si lo deja vacío, la app asigna el número siguiente de la unidad (por ejemplo OT-EXP-000001). En HEMCO se escribe la <b>OT SAP</b> y es obligatoria.</li>
   <li><span class="paso">3</span>Marque <b>Aprovechar la parada de un PM</b> si se hará junto con un preventivo.</li>
 </ol>
-${fig("estados-programar", "Programar la reparación de la luz de trabajo del B1-31 (PowerROC T50): fecha, N° OT y si aprovecha un PM.")}
+${fig("estados-programar", "Programar la reparación de la luz de trabajo del B1-31 (PowerROC T50): fecha, N° OT (vacío para que lo asigne la app) y si aprovecha un PM.")}
 <p>También se programa arrastrando la tarjeta desde "Listos para programar" hasta el día en el <b>Calendario</b> (8.3).</p>
 
 <h2>7.4 Reprogramar o quitar del calendario</h2>
@@ -351,7 +356,7 @@ ${fig("kanban-tarjeta", "Tarjeta desplegada.")}
 ${fig("por-equipo-desplegado", "Equipo TD22008LC desplegado con su backlog.")}
 
 <h2>8.3 Calendario</h2>
-<p>Muestra la semana de lunes a domingo con los trabajos programados por equipo y día, y abajo las barras de HH programadas contra la capacidad del taller por especialidad. Para programar, arrastre una tarjeta desde "Listos para programar" hasta el día (pide la OT); para reprogramar, arrastre la tarjeta programada a otro día (pide el motivo). Use las flechas para cambiar de semana y <b>Hoy</b> para volver a la actual.</p>
+<p>Muestra la semana de lunes a domingo con los trabajos programados por equipo y día, y abajo las barras de HH programadas contra la capacidad del taller por especialidad. Para programar, arrastre una tarjeta desde "Listos para programar" hasta el día (pide la fecha y, en HEMCO, la OT); para reprogramar, arrastre la tarjeta programada a otro día (pide el motivo). Use las flechas para cambiar de semana y <b>Hoy</b> para volver a la actual.</p>
 ${fig("calendario", "Calendario semanal.")}
 
 <h1>9. Cerrar un trabajo: ejecutar y validar</h1>
@@ -375,10 +380,76 @@ ${fig("validar-dialogo", "Validar: el cuadro avisa que el backlog quedará bloqu
 <p>Un backlog validado muestra la barra completa (5 de 5) y, para el capturador, solo el botón Imprimir formato. Si hay que corregir algo, pida al administrador que lo revierta a Ejecutado.</p>
 ${fig("validado-bloqueado", "Backlog del B1-27 validado: bloqueado para el capturador.")}
 
-<h1>10. Indicadores y reporte semanal</h1>
+<h1>10. Preventivos y paquetes de órdenes de trabajo</h1>
+<p>Un <b>preventivo</b> es un mantenimiento planificado del equipo (por ejemplo, "PM 500 h motor diésel"). En la app se programa a mano, aparece en el calendario junto a los correctivos y se cierra con los materiales que se usaron. Un preventivo no es un backlog:</p>
+<ul>
+  <li>no lleva prioridad, sistema ni horas hombre, y no suma a la carga del taller;</li>
+  <li>no entra en los indicadores de backlog (HH pendientes, vencidos, antigüedad);</li>
+  <li>tiene tres estados: <b>Programado</b>, <b>Ejecutado</b> y <b>Anulado</b>.</li>
+</ul>
+<div class="nota">La <b>pauta de mantenimiento</b> (lista de tareas) y el <b>listado de filtros</b> no se cargan en la app, porque cambian entre clientes y equipos. El planificador los imprime aparte y los entrega junto con la orden. La app Control de preventivos (horómetros) sigue igual y se actualiza a mano.</div>
+
+<h2>10.1 Programar un preventivo</h2>
+<p>En el menú <b>Preventivos</b> (o en el <b>Calendario</b>), pulse <b>Programar preventivo</b> y complete:</p>
+<ol>
+  <li><span class="paso">1</span><b>Equipo</b>: de la lista, agrupada por familia.</li>
+  <li><span class="paso">2</span><b>Actividad</b>: qué preventivo es. La app sugiere las actividades ya usadas en la unidad, para escribir siempre igual el mismo preventivo.</li>
+  <li><span class="paso">3</span><b>Fecha programada</b> y, si lo tiene, el <b>horómetro programado</b>.</li>
+  <li><span class="paso">4</span><b>N° OT</b>: en Explotec y las demás unidades sin SAP se deja vacío y la app asigna el número (OT-EXP-000002). En HEMCO se escribe la OT de SAP.</li>
+  <li><span class="paso">5</span><b>Observaciones</b>, si hay algo que el técnico deba saber.</li>
+</ol>
+${fig("preventivo-programar", "Programar el PM 500 h del motor diésel del B1-31 (PowerROC T50).")}
+<p>Al pulsar <b>Programar</b>, la app asigna el folio del preventivo (PM-EXP-000001) y el N° de OT, y lo deja en estado Programado. La lista de Preventivos se filtra por estado y se busca por equipo, actividad, folio u OT.</p>
+${fig("preventivos-lista", "Lista de preventivos programados, con las acciones de cada uno.")}
+<div class="ejemplo">El número de OT es un solo correlativo por unidad para preventivos y correctivos. Si el correctivo del B1-31 tomó OT-EXP-000001, el preventivo siguiente toma OT-EXP-000002.</div>
+
+<h2>10.2 El preventivo en el calendario</h2>
+<p>En el <b>Calendario</b> el preventivo sale en la celda de su equipo y día, con una tarjeta verde y la etiqueta <b>PM</b>. Un correctivo del mismo equipo programado ese día muestra "con PM": los dos trabajos se hacen en la misma parada.</p>
+<ul>
+  <li>Para <b>reprogramar</b>, arrastre la tarjeta a otro día (o use Reprogramar en la lista o en la ficha). Pide el motivo, mantiene la OT y cuenta la reprogramación.</li>
+  <li>Al pasar el mouse por una celda aparece <b>+ PM</b>: abre Programar preventivo con ese equipo y ese día ya puestos.</li>
+  <li><b>Anular</b> es para un preventivo que no se hará. Pide motivo.</li>
+</ul>
+${fig("calendario-preventivo", "Calendario con el preventivo (PM) y el correctivo del B1-31 el mismo día, y el botón Paquete de la celda.")}
+
+<h2>10.3 Paquete de órdenes de trabajo</h2>
+<p>Un <b>paquete</b> reúne todo lo programado para <b>un equipo en un día</b>: sus preventivos y sus correctivos. Es lo que se imprime para entregar a los técnicos antes de la parada. No hay que elegir las órdenes: entra todo lo que esté programado para ese equipo ese día. Si una orden se reprograma a otro día, sale sola del paquete.</p>
+<ol>
+  <li><span class="paso">1</span>En el Calendario, pulse <b>Paquete</b> en la celda del equipo y día. Se abre la lista de órdenes del paquete.</li>
+  <li><span class="paso">2</span>Revise que estén todas las órdenes. Si falta una, prográmela para ese día y vuelva a abrir el paquete.</li>
+  <li><span class="paso">3</span>Pulse <b>Imprimir paquete</b>. En la PC se guarda un PDF; en la web se abre el cuadro de impresión del navegador.</li>
+</ol>
+${fig("paquete-vista", "Paquete del B1-31: el preventivo y el correctivo programados para ese día.")}
+<p>Al imprimir por primera vez, la app le asigna al paquete su número (PQ-EXP-000001). Ese número queda fijo para ese equipo y ese día aunque se vuelva a imprimir. El PDF trae:</p>
+<table>
+  <tr><th>Hoja</th><th>Contenido</th></tr>
+  <tr><td>Carátula</td><td>N° de paquete, fecha, equipo, la lista de órdenes con su N° de OT, las especialidades y HH de los correctivos, los repuestos de los correctivos, el renglón "Pauta de mantenimiento y listado de filtros adjuntos" y las firmas de quien entrega y quien recibe.</td></tr>
+  <tr><td>Una hoja por preventivo</td><td>Orden de trabajo del preventivo: equipo, actividad, N° de OT, horómetro programado, casillas para la fecha, hora de inicio, hora de fin y horómetro al ejecutar, tabla de materiales utilizados para llenar a mano, observaciones del técnico y firmas.</td></tr>
+  <tr><td>El formato de cada correctivo</td><td>El mismo "Mantenimiento correctivo programado" de la ficha del backlog, con su hoja de imágenes.</td></tr>
+</table>
+${fig("paquete-caratula", "Carátula del paquete PQ-EXP-000001.", "alta")}
+${fig("paquete-ot-preventivo", "Orden de trabajo del preventivo dentro del paquete.", "alta")}
+<p>En el encabezado de cada día, <b>Paquetes (n)</b> imprime en un solo PDF los paquetes de todos los equipos de ese día. El menú <b>Paquetes de OT</b> lista los paquetes ya numerados, con cuántas órdenes tienen, cuántas están ejecutadas y cuándo se imprimieron; desde ahí se vuelven a imprimir.</p>
+${fig("paquetes-lista", "Lista de paquetes de órdenes de trabajo.")}
+<div class="nota">Adjunte al paquete impreso la pauta de mantenimiento y el listado de filtros del preventivo, y marque "Sí" en el renglón de la carátula.</div>
+
+<h2>10.4 Cerrar el preventivo</h2>
+<p>Cuando el técnico devuelve la orden, abra el preventivo (desde la lista, el calendario o el paquete) y pulse <b>Marcar ejecutado</b>:</p>
+<ol>
+  <li><span class="paso">1</span><b>Fecha de ejecución</b> (no puede ser futura), <b>horómetro al ejecutar</b> y <b>ejecutado por</b>.</li>
+  <li><span class="paso">2</span><b>Materiales utilizados</b>: una fila por filtro, aceite, grasa o repuesto, con número de parte (si lo tiene), descripción, cantidad y unidad. Pulse <b>Agregar</b> en cada fila; los ya agregados se corrigen escribiendo en la celda.</li>
+  <li><span class="paso">3</span><b>Comentario de cierre</b>, con las observaciones del técnico.</li>
+  <li><span class="paso">4</span>Pulse <b>Marcar ejecutado</b>.</li>
+</ol>
+${fig("preventivo-ejecutar", "Cierre del preventivo con los materiales utilizados.")}
+<p>La ficha del preventivo muestra los datos, los materiales y la bitácora (registro, reprogramaciones, ejecución). <b>Imprimir OT</b> genera la orden de ese preventivo sola. <b>Programar el siguiente</b> abre el cuadro con el mismo equipo y actividad para dejar programado el próximo.</p>
+${fig("preventivo-ficha", "Ficha del preventivo ejecutado.", "alta")}
+<div class="alerta">Una vez <b>Ejecutado</b>, el preventivo queda bloqueado para el capturador: no se cambian sus datos ni sus materiales. Si hay que corregirlo, el administrador lo vuelve a Programado. Registre también el preventivo en la app Control de preventivos, con su horómetro, como hasta ahora.</div>
+
+<h1>11. Indicadores y reporte semanal</h1>
 <p>La pantalla <b>Indicadores</b> muestra, para su unidad:</p>
 <ul>
-  <li>backlogs abiertos, <b>HH acumuladas pendientes</b>, semanas de backlog (cuando hay capacidad cargada), vencidos, HH ya programadas y cerrados dentro del plazo;</li>
+  <li>backlogs abiertos, <b>HH acumuladas pendientes</b>, semanas de backlog (cuando hay capacidad cargada), vencidos, HH ya programadas, cerrados dentro del plazo y preventivos de la semana (ejecutados sobre programados);</li>
   <li>HH acumuladas por especialidad;</li>
   <li>antigüedad de los abiertos (0 a 15, 16 a 30, 31 a 60 y más de 60 días);</li>
   <li>vencidos por prioridad;</li>
@@ -393,10 +464,12 @@ ${fig("validado-bloqueado", "Backlog del B1-27 validado: bloqueado para el captu
   <tr><td>Ejecutados y validados</td><td>Todos los ejecutados y validados, con fecha de ejecución, HH y N° OT.</td></tr>
   <tr><td>Rep. ejecutados y validados</td><td>Los números de parte usados en cada trabajo ejecutado o validado, con la actividad, la fecha de ejecución y la OT.</td></tr>
   <tr><td>Semanas de backlog</td><td>HH pendientes, HH por semana y semanas de backlog por especialidad.</td></tr>
+  <tr><td>Preventivos</td><td>Todos los preventivos: equipo, actividad, N° OT, estado, fecha programada y de ejecución, horómetros y quién lo ejecutó.</td></tr>
+  <tr><td>Materiales de preventivos</td><td>Los materiales utilizados en cada preventivo, con su actividad y la fecha de ejecución.</td></tr>
 </table>
 ${fig("indicadores", "Indicadores.")}
 
-<h1>11. Capacidad del taller</h1>
+<h1>12. Capacidad del taller</h1>
 <p>Indica cuántas HH por semana hay disponibles para backlog en cada especialidad de su unidad. Con ella se calculan las semanas de backlog y las barras del calendario.</p>
 <ol>
   <li><span class="paso">1</span>Pulse <b>Cambiar</b> en la especialidad.</li>
@@ -407,12 +480,12 @@ ${fig("indicadores", "Indicadores.")}
 ${fig("capacidad", "Calculadora de capacidad para Mecánico.")}
 <p>Cada cambio queda en el historial con su fecha; los indicadores de semanas anteriores no cambian.</p>
 
-<h1>12. Uso desde el celular</h1>
+<h1>13. Uso desde el celular</h1>
 <p>En el celular el menú pasa a una barra abajo: <b>Nuevo</b>, <b>Por equipo</b>, <b>Kanban</b> y <b>Más</b> (resto del menú, unidad, cambiar contraseña y cerrar sesión). El Kanban se recorre por etapas con las pestañas de arriba y se avanza con los botones dentro de cada tarjeta. En Fotos, el botón ofrece tomar la foto con la cámara.</p>
 ${movil([["movil-inicio", "Por equipo en el celular."], ["movil-nuevo", "Nuevo backlog en el celular."]])}
 ${movil([["movil-kanban", "Kanban en el celular."], ["movil-ficha", "Ficha en el celular."]])}
 
-<h1>13. Preguntas frecuentes y mensajes de la app</h1>
+<h1>14. Preguntas frecuentes y mensajes de la app</h1>
 <table>
   <tr><th>Situación o mensaje</th><th>Qué significa y qué hacer</th></tr>
   <tr><td>El botón Registrar backlog está gris</td><td>Falta un dato obligatorio. Lea el texto "Falta: ..." junto al botón.</td></tr>
@@ -424,7 +497,10 @@ ${movil([["movil-kanban", "Kanban en el celular."], ["movil-ficha", "Ficha en el
   <tr><td>No puedo cambiar los datos del backlog</td><td>Está Validado, Rechazado o Anulado. Pida al administrador que lo revierta si hace falta corregirlo.</td></tr>
   <tr><td>"Indique el motivo para volver a ..."</td><td>Todo paso atrás pide motivo. Escríbalo en el cuadro.</td></tr>
   <tr><td>"Faltan N repuesto(s) por recibir"</td><td>Para pasar a Listo para programar, marque como Recibido los repuestos en la pestaña Repuestos, o use Pasar a esperar repuestos.</td></tr>
-  <tr><td>"Para programar indique fecha programada y N° de OT"</td><td>Complete la fecha y el número de OT en el cuadro Programar.</td></tr>
+  <tr><td>"Para programar indique fecha programada y N° de OT"</td><td>Complete la fecha. En HEMCO, además, la OT de SAP.</td></tr>
+  <tr><td>"Para programar el preventivo indique la OT de SAP"</td><td>En HEMCO el preventivo necesita la OT de SAP. En las demás unidades la app asigna el número.</td></tr>
+  <tr><td>"El preventivo está Ejecutado: solo el administrador puede revertirlo"</td><td>Un preventivo ejecutado o anulado queda bloqueado para el capturador. Pida al administrador que lo vuelva a Programado.</td></tr>
+  <tr><td>"No hay órdenes programadas para ese equipo el ..."</td><td>El paquete se arma con lo programado para el equipo ese día. Programe primero el preventivo o el backlog en esa fecha.</td></tr>
   <tr><td>"La fecha programada no puede ser anterior a la fecha de detección"</td><td>Elija una fecha igual o posterior al día en que se reportó el backlog (campo Fecha de la pestaña Datos).</td></tr>
   <tr><td>"Con el backlog Programado los materiales no se editan"</td><td>Vuelva el backlog a Listo para programar (Quitar del calendario, con motivo), corrija los repuestos y prográmelo de nuevo.</td></tr>
   <tr><td>"El backlog está ...: solo el administrador puede revertirlo"</td><td>El backlog está cerrado (Validado, Rechazado o Anulado). Pida al administrador que lo revierta.</td></tr>
@@ -436,7 +512,7 @@ ${movil([["movil-kanban", "Kanban en el celular."], ["movil-ficha", "Ficha en el
   <tr><td>Registré un backlog dos veces</td><td>Borre el duplicado con el motivo "Duplicado de BL-..." (6.7) o anúlelo.</td></tr>
 </table>
 
-<h1>14. Resumen: qué puede y qué no puede hacer el capturador</h1>
+<h1>15. Resumen: qué puede y qué no puede hacer el capturador</h1>
 <table>
   <tr><th>Acción</th><th>Capturador</th><th>Administrador</th></tr>
   <tr><td>Registrar backlogs de sus unidades</td><td>Sí</td><td>Sí, en todas</td></tr>
@@ -451,6 +527,9 @@ ${movil([["movil-kanban", "Kanban en el celular."], ["movil-ficha", "Ficha en el
   <tr><td>Rechazar y anular (con motivo)</td><td>Sí</td><td>Sí</td></tr>
   <tr><td>Revertir un Validado; reabrir un Rechazado o Anulado</td><td>No</td><td>Sí</td></tr>
   <tr><td>Borrar un backlog con motivo</td><td>Sí, salvo Validado</td><td>Sí, y también restaurarlo</td></tr>
+  <tr><td>Programar, reprogramar, ejecutar y anular preventivos</td><td>Sí</td><td>Sí</td></tr>
+  <tr><td>Volver a Programado un preventivo Ejecutado o Anulado; cambiar sus materiales</td><td>No</td><td>Sí</td></tr>
+  <tr><td>Armar e imprimir paquetes de órdenes de trabajo</td><td>Sí</td><td>Sí</td></tr>
   <tr><td>Capacidad del taller</td><td>Sí, en su unidad</td><td>Sí, en todas</td></tr>
   <tr><td>Indicadores, reporte PDF, Excel, formato impreso</td><td>Sí</td><td>Sí</td></tr>
   <tr><td>Equipos, familias, sistemas, plazos, usuarios</td><td>No</td><td>Sí</td></tr>

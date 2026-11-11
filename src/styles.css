@@ -1085,4 +1085,10 @@ dialog.dialogo-preventivo { width: min(560px, 94vw); }
   .boton-pm-celda { opacity: 1; }
   .tabla-preventivos .celda-acciones { white-space: normal; }
 }
-.tarjeta-cal.pm .tc-datos span, .tarjeta-cal.pm .tc-folio { overflow-wrap: anywhere; }
+.tarjeta-cal .tc-datos span, .tarjeta-cal.pm .tc-folio { overflow-wrap: anywhere; }
+
+/* ===== Paquetes de órdenes (022) ===== */
+.boton-paquete { display: block; width: 100%; padding: 2px 4px; font-size: 11.5px; font-weight: 600; margin-bottom: 3px; }
+.boton-paquetes-dia { display: block; margin-top: 3px; padding: 1px 6px; font-size: 11px; font-weight: 600; }
+.tabla-ordenes-paquete td, .tabla-ordenes-paquete th { padding: 6px 8px; }
+.boton-paquetes-movil { padding: 2px 8px; font-size: 12px; }
