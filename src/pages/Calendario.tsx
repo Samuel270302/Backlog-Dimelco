@@ -9,6 +9,8 @@ import { fFecha, fNum, hoyISO, sumarDiasISO } from "../lib/fmt";
 import { usePreventivos } from "../lib/preventivos";
 import { useAccionesPreventivo } from "../components/preventivos/AccionesPreventivo";
 import { DialogoPaquete, useImprimirPaquetes, type ClavePaquete } from "../components/paquetes/Paquetes";
+import CalendarioMes from "../components/CalendarioMes";
+import { usePaquetes } from "../lib/paquete";
 import type { BacklogFila, Preventivo } from "../lib/types";
 
 // Programa semanal: backlogs y preventivos programados por equipo y día, panel de listos
@@ -16,6 +18,22 @@ import type { BacklogFila, Preventivo } from "../lib/types";
 // preventivos no llevan HH).
 const DIAS = ["Lun", "Mar", "Mié", "Jue", "Vie", "Sáb", "Dom"];
 const EN_CALENDARIO = ["Programado", "Ejecutado", "Validado"];
+const MESES = ["enero", "febrero", "marzo", "abril", "mayo", "junio", "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre"];
+const CLAVE_VISTA = "backlog.calendario.vista";
+type Vista = "semana" | "mes";
+
+function vistaGuardada(): Vista {
+  try {
+    return localStorage.getItem(CLAVE_VISTA) === "mes" ? "mes" : "semana";
+  } catch {
+    return "semana";
+  }
+}
+// Primer día del mes que está n meses después (o antes) del mes de la fecha dada.
+function sumarMes(iso: string, n: number): string {
+  const total = Number(iso.slice(0, 4)) * 12 + Number(iso.slice(5, 7)) - 1 + n;
+  return `${Math.floor(total / 12)}-${String((total % 12) + 1).padStart(2, "0")}-01`;
+}
 
 const ordenListos = (a: BacklogFila, b: BacklogFila) =>
   Number(b.tipo_pedido === "Urgente") - Number(a.tipo_pedido === "Urgente") ||
@@ -34,6 +52,21 @@ export default function Calendario() {
   const [lunes, setLunes] = useState(() => lunesDe(hoy));
   const dias = useMemo(() => Array.from({ length: 7 }, (_, i) => sumarDiasISO(lunes, i)), [lunes]);
   const domingo = dias[6];
+  // Vista semanal (detalle, arrastrar, carga del taller) o mensual (paquetes por día).
+  const [vista, setVistaEstado] = useState<Vista>(vistaGuardada);
+  const [mes, setMes] = useState(() => sumarMes(hoy, 0));
+  const { data: paquetesNumerados } = usePaquetes();
+  function setVista(v: Vista) {
+    setVistaEstado(v);
+    if (v === "mes") setMes(sumarMes(lunes, 0));
+    try {
+      localStorage.setItem(CLAVE_VISTA, v);
+    } catch {
+      // Sin almacenamiento: la vista no se recuerda.
+    }
+  }
+  const mover = (n: number) => (vista === "mes" ? setMes(sumarMes(mes, n)) : setLunes(sumarDiasISO(lunes, n * 7)));
+  const enHoy = vista === "mes" ? mes === sumarMes(hoy, 0) : lunes === lunesDe(hoy);
   const { data: backlogs, isLoading } = useBacklogs();
   const { data: especialidades } = useEspecialidades();
   const { data: capacidad } = useCapacidadVigente();
@@ -206,20 +239,63 @@ export default function Calendario() {
       <div className="barra-acciones">
         <h1 style={{ margin: 0 }}>Calendario</h1>
         <span className="semana-titulo">
-          Semana del {fFecha(lunes)} al {fFecha(domingo)}
+          {vista === "mes"
+            ? `${MESES[Number(mes.slice(5, 7)) - 1].replace(/^./, (c) => c.toUpperCase())} de ${mes.slice(0, 4)}`
+            : `Semana del ${fFecha(lunes)} al ${fFecha(domingo)}`}
         </span>
         <div className="espacio" />
+        <div className="alternar-vista" role="group" aria-label="Vista del calendario">
+          <button className={vista === "semana" ? "activa" : "boton-plano"} aria-pressed={vista === "semana"} onClick={() => setVista("semana")}>
+            Semana
+          </button>
+          <button className={vista === "mes" ? "activa" : "boton-plano"} aria-pressed={vista === "mes"} onClick={() => setVista("mes")}>
+            Mes
+          </button>
+        </div>
         {puedeCapturar && <button onClick={() => pm.programar({ fecha: hoy >= lunes && hoy <= domingo ? hoy : lunes })}>Programar preventivo</button>}
-        <button className="boton-plano" onClick={() => setLunes(sumarDiasISO(lunes, -7))} aria-label="Semana anterior">
+        <button className="boton-plano" onClick={() => mover(-1)} aria-label={vista === "mes" ? "Mes anterior" : "Semana anterior"}>
           ‹ Anterior
         </button>
-        <button className="boton-plano" onClick={() => setLunes(lunesDe(hoy))} disabled={lunes === lunesDe(hoy)}>
+        <button
+          className="boton-plano"
+          onClick={() => {
+            setLunes(lunesDe(hoy));
+            setMes(sumarMes(hoy, 0));
+          }}
+          disabled={enHoy}
+        >
           Hoy
         </button>
-        <button className="boton-plano" onClick={() => setLunes(sumarDiasISO(lunes, 7))} aria-label="Semana siguiente">
+        <button className="boton-plano" onClick={() => mover(1)} aria-label={vista === "mes" ? "Mes siguiente" : "Semana siguiente"}>
           Siguiente ›
         </button>
       </div>
+
+      {vista === "mes" && (
+        <>
+          <p className="nota" style={{ marginTop: 0 }}>
+            Cada botón es el paquete de un equipo en un día: ábralo para ver sus órdenes e imprimirlo. Para arrastrar, reprogramar y ver la
+            carga del taller, pase a la vista Semana (o use la flecha de cada fila).
+          </p>
+          <CalendarioMes
+            mes={mes}
+            backlogs={backlogs ?? []}
+            preventivos={preventivos ?? []}
+            paquetes={paquetesNumerados ?? []}
+            puedeCapturar={puedeCapturar}
+            ocupado={paquetes.ocupado}
+            onPaquete={setPaquete}
+            onPaquetesDia={(claves) => paquetes.imprimir(claves)}
+            onProgramarPm={(fecha) => pm.programar({ fecha })}
+            onVerSemana={(l) => {
+              setLunes(l);
+              setVista("semana");
+            }}
+          />
+        </>
+      )}
+      {vista === "semana" && (
+        <>
 
       <section className="carga-semana" aria-label="Carga de la semana">
         {carga.length === 0 && <p className="nota">Sin HH programadas ni capacidad cargada para esta semana.</p>}
@@ -453,6 +529,8 @@ export default function Calendario() {
           );
         })}
       </div>
+        </>
+      )}
       {isLoading && <p className="nota">Cargando…</p>}
       {cambio.dialogo}
       {pm.dialogo}

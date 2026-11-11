@@ -894,6 +894,31 @@ try {
   await adm.screenshot({ path: join(SALIDA, "paquetes.png") });
   ok("los paquetes del día salen en un solo PDF y la lista de paquetes muestra el avance y las impresiones");
 
+  // Vista mensual del calendario: un botón por equipo y día abre su paquete.
+  await adm.goto(base + "#/calendario");
+  await adm.getByRole("button", { name: "Mes", exact: true }).click();
+  const MESES_ES = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"];
+  const lunesSemana = lunesIso(enDias(0));
+  await adm.locator(".semana-titulo", { hasText: `${MESES_ES[Number(lunesSemana.slice(5, 7)) - 1]} de ${lunesSemana.slice(0, 4)}` }).waitFor();
+  if (await adm.locator(".grilla-semana").count()) throw new Error("La vista Mes sigue mostrando la grilla semanal");
+  const botonMes = adm.locator(".mes").getByRole("button", { name: `Paquete PS090 ${ddmm(diaPm)}` });
+  await botonMes.locator(".paquete-mes-folio", { hasText: "PQ-VTN-000001" }).waitFor();
+  if (!(await botonMes.textContent()).includes("1 PM + 1 correctivo")) throw new Error(`Botón del mes: ${await botonMes.textContent()}`);
+  await adm.screenshot({ path: join(SALIDA, "calendario-mes.png"), fullPage: true });
+  await botonMes.click();
+  const dMes = adm.getByRole("dialog");
+  await dMes.getByText("PQ-VTN-000001, impreso 2").waitFor();
+  await dMes.getByRole("button", { name: "Cerrar" }).click();
+  await adm.locator(".mes").getByRole("button", { name: `Programar preventivo el ${ddmm(diaPm)}` }).click({ force: true });
+  if ((await adm.getByRole("dialog").getByLabel("Fecha programada del preventivo").inputValue()) !== diaPm) throw new Error("+ PM del mes no trae el día");
+  await adm.getByRole("dialog").getByRole("button", { name: "Cancelar" }).click();
+  await adm.reload();
+  await adm.locator(".mes").waitFor();
+  await adm.getByRole("button", { name: `Ver semana del ${ddmm(lunesIso(diaPm))}` }).click();
+  await adm.locator(".grilla-semana").getByLabel("PM-VTN-000001 PS090").waitFor();
+  await adm.locator(".semana-titulo", { hasText: `Semana del ${ddmm(lunesIso(diaPm))}` }).waitFor();
+  ok("el calendario alterna entre Semana y Mes; en el mes cada equipo y día abre su paquete y la vista se recuerda");
+
   // Excel de Indicadores con las hojas de preventivos.
   await adm.goto(base + "#/indicadores");
   await adm.getByRole("heading", { name: "Indicadores" }).waitFor();

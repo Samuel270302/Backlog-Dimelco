@@ -465,6 +465,12 @@ try {
   await p.locator(".tabla-paquetes tbody tr").first().waitFor();
   await p.locator(".aviso").first().waitFor({ state: "detached", timeout: 15000 }).catch(() => {});
   await foto(p, "paquetes-lista");
+  await p.goto(base + "#/calendario");
+  await p.getByRole("button", { name: "Mes", exact: true }).click();
+  await p.locator(".mes .paquete-mes").first().waitFor();
+  await marcar(p, p.locator(".alternar-vista"), p.locator(".mes .paquete-mes.con-pm").first());
+  await foto(p, "mes-calendario");
+  await p.getByRole("button", { name: "Semana", exact: true }).click();
 
   await p.goto(base + "#/preventivos");
   await p.getByRole("link", { name: "PM-EXP-000001" }).click();

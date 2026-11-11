@@ -77,7 +77,7 @@ const html = `<!doctype html><html lang="es"><head><meta charset="utf-8"><title>
   <div class="titulo">Control de Backlog</div>
   <div class="sub">Manual del capturador</div>
   <div class="sub" style="font-size:12pt">Registro y seguimiento de backlogs de mantenimiento</div>
-  <div class="datos">Dimelco · versión de la app 0.6.1 · noviembre de 2026</div>
+  <div class="datos">Dimelco · versión de la app 0.6.2 · noviembre de 2026</div>
 </section>
 
 <h1>Contenido</h1>
@@ -356,7 +356,7 @@ ${fig("kanban-tarjeta", "Tarjeta desplegada.")}
 ${fig("por-equipo-desplegado", "Equipo TD22008LC desplegado con su backlog.")}
 
 <h2>8.3 Calendario</h2>
-<p>Muestra la semana de lunes a domingo con los trabajos programados por equipo y día, y abajo las barras de HH programadas contra la capacidad del taller por especialidad. Para programar, arrastre una tarjeta desde "Listos para programar" hasta el día (pide la fecha y, en HEMCO, la OT); para reprogramar, arrastre la tarjeta programada a otro día (pide el motivo). Use las flechas para cambiar de semana y <b>Hoy</b> para volver a la actual.</p>
+<p>Muestra la semana de lunes a domingo con los trabajos programados por equipo y día, y abajo las barras de HH programadas contra la capacidad del taller por especialidad. Para programar, arrastre una tarjeta desde "Listos para programar" hasta el día (pide la fecha y, en HEMCO, la OT); para reprogramar, arrastre la tarjeta programada a otro día (pide el motivo). Con los botones <b>Semana</b> y <b>Mes</b> se alterna entre esta vista y el mes completo (10.3). Use las flechas para cambiar de semana y <b>Hoy</b> para volver a la actual.</p>
 ${fig("calendario", "Calendario semanal.")}
 
 <h1>9. Cerrar un trabajo: ejecutar y validar</h1>
@@ -431,6 +431,9 @@ ${fig("paquete-caratula", "Carátula del paquete PQ-EXP-000001.", "alta")}
 ${fig("paquete-ot-preventivo", "Orden de trabajo del preventivo dentro del paquete.", "alta")}
 <p>En el encabezado de cada día, <b>Paquetes (n)</b> imprime en un solo PDF los paquetes de todos los equipos de ese día. El menú <b>Paquetes de OT</b> lista los paquetes ya numerados, con cuántas órdenes tienen, cuántas están ejecutadas y cuándo se imprimieron; desde ahí se vuelven a imprimir.</p>
 ${fig("paquetes-lista", "Lista de paquetes de órdenes de trabajo.")}
+<h3>Vista mensual</h3>
+<p>Arriba del Calendario, los botones <b>Semana</b> y <b>Mes</b> cambian la vista; la app recuerda la última que usó. La vista <b>Mes</b> muestra el mes completo y, en cada día, un botón por equipo con órdenes programadas: el código del equipo, cuántos preventivos y correctivos tiene y el número de paquete (o "Sin imprimir" si todavía no se imprimió). Pulse el botón para abrir el paquete e imprimirlo. <b>Todos (n)</b> imprime los paquetes del día en un solo PDF, <b>+ PM</b> programa un preventivo ese día y la flecha a la izquierda de cada fila abre esa semana en detalle. Arrastrar para programar o reprogramar y las barras de carga del taller están en la vista Semana.</p>
+${fig("mes-calendario", "Vista mensual: un botón por equipo y día abre su paquete.")}
 <div class="nota">Adjunte al paquete impreso la pauta de mantenimiento y el listado de filtros del preventivo, y marque "Sí" en el renglón de la carátula.</div>
 
 <h2>10.4 Cerrar el preventivo</h2>
