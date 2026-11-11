@@ -84,11 +84,11 @@ export function cuerpoCaratula(d: DatosPaquete, logo: string, logoUnidad = "", m
   const filasRep = repuestos.length
     ? repuestos
         .map(
-          ({ r, folio }) => `<tr><td>${esc(folio)}</td><td class="n">${r.item}</td><td>${esc(r.numero_parte)}</td>${sap ? `<td>${esc(r.cod_sap)}</td>` : ""}
+          ({ r, folio }) => `<tr><td>${esc(folio)}</td><td class="n">${r.item}</td><td>${esc(r.numero_parte)}</td><td>${esc(r.cod_sap)}</td>
       <td>${esc(r.descripcion)}</td><td class="n">${fNum(r.cantidad, 2)}</td><td>${esc(r.estado)}</td></tr>`
         )
         .join("")
-    : `<tr><td colspan="${sap ? 7 : 6}" class="gris">Los correctivos del paquete no tienen repuestos cargados.</td></tr>`;
+    : `<tr><td colspan="7" class="gris">Los correctivos del paquete no tienen repuestos cargados.</td></tr>`;
 
   return `<table class="enc"><tr>
   ${celdaLogos(logo, logoUnidad, d.unidad, marca)}
@@ -114,7 +114,7 @@ ${
   d.correctivos.length
     ? `<div class="seccion">Repuestos de los correctivos</div>
 <table><thead><tr>
-  <th>Folio</th><th class="n" style="width:34px">Ítem</th><th>Número de parte</th>${sap ? "<th>Código SAP</th>" : ""}<th>Descripción</th><th class="n">Cant/Req</th><th>Estado</th>
+  <th>Folio</th><th class="n" style="width:34px">Ítem</th><th>Número de parte</th><th>${sap ? "Código SAP" : "Cód. interno"}</th><th>Descripción</th><th class="n">Cant/Req</th><th>Estado</th>
 </tr></thead><tbody>${filasRep}</tbody></table>`
     : ""
 }

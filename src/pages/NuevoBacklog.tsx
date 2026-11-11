@@ -364,7 +364,7 @@ export default function NuevoBacklog() {
                 <tr>
                   <th className="num">Ítem</th>
                   <th>Número de parte</th>
-                  {sap && <th>Código SAP</th>}
+                  <th>{sap ? "Código SAP" : "Cód. interno"}</th>
                   <th className="num">Cant/Req</th>
                   <th className="num">Stock</th>
                   <th>Descripción del repuesto</th>
@@ -378,7 +378,7 @@ export default function NuevoBacklog() {
                   <tr key={i}>
                     <td className="num">{i + 1}</td>
                     <td><input value={r.numero_parte} onChange={(e) => cambiarRepuesto(i, "numero_parte", e.target.value)} aria-label={`Número de parte ítem ${i + 1}`} /></td>
-                    {sap && <td><input value={r.cod_sap} onChange={(e) => cambiarRepuesto(i, "cod_sap", e.target.value)} aria-label={`Código ítem ${i + 1}`} /></td>}
+                    <td><input value={r.cod_sap} onChange={(e) => cambiarRepuesto(i, "cod_sap", e.target.value)} aria-label={`Código ítem ${i + 1}`} /></td>
                     <td className="num"><input type="number" min={0.01} step="any" value={r.cantidad} onChange={(e) => cambiarRepuesto(i, "cantidad", e.target.value)} aria-label={`Cantidad ítem ${i + 1}`} /></td>
                     <td className="num"><input type="number" min={0} step="any" value={r.stock} onChange={(e) => cambiarRepuesto(i, "stock", e.target.value)} aria-label={`Stock ítem ${i + 1}`} /></td>
                     <td><input value={r.descripcion} onChange={(e) => cambiarRepuesto(i, "descripcion", e.target.value)} aria-label={`Descripción ítem ${i + 1}`} /></td>

@@ -103,7 +103,8 @@ function DialogoAccion({
   }, []);
   const { data: materiales } = useMaterialesPreventivo(accion === "ejecutar" ? p.id : "");
   const [fechaProg, setFechaProg] = useState(fechaInicial ?? "");
-  const [fechaEjec, setFechaEjec] = useState(p.fecha_programada <= hoyISO() ? p.fecha_programada : hoyISO());
+  // Propone la fecha programada; se admite cualquier fecha, anterior o posterior a hoy (023).
+  const [fechaEjec, setFechaEjec] = useState(p.fecha_programada);
   const [horometro, setHorometro] = useState(p.horometro_ejecucion === null ? "" : String(p.horometro_ejecucion));
   const [ejecutadoPor, setEjecutadoPor] = useState(p.ejecutado_por ?? "");
   const [comentario, setComentario] = useState(p.comentario_cierre ?? "");
@@ -158,7 +159,8 @@ function DialogoAccion({
           <div className="fila-campos">
             <label className="campo">
               <span>Fecha de ejecución</span>
-              <input type="date" max={hoyISO()} value={fechaEjec} onChange={(e) => setFechaEjec(e.target.value)} aria-label="Fecha de ejecución del preventivo" />
+              <input type="date" value={fechaEjec} onChange={(e) => setFechaEjec(e.target.value)} aria-label="Fecha de ejecución del preventivo" />
+              {fechaEjec > hoyISO() && <span className="nota">Fecha posterior a hoy: queda registrada como ejecución futura.</span>}
             </label>
             <label className="campo">
               <span>Horómetro al ejecutar (opcional)</span>

@@ -154,7 +154,7 @@ export default function TablaRepuestos({
             <tr>
               <th className="num">Ítem</th>
               <th>Número de parte</th>
-              {sap && <th>Código SAP</th>}
+              <th>{sap ? "Código SAP" : "Cód. interno"}</th>
               <th className="num">Cant/Req</th>
               <th className="num">Stock</th>
               <th>Descripción del repuesto</th>
@@ -173,7 +173,7 @@ export default function TablaRepuestos({
               <tr key={f.id} className={f.estado === "Recibido" ? "fila-recibida" : undefined}>
                 <td className="num">{f.item}</td>
                 <td>{textoEditable(f, "numero_parte", "Número de parte")}</td>
-                {sap && <td>{textoEditable(f, "cod_sap", "Código")}</td>}
+                <td>{textoEditable(f, "cod_sap", "Código")}</td>
                 <td className="num">{numeroEditable(f, "cantidad", "Cantidad")}</td>
                 <td className="num">{numeroEditable(f, "stock", "Stock")}</td>
                 <td>{textoEditable(f, "descripcion", "Descripción")}</td>
@@ -233,7 +233,7 @@ export default function TablaRepuestos({
               <tr className="fila-nueva">
                 <td className="num">{(ordenadas.at(-1)?.item ?? 0) + 1}</td>
                 <td><input value={nuevo.numero_parte} onChange={n("numero_parte")} placeholder="N° de parte" aria-label="Número de parte nuevo" /></td>
-                {sap && <td><input value={nuevo.cod_sap} onChange={n("cod_sap")} placeholder="Código" aria-label="Código nuevo" /></td>}
+                <td><input value={nuevo.cod_sap} onChange={n("cod_sap")} placeholder="Código" aria-label="Código nuevo" /></td>
                 <td className="num"><input type="number" min={0.01} step="any" value={nuevo.cantidad} onChange={n("cantidad")} aria-label="Cantidad nueva" /></td>
                 <td className="num"><input type="number" min={0} step="any" value={nuevo.stock} onChange={n("stock")} aria-label="Stock nuevo" /></td>
                 <td><input value={nuevo.descripcion} onChange={n("descripcion")} placeholder="Descripción" aria-label="Descripción nueva" /></td>

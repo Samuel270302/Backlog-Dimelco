@@ -17,11 +17,11 @@ export function cuerpoOtPreventivo(
   const sap = p.usa_sap;
   const ordenados = [...materiales].sort((a, b) => a.item - b.item);
   const filas = ordenados.map(
-    (m) => `<tr><td class="n">${m.item}</td><td>${esc(m.numero_parte)}</td>${sap ? `<td>${esc(m.cod_sap)}</td>` : ""}
+    (m) => `<tr><td class="n">${m.item}</td><td>${esc(m.numero_parte)}</td><td>${esc(m.cod_sap)}</td>
       <td>${esc(m.descripcion)}</td><td class="n">${fNum(m.cantidad, 2)}</td><td>${esc(m.um)}</td><td>${esc(m.observaciones)}</td></tr>`
   );
   for (let i = ordenados.length; i < FILAS_MINIMAS_MATERIALES; i++) {
-    filas.push(`<tr class="vacia"><td class="n">${i + 1}</td>${"<td></td>".repeat(sap ? 6 : 5)}</tr>`);
+    filas.push(`<tr class="vacia"><td class="n">${i + 1}</td>${"<td></td>".repeat(6)}</tr>`);
   }
   const ejecutado = p.estado === "Ejecutado";
   return `<table class="enc"><tr>
@@ -57,7 +57,7 @@ export function cuerpoOtPreventivo(
 
 <div class="seccion">Materiales utilizados</div>
 <table><thead><tr>
-  <th class="n" style="width:34px">Ítem</th><th>Número de parte</th>${sap ? "<th>Código SAP</th>" : ""}<th>Descripción</th>
+  <th class="n" style="width:34px">Ítem</th><th>Número de parte</th><th>${sap ? "Código SAP" : "Cód. interno"}</th><th>Descripción</th>
   <th class="n">Cantidad</th><th>Unidad</th><th>Observaciones</th>
 </tr></thead><tbody>${filas.join("")}</tbody></table>
 

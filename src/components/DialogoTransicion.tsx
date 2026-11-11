@@ -51,6 +51,9 @@ export default function DialogoTransicion({
   // Fuera de SAP la OT es opcional: si queda vacía, la base asigna el número (021).
   if (pide("ot_sap") && usaSap && !ot.trim()) faltantes.push("OT SAP");
   if (pide("fecha_ejecucion") && !fechaEjec) faltantes.push("fecha de ejecución");
+  // La ejecución puede ser anterior o posterior a hoy, pero no anterior a la detección (023).
+  if (pide("fecha_ejecucion") && fechaEjec && fechaMinima && fechaEjec < fechaMinima)
+    faltantes.push(`fecha de ejecución desde el ${fFecha(fechaMinima)} (detección)`);
   if (pide("motivo") && motivo.trim().length < 3) faltantes.push("motivo");
 
   function aceptar() {
@@ -122,7 +125,8 @@ export default function DialogoTransicion({
       {pide("fecha_ejecucion") && (
         <label className="campo">
           <span>Fecha de ejecución</span>
-          <input type="date" max={hoyISO()} value={fechaEjec} onChange={(e) => setFechaEjec(e.target.value)} />
+          <input type="date" min={fechaMinima} value={fechaEjec} onChange={(e) => setFechaEjec(e.target.value)} />
+          {fechaEjec > hoyISO() && <span className="nota">Fecha posterior a hoy: queda registrada como ejecución futura.</span>}
         </label>
       )}
       {pide("motivo") && (

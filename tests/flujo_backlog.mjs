@@ -569,9 +569,10 @@ try {
   await vtn.getByRole("button", { name: "Agregar repuesto" }).click();
   await vtn.getByLabel("Número de parte ítem 1").waitFor();
   if (await vtn.getByLabel("Aviso SAP (si existe)").count()) throw new Error("Veta Nueva ve Aviso SAP");
-  if (await vtn.getByLabel("Código ítem 1").count()) throw new Error("Veta Nueva ve Código SAP del repuesto");
+  await vtn.getByLabel("Código ítem 1").waitFor();
+  await vtn.getByRole("columnheader", { name: "Cód. interno" }).waitFor();
   if (await vtn.getByRole("columnheader", { name: "Código SAP" }).count()) throw new Error("Veta Nueva ve la columna Código SAP");
-  ok("Veta Nueva registra sin Aviso SAP ni Código SAP");
+  ok("Veta Nueva registra sin Aviso SAP; el código del repuesto se llama Cód. interno");
 
   // Borrar: el capturador borra un backlog con motivo; el admin lo ve en Borrados y lo restaura.
   await cap.goto(base + "#/backlog/30000000-0000-0000-0000-000000000001");
@@ -784,7 +785,8 @@ try {
   await material("1R-0739", "Filtro de aceite de motor", "2", "un", 1);
   await material("", "Aceite 15W40", "20", "L", 2);
   if (await dEj.getByRole("columnheader", { name: "Código SAP" }).count()) throw new Error("Veta Nueva ve Código SAP en los materiales");
-  const fechaEj = diaPm <= enDias(0) ? diaPm : enDias(0);
+  await dEj.getByRole("columnheader", { name: "Cód. interno" }).waitFor();
+  const fechaEj = diaPm; // se propone la fecha programada, aunque sea posterior a hoy (023)
   if ((await dEj.getByLabel("Fecha de ejecución del preventivo").inputValue()) !== fechaEj) throw new Error("La fecha de ejecución propuesta no es la esperada");
   await dEj.getByLabel("Horómetro al ejecutar").fill("1262");
   await dEj.getByLabel("Ejecutado por").fill("Mecánico turno A");
@@ -808,7 +810,7 @@ try {
   await vOt.waitForFunction(() => document.title && !document.title.startsWith("Generando"));
   const htmlOt = await vOt.content();
   for (const t of ["MANTENIMIENTO PREVENTIVO", "OT-VTN-000001", "PM-VTN-000001", "PM 250 h motor diésel", "1R-0739", "Aceite 15W40",
-                   "Pauta de mantenimiento y listado de filtros adjuntos", "Mecánico turno A</div><div class=\"linea\">Ejecutado por"])
+                   "Pauta de mantenimiento y listado de filtros adjuntos", "Mecánico turno A</div><div class=\"linea\">Ejecutado por", "<th>Cód. interno</th>"])
     if (!htmlOt.includes(t)) throw new Error(`La OT del preventivo no tiene «${t}»`);
   if (htmlOt.includes("SAP")) throw new Error("La OT de Veta Nueva menciona SAP");
   if (!htmlOt.includes("data:image/png")) throw new Error("La OT no lleva el logo incrustado");
@@ -1026,6 +1028,28 @@ try {
   await vPaqAdm.close();
   await sara.context().close();
   ok("el paquete de B1-20 sale solo con Explotec si lo imprime un usuario @explotec.com y con los dos logos si lo imprime el admin");
+
+  // 10. Ejecución con fecha futura (023): el BL-VTN-000001 se marca ejecutado dentro de 5 días.
+  const blFut = "30000000-0000-0000-0000-000000000005";
+  const espFut = (await (await pedirComo("admin", "especialidades?select=id&nombre=eq.Mecánico")).json())[0].id;
+  const rHh = await pedirComo("capVtn", "backlog_hh", { method: "POST", body: JSON.stringify({ backlog_id: blFut, especialidad_id: espFut, tipo: "real", personas: 1, horas: 3 }) });
+  if (!rHh.ok) throw new Error(`HH reales del BL-VTN-000001: ${rHh.status} ${await rHh.text()}`);
+  const fut = await abrir("capVtn");
+  await fut.goto(base + `#/backlog/${blFut}`);
+  await esperarEstado(fut, "Programado");
+  await fut.locator(".ficha-acciones").getByRole("button", { name: "Marcar ejecutado", exact: true }).click();
+  const dFut = fut.getByRole("dialog");
+  const campoFut = dFut.getByLabel("Fecha de ejecución");
+  if (await campoFut.getAttribute("max")) throw new Error("La fecha de ejecución sigue con tope en hoy");
+  await campoFut.fill(enDias(5));
+  await dFut.locator(".nota", { hasText: "ejecución futura" }).waitFor();
+  await fut.screenshot({ path: join(SALIDA, "ejecutar-fecha-futura.png") });
+  await dFut.getByRole("button", { name: "Marcar ejecutado", exact: true }).click();
+  await esperarEstado(fut, "Ejecutado");
+  const fEj = (await (await pedirComo("admin", `backlogs?select=fecha_ejecucion&id=eq.${blFut}`)).json())[0].fecha_ejecucion;
+  if (fEj !== enDias(5)) throw new Error(`Fecha de ejecución ${fEj}, esperada ${enDias(5)}`);
+  await fut.context().close();
+  ok("un backlog programado se marca ejecutado con una fecha posterior a hoy");
 
   // 6. Vista de celular.
   const movil = await abrir("cap", 390, 844);

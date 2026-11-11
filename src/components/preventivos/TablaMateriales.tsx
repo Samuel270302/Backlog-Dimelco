@@ -95,7 +95,7 @@ export default function TablaMateriales({
             <tr>
               <th className="num">Ítem</th>
               <th>Número de parte</th>
-              {sap && <th>Código SAP</th>}
+              <th>{sap ? "Código SAP" : "Cód. interno"}</th>
               <th>Descripción</th>
               <th className="num">Cantidad</th>
               <th>Unidad</th>
@@ -108,7 +108,7 @@ export default function TablaMateriales({
               <tr key={f.id}>
                 <td className="num">{f.item}</td>
                 <td>{texto(f, "numero_parte", "Número de parte")}</td>
-                {sap && <td>{texto(f, "cod_sap", "Código")}</td>}
+                <td>{texto(f, "cod_sap", "Código")}</td>
                 <td>{texto(f, "descripcion", "Descripción")}</td>
                 <td className="num">
                   {editable ? (
@@ -149,7 +149,7 @@ export default function TablaMateriales({
               <tr className="fila-nueva">
                 <td className="num">{(ordenadas.at(-1)?.item ?? 0) + 1}</td>
                 <td><input value={nuevo.numero_parte} onChange={n("numero_parte")} placeholder="N° de parte" aria-label="Número de parte del material nuevo" /></td>
-                {sap && <td><input value={nuevo.cod_sap} onChange={n("cod_sap")} placeholder="Código" aria-label="Código del material nuevo" /></td>}
+                <td><input value={nuevo.cod_sap} onChange={n("cod_sap")} placeholder="Código" aria-label="Código del material nuevo" /></td>
                 <td><input value={nuevo.descripcion} onChange={n("descripcion")} placeholder="Filtro, aceite, grasa…" aria-label="Descripción del material nuevo" /></td>
                 <td className="num"><input type="number" min={0.01} step="any" value={nuevo.cantidad} onChange={n("cantidad")} aria-label="Cantidad del material nuevo" /></td>
                 <td><input value={nuevo.um} onChange={n("um")} placeholder="un, L, kg" aria-label="Unidad del material nuevo" /></td>

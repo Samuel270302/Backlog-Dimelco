@@ -133,12 +133,12 @@ export function cuerpoFormato(
   const repuestos = [...d.repuestos].sort((a, b2) => a.item - b2.item);
   const filasRep = repuestos.map(
     (r) => `<tr>
-      <td class="n">${r.item}</td><td>${esc(r.numero_parte)}</td>${sap ? `<td>${esc(r.cod_sap)}</td>` : ""}
+      <td class="n">${r.item}</td><td>${esc(r.numero_parte)}</td><td>${esc(r.cod_sap)}</td>
       <td class="n">${fNum(r.cantidad, 2)}</td><td class="n">${fNum(r.stock, 2)}</td>
       <td>${esc(r.descripcion)}</td><td>${esc(r.componente)}</td><td>${esc(r.observaciones)}</td></tr>`
   );
   for (let i = repuestos.length; i < FILAS_MINIMAS_REPUESTOS; i++) {
-    filasRep.push(`<tr class="vacia"><td class="n">${i + 1}</td>${"<td></td>".repeat(sap ? 7 : 6)}</tr>`);
+    filasRep.push(`<tr class="vacia"><td class="n">${i + 1}</td>${"<td></td>".repeat(7)}</tr>`);
   }
 
   const estimadas = d.hh.filter((h) => h.tipo === "estimada");
@@ -177,7 +177,7 @@ export function cuerpoFormato(
 
 <div class="seccion">Repuestos</div>
 <table><thead><tr>
-  <th class="n" style="width:34px">Ítem</th><th>Número de parte</th>${sap ? "<th>Código SAP</th>" : ""}<th class="n">Cant/Req</th><th class="n">Stock</th>
+  <th class="n" style="width:34px">Ítem</th><th>Número de parte</th><th>${sap ? "Código SAP" : "Cód. interno"}</th><th class="n">Cant/Req</th><th class="n">Stock</th>
   <th>Descripción del repuesto</th><th>Componente/Sistema</th><th>Observaciones</th>
 </tr></thead><tbody>${filasRep.join("")}</tbody></table>
 
