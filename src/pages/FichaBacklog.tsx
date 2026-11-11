@@ -24,7 +24,7 @@ type Pestania = "datos" | "hh" | "repuestos" | "fotos" | "bitacora";
 
 export default function FichaBacklog() {
   const { id = "" } = useParams();
-  const { esAdmin, puedeCapturar } = useAuth();
+  const { esAdmin, puedeCapturar, perfil } = useAuth();
   const { avisar } = useAvisos();
   const permitidas = useTransicionesPermitidas();
   const cambio = useCambioEstado();
@@ -80,6 +80,7 @@ export default function FichaBacklog() {
         eventos: eventos ?? [],
         perfiles: perfiles ?? [],
         unidad: unidades?.find((u) => u.id === b.unidad_id)?.nombre ?? "",
+        correoImprime: perfil?.correo,
       });
       if (ruta) avisar(`Formato guardado en ${ruta}`);
     } catch (e) {

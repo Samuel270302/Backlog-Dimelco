@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { useQueryClient } from "@tanstack/react-query";
+import { useAuth } from "../../auth";
 import { useBacklogs, useEspecialidades, usePerfiles } from "../../lib/queries";
 import { useUnidades } from "../../lib/unidad";
 import { usePreventivos } from "../../lib/preventivos";
@@ -21,6 +22,7 @@ export function useImprimirPaquetes() {
   const { data: preventivos } = usePreventivos();
   const { data: especialidades } = useEspecialidades();
   const { data: perfiles } = usePerfiles();
+  const { perfil } = useAuth();
   const { data: unidades } = useUnidades();
   const [ocupado, setOcupado] = useState(false);
 
@@ -33,6 +35,7 @@ export function useImprimirPaquetes() {
         especialidades: especialidades ?? [],
         perfiles: perfiles ?? [],
         nombreUnidad: (id) => unidades?.find((u) => u.id === id)?.nombre ?? "",
+        correoImprime: perfil?.correo,
       });
       avisar(ruta ? `${folios.join(", ")} guardado en ${ruta}` : `${folios.join(", ")} listo para imprimir`);
       qc.invalidateQueries();

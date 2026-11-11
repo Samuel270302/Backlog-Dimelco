@@ -22,7 +22,7 @@ import type { Preventivo } from "../lib/types";
 
 export default function FichaPreventivo() {
   const { id = "" } = useParams();
-  const { esAdmin, puedeCapturar } = useAuth();
+  const { esAdmin, puedeCapturar, perfil } = useAuth();
   const { avisar } = useAvisos();
   const qc = useQueryClient();
   const { data: p, isLoading } = usePreventivo(id);
@@ -62,7 +62,8 @@ export default function FichaPreventivo() {
     if (!p) return;
     setImprimiendo(true);
     try {
-      const ruta = await imprimirOtPreventivo(p, materiales ?? []);
+      const creador = perfiles?.find((u) => u.user_id === p.creado_por)?.correo;
+      const ruta = await imprimirOtPreventivo(p, materiales ?? [], [creador, perfil?.correo]);
       if (ruta) avisar(`Orden guardada en ${ruta}`);
     } catch (e) {
       avisar(`No se pudo generar la orden: ${(e as Error).message}`, "error");

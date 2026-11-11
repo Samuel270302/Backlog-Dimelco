@@ -14,8 +14,20 @@ const FILAS_MINIMAS_REPUESTOS = 8;
 // Logo que va a la par del de Dimelco, por nombre de unidad.
 const LOGOS_UNIDAD: Record<string, string> = { Explotec: logoExplotec };
 
-export const celdaLogos = (logo: string, logoUnidad: string, unidad: string) =>
-  `<td class="logo${logoUnidad ? " doble" : ""}">${logo ? `<img src="${logo}" alt="Dimelco">` : "Dimelco"}${
+// Usuarios con correo de estos dominios imprimen solo con el logo de su empresa, sin
+// Dimelco (pedido del 11/11/2026 para @explotec.com).
+const MARCAS_DOMINIO: Record<string, { logo: string; nombre: string }> = {
+  "explotec.com": { logo: logoExplotec, nombre: "Explotec" },
+};
+const MARCA_BASE = "Dimelco";
+
+function marcaDeCorreo(correo: string | null | undefined) {
+  const dominio = (correo ?? "").trim().toLowerCase().split("@")[1];
+  return dominio ? MARCAS_DOMINIO[dominio] : undefined;
+}
+
+export const celdaLogos = (logo: string, logoUnidad: string, unidad: string, marca = MARCA_BASE) =>
+  `<td class="logo${logoUnidad ? " doble" : ""}">${logo ? `<img src="${logo}" alt="${esc(marca)}">` : esc(marca)}${
     logoUnidad ? `<img src="${logoUnidad}" alt="${esc(unidad)}">` : ""
   }</td>`;
 
@@ -50,6 +62,8 @@ export interface DatosFormato {
   perfiles: Perfil[];
   unidad: string;
   fotos?: FotoConUrl[];
+  // Correo de quien imprime: si es de un dominio de MARCAS_DOMINIO, el impreso sale solo con su logo.
+  correoImprime?: string | null;
 }
 
 // Estilos comunes a todo lo que se imprime en A4 vertical: formato del backlog, OT de
@@ -104,11 +118,17 @@ ${ESTILOS}</style></head><body>${cuerpos
 }
 
 // Cuerpo del formato de un backlog. imagenes: id de foto -> data URL ya incrustable.
-export function cuerpoFormato(d: DatosFormato, logo: string, imagenes: Map<string, string> = new Map(), logoUnidad = ""): string {
+export function cuerpoFormato(
+  d: DatosFormato,
+  logo: string,
+  imagenes: Map<string, string> = new Map(),
+  logoUnidad = "",
+  marca = MARCA_BASE
+): string {
   const { b } = d;
   const nombre = (id: string | null) => d.perfiles.find((p) => p.user_id === id)?.nombre ?? "";
   const sap = b.usa_sap;
-  const marca = (si: boolean) => (si ? "&#9746;" : "&#9744;");
+  const casilla = (si: boolean) => (si ? "&#9746;" : "&#9744;");
 
   const repuestos = [...d.repuestos].sort((a, b2) => a.item - b2.item);
   const filasRep = repuestos.map(
@@ -131,14 +151,14 @@ export function cuerpoFormato(d: DatosFormato, logo: string, imagenes: Map<strin
     : `<tr><td colspan="4" class="gris">Sin HH estimadas</td></tr>`;
 
   return `<table class="enc"><tr>
-  ${celdaLogos(logo, logoUnidad, d.unidad)}
+  ${celdaLogos(logo, logoUnidad, d.unidad, marca)}
   <td class="titulo">MANTENIMIENTO CORRECTIVO PROGRAMADO</td>
   <td class="datos"><span class="et">N°</span><b>${esc(b.folio)}</b><br><span class="et">Fecha</span>${fFecha(b.fecha_deteccion)}<br><span class="et">Unidad</span>${esc(d.unidad)}</td>
 </tr></table>
 
 <table class="bloque"><tr>
   <td style="width:40%"><span class="et">Reportado por</span>${esc(b.reportado_por)}</td>
-  <td><span class="et">Tipo de pedido</span>${marca(b.tipo_pedido === "Normal")} Normal &nbsp;&nbsp; ${marca(b.tipo_pedido === "Urgente")} Urgente</td>
+  <td><span class="et">Tipo de pedido</span>${casilla(b.tipo_pedido === "Normal")} Normal &nbsp;&nbsp; ${casilla(b.tipo_pedido === "Urgente")} Urgente</td>
   <td><span class="et">Prioridad</span>${esc(nombrePrioridad(b.prioridad))}</td>
   <td><span class="et">Estado</span>${esc(b.estado)}</td>
 </tr><tr>
@@ -172,16 +192,22 @@ export function cuerpoFormato(d: DatosFormato, logo: string, imagenes: Map<strin
   <div class="firma"><div class="quien">${esc(b.reportado_por)}</div><div class="linea">Reportado por</div></div>
   <div class="firma"><div class="quien">${esc(b.aprobado_por)}</div><div class="linea">Aprobado por</div></div>
 </div>
-<div class="pie">Control de Backlog · Dimelco · ${esc(b.folio)}</div>
-${hojaImagenes(d, logo, imagenes, logoUnidad)}`;
+<div class="pie">Control de Backlog · ${esc(marca)} · ${esc(b.folio)}</div>
+${hojaImagenes(d, logo, imagenes, logoUnidad, marca)}`;
 }
 
-export function armarFormato(d: DatosFormato, logo: string, imagenes: Map<string, string> = new Map(), logoUnidad = ""): string {
-  return documentoImprimible(`${d.b.folio} ${d.b.descripcion}`, cuerpoFormato(d, logo, imagenes, logoUnidad));
+export function armarFormato(
+  d: DatosFormato,
+  logo: string,
+  imagenes: Map<string, string> = new Map(),
+  logoUnidad = "",
+  marca = MARCA_BASE
+): string {
+  return documentoImprimible(`${d.b.folio} ${d.b.descripcion}`, cuerpoFormato(d, logo, imagenes, logoUnidad, marca));
 }
 
 // Hoja 2 del formato: primero las fotos de repuestos por ítem, luego las generales.
-function hojaImagenes(d: DatosFormato, logo: string, imagenes: Map<string, string>, logoUnidad: string): string {
+function hojaImagenes(d: DatosFormato, logo: string, imagenes: Map<string, string>, logoUnidad: string, marca: string): string {
   const fotos = (d.fotos ?? []).filter((f) => imagenes.get(f.id));
   if (!fotos.length) return "";
   const rep = new Map(d.repuestos.map((r) => [r.id, r]));
@@ -201,7 +227,7 @@ function hojaImagenes(d: DatosFormato, logo: string, imagenes: Map<string, strin
     .join("");
   return `<div class="hoja2">
 <table class="enc"><tr>
-  ${celdaLogos(logo, logoUnidad, d.unidad)}
+  ${celdaLogos(logo, logoUnidad, d.unidad, marca)}
   <td class="titulo">IMÁGENES</td>
   <td class="datos"><span class="et">N°</span><b>${esc(d.b.folio)}</b><br><span class="et">Código interno</span>${esc(d.b.cod_interno)}</td>
 </tr></table>
@@ -230,11 +256,19 @@ export function escribirParaImprimir(v: Window, html: string) {
   v.document.close();
 }
 
-// Logos ya incrustables: Dimelco y, si corresponde, el de la unidad.
-export async function logosPara(unidad: string): Promise<{ logo: string; logoUnidad: string }> {
+// Logos ya incrustables. Por defecto Dimelco y, si corresponde, el de la unidad a la par.
+// Si alguno de los correos es de un dominio de MARCAS_DOMINIO (por ejemplo, quien creó la
+// orden o quien la imprime), sale solo el logo de esa empresa y `marca` lo nombra.
+export async function logosPara(
+  unidad: string,
+  correos: (string | null | undefined)[] = []
+): Promise<{ logo: string; logoUnidad: string; marca: string }> {
+  const propia = correos.map(marcaDeCorreo).find(Boolean);
+  if (propia) return { logo: await comoDataUrl(propia.logo), logoUnidad: "", marca: propia.nombre };
   return {
     logo: await comoDataUrl(logoDimelco),
     logoUnidad: LOGOS_UNIDAD[unidad] ? await comoDataUrl(LOGOS_UNIDAD[unidad]) : "",
+    marca: MARCA_BASE,
   };
 }
 
@@ -264,8 +298,9 @@ export async function imprimirFormato(d: DatosFormato): Promise<string | null> {
   const ventana = abrirVentanaImpresion();
   try {
     const imagenes = await incrustarFotos(d.fotos);
-    const { logo, logoUnidad } = await logosPara(d.unidad);
-    const html = armarFormato(d, logo, imagenes, logoUnidad);
+    const creador = d.perfiles.find((p) => p.user_id === d.b.creado_por)?.correo;
+    const { logo, logoUnidad, marca } = await logosPara(d.unidad, [creador, d.correoImprime]);
+    const html = armarFormato(d, logo, imagenes, logoUnidad, marca);
     return await entregarImpresion(ventana, html, `${d.b.folio} ${d.b.cod_interno} ${d.b.descripcion}`);
   } catch (e) {
     ventana?.close();

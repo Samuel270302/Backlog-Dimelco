@@ -63,7 +63,7 @@ export interface DatosPaquete {
 const nombreEsp = (especialidades: Catalogo[], id: string) => especialidades.find((e) => e.id === id)?.nombre ?? "";
 
 // Carátula: equipo, lista de órdenes, repuestos de los correctivos y firmas de entrega.
-export function cuerpoCaratula(d: DatosPaquete, logo: string, logoUnidad = ""): string {
+export function cuerpoCaratula(d: DatosPaquete, logo: string, logoUnidad = "", marca = "Dimelco"): string {
   const primero = d.preventivos[0]?.p ?? d.correctivos[0]?.b;
   const sap = !!primero?.usa_sap;
   let n = 0;
@@ -91,7 +91,7 @@ export function cuerpoCaratula(d: DatosPaquete, logo: string, logoUnidad = ""): 
     : `<tr><td colspan="${sap ? 7 : 6}" class="gris">Los correctivos del paquete no tienen repuestos cargados.</td></tr>`;
 
   return `<table class="enc"><tr>
-  ${celdaLogos(logo, logoUnidad, d.unidad)}
+  ${celdaLogos(logo, logoUnidad, d.unidad, marca)}
   <td class="titulo">PAQUETE DE ÓRDENES DE TRABAJO</td>
   <td class="datos"><span class="et">N° de paquete</span><b>${esc(d.folio)}</b><br><span class="et">Fecha programada</span><b>${fFecha(d.fecha)}</b><br><span class="et">Unidad</span>${esc(d.unidad)}</td>
 </tr></table>
@@ -131,15 +131,21 @@ ${
   <div class="firma"><div class="quien"></div><div class="linea">Entregado por (planificador)</div></div>
   <div class="firma"><div class="quien"></div><div class="linea">Recibido por (técnico o supervisor)</div></div>
 </div>
-<div class="pie">Control de Backlog · Dimelco · ${esc(d.folio)} · ${esc(primero?.cod_interno)} · ${fFecha(d.fecha)}</div>`;
+<div class="pie">Control de Backlog · ${esc(marca)} · ${esc(d.folio)} · ${esc(primero?.cod_interno)} · ${fFecha(d.fecha)}</div>`;
 }
 
 // Cuerpos del paquete en orden: carátula, preventivos, correctivos.
-export function cuerposPaquete(d: DatosPaquete, logo: string, logoUnidad: string, imagenes: Map<string, Map<string, string>>): string[] {
+export function cuerposPaquete(
+  d: DatosPaquete,
+  logo: string,
+  logoUnidad: string,
+  imagenes: Map<string, Map<string, string>>,
+  marca = "Dimelco"
+): string[] {
   return [
-    cuerpoCaratula(d, logo, logoUnidad),
-    ...d.preventivos.map(({ p, materiales }) => cuerpoOtPreventivo(p, materiales, logo, logoUnidad, d.folio)),
-    ...d.correctivos.map((c) => cuerpoFormato(c, logo, imagenes.get(c.b.id) ?? new Map(), logoUnidad)),
+    cuerpoCaratula(d, logo, logoUnidad, marca),
+    ...d.preventivos.map(({ p, materiales }) => cuerpoOtPreventivo(p, materiales, logo, logoUnidad, d.folio, marca)),
+    ...d.correctivos.map((c) => cuerpoFormato(c, logo, imagenes.get(c.b.id) ?? new Map(), logoUnidad, marca)),
   ];
 }
 
@@ -159,6 +165,8 @@ export interface ContextoPaquete {
   especialidades: Catalogo[];
   perfiles: Perfil[];
   nombreUnidad: (id: string) => string;
+  // Correo de quien imprime: si es @explotec.com, todo el paquete sale solo con el logo de Explotec.
+  correoImprime?: string | null;
 }
 
 // Imprime uno o varios paquetes (equipo y día) en un solo PDF. La base asigna o
@@ -206,8 +214,8 @@ export async function imprimirPaquetes(claves: { equipo_id: string; fecha: strin
         preventivos: preventivos.map((p) => ({ p, materiales: materiales.filter((m) => m.preventivo_id === p.id) })),
         correctivos: datosCorrectivos,
       };
-      const { logo, logoUnidad } = await logosPara(unidad);
-      cuerpos.push(...cuerposPaquete(d, logo, logoUnidad, imagenes));
+      const { logo, logoUnidad, marca } = await logosPara(unidad, [ctx.correoImprime]);
+      cuerpos.push(...cuerposPaquete(d, logo, logoUnidad, imagenes, marca));
       folios.push(paquete.folio);
       const cod = preventivos[0]?.cod_interno ?? correctivos[0]?.cod_interno ?? "";
       titulo = folios.length === 1 ? `${paquete.folio} ${cod} ${clave.fecha}` : `Paquetes ${clave.fecha} (${folios.length})`;
