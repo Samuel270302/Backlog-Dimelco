@@ -77,7 +77,7 @@ const html = `<!doctype html><html lang="es"><head><meta charset="utf-8"><title>
   <div class="titulo">Control de Backlog</div>
   <div class="sub">Manual del capturador</div>
   <div class="sub" style="font-size:12pt">Registro y seguimiento de backlogs de mantenimiento</div>
-  <div class="datos">Dimelco · versión de la app 0.6.2 · noviembre de 2026</div>
+  <div class="datos">Dimelco · versión de la app 0.6.3 · noviembre de 2026</div>
 </section>
 
 <h1>Contenido</h1>
@@ -293,6 +293,7 @@ ${fig("ficha-bitacora", "Bitácora con el registro y un comentario.")}
 
 <h2>6.6 Imprimir formato</h2>
 <p>El botón <b>Imprimir formato</b> genera el formato "Mantenimiento correctivo programado" en A4 con el logo de Dimelco (en Explotec, también el de Explotec a la par): datos del equipo, repuestos, HH, justificación y las firmas de Reportado por y Aprobado por. Si hay fotos, van en una segunda hoja. En la PC se guarda como PDF (la app pregunta dónde); en el celular o el navegador, use "Guardar como PDF" en la ventana de impresión.</p>
+<div class="nota">Si el backlog lo creó, o lo imprime, un usuario con correo <b>@explotec.com</b>, el formato sale solo con el logo de Explotec y el pie dice "Explotec" en lugar de Dimelco. Lo mismo vale para la orden de trabajo de un preventivo.</div>
 ${fig("formato-impreso", "Formato impreso del ejemplo, con la hoja de imágenes.", "alta")}
 
 <h2>6.7 Borrar un backlog</h2>
@@ -435,6 +436,7 @@ ${fig("paquetes-lista", "Lista de paquetes de órdenes de trabajo.")}
 <p>Arriba del Calendario, los botones <b>Semana</b> y <b>Mes</b> cambian la vista; la app recuerda la última que usó. La vista <b>Mes</b> muestra el mes completo y, en cada día, un botón por equipo con órdenes programadas: el código del equipo, cuántos preventivos y correctivos tiene y el número de paquete (o "Sin imprimir" si todavía no se imprimió). Pulse el botón para abrir el paquete e imprimirlo. <b>Todos (n)</b> imprime los paquetes del día en un solo PDF, <b>+ PM</b> programa un preventivo ese día y la flecha a la izquierda de cada fila abre esa semana en detalle. Arrastrar para programar o reprogramar y las barras de carga del taller están en la vista Semana.</p>
 ${fig("mes-calendario", "Vista mensual: un botón por equipo y día abre su paquete.")}
 <div class="nota">Adjunte al paquete impreso la pauta de mantenimiento y el listado de filtros del preventivo, y marque "Sí" en el renglón de la carátula.</div>
+<div class="nota">En el paquete decide quien imprime: si es un usuario con correo <b>@explotec.com</b>, la carátula y todas las hojas salen solo con el logo de Explotec; si es de otro dominio, salen como siempre, con el logo de Dimelco (y el de Explotec a la par en esa unidad).</div>
 
 <h2>10.4 Cerrar el preventivo</h2>
 <p>Cuando el técnico devuelve la orden, abra el preventivo (desde la lista, el calendario o el paquete) y pulse <b>Marcar ejecutado</b>:</p>
