@@ -131,7 +131,7 @@ select pruebas.espera_error($$select cambiar_estado_backlog('20000000-0000-0000-
 select pruebas.espera_error($$select cambiar_estado_backlog('20000000-0000-0000-0000-000000000001', 'Ejecutado', '{"fecha_ejecucion":"2026-11-02"}')$$, 'HH reales');
 insert into backlog_hh (backlog_id, especialidad_id, tipo, personas, horas)
 values ('20000000-0000-0000-0000-000000000001', (select id from especialidades where nombre = 'Mecánico'), 'real', 2, 5);
-select pruebas.espera_error($$select cambiar_estado_backlog('20000000-0000-0000-0000-000000000001', 'Ejecutado', '{"fecha_ejecucion":"2026-11-20"}')$$, 'futura');
+select pruebas.espera_error($$select cambiar_estado_backlog('20000000-0000-0000-0000-000000000001', 'Ejecutado', '{"fecha_ejecucion":"2026-10-29"}')$$, 'anterior a la fecha de detección (30/10/2026)');
 select cambiar_estado_backlog('20000000-0000-0000-0000-000000000001', 'Ejecutado', '{"fecha_ejecucion":"2026-11-02","comentario":"Se cambiaron sellos"}');
 insert into backlog_eventos (backlog_id, tipo, texto) values ('20000000-0000-0000-0000-000000000001', 'comentario', 'Equipo probado OK');
 -- 018: el capturador también valida; después ya no lo puede revertir.
@@ -428,7 +428,6 @@ insert into preventivo_materiales (id, preventivo_id, numero_parte, descripcion,
   ('81000000-0000-0000-0000-000000000002', '80000000-0000-0000-0000-000000000001', null, 'Aceite 15W40', 20, 'L');
 select pruebas.igual((select string_agg(item::text, ',' order by item) from preventivo_materiales where preventivo_id = '80000000-0000-0000-0000-000000000001'), '1,2', 'ítems de materiales del preventivo');
 select pruebas.espera_error($$select cambiar_estado_preventivo('80000000-0000-0000-0000-000000000001', 'Ejecutado', '{}')$$, 'fecha de ejecución');
-select pruebas.espera_error($$select cambiar_estado_preventivo('80000000-0000-0000-0000-000000000001', 'Ejecutado', '{"fecha_ejecucion":"2026-11-03"}')$$, 'no puede ser futura');
 select cambiar_estado_preventivo('80000000-0000-0000-0000-000000000001', 'Ejecutado', '{"fecha_ejecucion":"2026-11-01","horometro_ejecucion":"1262","ejecutado_por":"Mecánico turno A","comentario":"Sin novedades"}');
 select pruebas.igual((select estado || ' ' || fecha_ejecucion || ' ' || horometro_ejecucion || ' ' || ejecutado_por || ' ' || materiales_total from v_preventivos where id = '80000000-0000-0000-0000-000000000001'),
   'Ejecutado 2026-11-01 1262 Mecánico turno A 2', 'preventivo ejecutado con materiales');
@@ -486,6 +485,32 @@ select pruebas.igual((select count(*) from v_paquetes)::int, 0, 'capturador de H
 select pruebas.espera_error($$select paquete_de('10000000-0000-0000-0000-000000000002', '2026-11-05')$$, 'Sin permiso');
 select set_config('request.jwt.claims', '{"sub":"00000000-0000-0000-0000-00000000000e"}', false);
 select pruebas.espera_error($$select paquete_de('10000000-0000-0000-0000-000000000001', '2026-11-05')$$, 'Sin permiso');
+select set_config('request.jwt.claims', '{"sub":"00000000-0000-0000-0000-00000000000a"}', false);
+
+
+-- Ejecución con fecha futura (023): backlogs desde la detección, preventivos sin límite.
+select set_config('request.jwt.claims', '{"sub":"00000000-0000-0000-0000-00000000000d"}', false);
+insert into preventivos (id, equipo_id, actividad, fecha_programada)
+values ('80000000-0000-0000-0000-000000000009', '10000000-0000-0000-0000-000000000002', 'PM 1000 h motor diésel', '2026-11-18');
+select cambiar_estado_preventivo('80000000-0000-0000-0000-000000000009', 'Ejecutado', '{"fecha_ejecucion":"2026-11-20"}');
+select pruebas.igual((select estado || ' ' || fecha_ejecucion from preventivos where id = '80000000-0000-0000-0000-000000000009'), 'Ejecutado 2026-11-20', 'preventivo ejecutado con fecha futura');
+select set_config('request.jwt.claims', '{"sub":"00000000-0000-0000-0000-00000000000c"}', false);
+insert into backlogs (id, equipo_id, sistema_id, descripcion, origen, prioridad, fecha_deteccion, reportado_por, aprobado_por)
+values ('20000000-0000-0000-0000-0000000000a9', '10000000-0000-0000-0000-000000000001', (select id from sistemas where nombre = 'Frenos'), 'Cambio de zapatas de freno', 'PM', 'P3', '2026-10-28', 'A', 'B');
+insert into backlog_hh (backlog_id, especialidad_id, tipo, personas, horas) values
+  ('20000000-0000-0000-0000-0000000000a9', (select id from especialidades where nombre = 'Mecánico'), 'estimada', 1, 2);
+select cambiar_estado_backlog('20000000-0000-0000-0000-0000000000a9', 'En planificación');
+select cambiar_estado_backlog('20000000-0000-0000-0000-0000000000a9', 'Listo para programar');
+select cambiar_estado_backlog('20000000-0000-0000-0000-0000000000a9', 'Programado', '{"fecha_programada":"2026-11-24","ot_sap":"5009"}');
+insert into backlog_hh (backlog_id, especialidad_id, tipo, personas, horas) values
+  ('20000000-0000-0000-0000-0000000000a9', (select id from especialidades where nombre = 'Mecánico'), 'real', 1, 2);
+select pruebas.espera_error($$select cambiar_estado_backlog('20000000-0000-0000-0000-0000000000a9', 'Ejecutado', '{"fecha_ejecucion":"2026-10-27"}')$$,
+  'anterior a la fecha de detección (28/10/2026)');
+select cambiar_estado_backlog('20000000-0000-0000-0000-0000000000a9', 'Ejecutado', '{"fecha_ejecucion":"2026-11-25"}');
+select pruebas.igual((select estado || ' ' || fecha_ejecucion from backlogs where id = '20000000-0000-0000-0000-0000000000a9'), 'Ejecutado 2026-11-25', 'backlog ejecutado con fecha futura');
+select cambiar_estado_backlog('20000000-0000-0000-0000-0000000000a9', 'Programado', '{"motivo":"Corregir la fecha"}');
+select cambiar_estado_backlog('20000000-0000-0000-0000-0000000000a9', 'Ejecutado', '{"fecha_ejecucion":"2026-10-28"}');
+select pruebas.igual((select fecha_ejecucion::text from backlogs where id = '20000000-0000-0000-0000-0000000000a9'), '2026-10-28', 'backlog ejecutado el mismo día de la detección');
 select set_config('request.jwt.claims', '{"sub":"00000000-0000-0000-0000-00000000000a"}', false);
 
 reset role;

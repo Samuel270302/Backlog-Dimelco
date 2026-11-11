@@ -50,6 +50,10 @@ with chequeos(orden, punto, ok, si_falta) as (
   (6.99, 'Paquetes de órdenes de trabajo (022)',
       exists (select 1 from pg_proc where proname = 'paquete_de') and to_regclass('public.v_paquetes') is not null,
       'Ejecutar 022_paquetes.sql'),
+  (6.995, 'Ejecución con fecha futura (023)',
+      not exists (select 1 from pg_proc where proname in ('cambiar_estado_backlog','cambiar_estado_preventivo') and prosrc like '%no puede ser futura%')
+      and exists (select 1 from pg_proc where proname = 'cambiar_estado_backlog' and prosrc like '%ejecución no puede ser anterior a la fecha de detección%'),
+      'Ejecutar 023_ejecucion_futura.sql'),
   (7, 'Bucket privado backlog-fotos',
       exists (select 1 from storage.buckets where id = 'backlog-fotos' and not public),
       'Ejecutar 007_storage.sql (Storage debe estar habilitado en el proyecto)'),
