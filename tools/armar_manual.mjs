@@ -77,7 +77,7 @@ const html = `<!doctype html><html lang="es"><head><meta charset="utf-8"><title>
   <div class="titulo">Control de Backlog</div>
   <div class="sub">Manual del capturador</div>
   <div class="sub" style="font-size:12pt">Registro y seguimiento de backlogs de mantenimiento</div>
-  <div class="datos">Dimelco · versión de la app 0.6.3 · noviembre de 2026</div>
+  <div class="datos">Dimelco · versión de la app 0.6.4 · noviembre de 2026</div>
 </section>
 
 <h1>Contenido</h1>
@@ -233,8 +233,8 @@ ${fig("nuevo-trabajo", "Sección Trabajo completa.")}
 <table>
   <tr><th>Columna</th><th>Qué escribir</th></tr>
   <tr><td>Ítem</td><td>Lo numera la app.</td></tr>
-  <tr><td>Número de parte</td><td>El del fabricante (manual de partes). Obligatorio si no hay código SAP.</td></tr>
-  <tr><td>Código SAP</td><td>Solo en HEMCO. En Explotec la columna no aparece.</td></tr>
+  <tr><td>Número de parte</td><td>El del fabricante (manual de partes). Obligatorio si no hay código.</td></tr>
+  <tr><td>Cód. interno</td><td>Código interno del repuesto en la bodega de la unidad. En HEMCO la columna se llama Código SAP.</td></tr>
   <tr><td>Cant/Req</td><td>Cantidad requerida (mayor que 0).</td></tr>
   <tr><td>Stock</td><td>Cuántos hay en bodega, si lo sabe.</td></tr>
   <tr><td>Descripción del repuesto</td><td>Nombre de la pieza.</td></tr>
@@ -368,7 +368,7 @@ ${fig("calendario", "Calendario semanal.")}
 </ol>
 ${fig("ejecutar-hh-reales", "Carga de HH reales del B1-27 (XQZ152): 2 mecánicos × 4,5 horas.")}
 <ol start="3">
-  <li><span class="paso">3</span>Pulse <b>Marcar ejecutado</b>. En el cuadro, confirme la <b>fecha de ejecución</b> (por defecto hoy) y escriba un comentario con lo que se hizo.</li>
+  <li><span class="paso">3</span>Pulse <b>Marcar ejecutado</b>. En el cuadro, confirme la <b>fecha de ejecución</b> (por defecto hoy; puede ser anterior o posterior a hoy, pero no anterior a la fecha de detección) y escriba un comentario con lo que se hizo.</li>
   <li><span class="paso">4</span>Pulse <b>Marcar ejecutado</b> en el cuadro para confirmar.</li>
 </ol>
 ${fig("ejecutar-dialogo", "Marcar ejecutado el cambio de rodillos del B1-27: fecha y comentario.")}
@@ -441,7 +441,7 @@ ${fig("mes-calendario", "Vista mensual: un botón por equipo y día abre su paqu
 <h2>10.4 Cerrar el preventivo</h2>
 <p>Cuando el técnico devuelve la orden, abra el preventivo (desde la lista, el calendario o el paquete) y pulse <b>Marcar ejecutado</b>:</p>
 <ol>
-  <li><span class="paso">1</span><b>Fecha de ejecución</b> (no puede ser futura), <b>horómetro al ejecutar</b> y <b>ejecutado por</b>.</li>
+  <li><span class="paso">1</span><b>Fecha de ejecución</b> (propone la fecha programada; puede ser anterior o posterior a hoy), <b>horómetro al ejecutar</b> y <b>ejecutado por</b>.</li>
   <li><span class="paso">2</span><b>Materiales utilizados</b>: una fila por filtro, aceite, grasa o repuesto, con número de parte (si lo tiene), descripción, cantidad y unidad. Pulse <b>Agregar</b> en cada fila; los ya agregados se corrigen escribiendo en la celda.</li>
   <li><span class="paso">3</span><b>Comentario de cierre</b>, con las observaciones del técnico.</li>
   <li><span class="paso">4</span>Pulse <b>Marcar ejecutado</b>.</li>
@@ -496,7 +496,8 @@ ${movil([["movil-kanban", "Kanban en el celular."], ["movil-ficha", "Ficha en el
   <tr><td>El botón Registrar backlog está gris</td><td>Falta un dato obligatorio. Lea el texto "Falta: ..." junto al botón.</td></tr>
   <tr><td>No encuentro el equipo en la lista</td><td>El equipo está inactivo o es de una unidad que no tiene asignada. Pida al administrador que lo active o le asigne la unidad.</td></tr>
   <tr><td>El sistema que necesito no está en la lista</td><td>Elija <b>Otro</b> y escriba cuál. Avise al administrador para que lo agregue a la familia del equipo.</td></tr>
-  <tr><td>"Cada repuesto necesita número de parte o código, y cantidad"</td><td>Complete el número de parte (o código SAP en HEMCO) y la cantidad, o quite la fila vacía con la ×.</td></tr>
+  <tr><td>"Cada repuesto necesita número de parte o código, y cantidad"</td><td>Complete el número de parte o el código (Cód. interno, o Código SAP en HEMCO) y la cantidad, o quite la fila vacía con la ×.</td></tr>
+  <tr><td>"La fecha de ejecución no puede ser anterior a la fecha de detección"</td><td>Elija una fecha igual o posterior al día en que se reportó el backlog.</td></tr>
   <tr><td>"Indique quién reporta la necesidad y quién la aprueba"</td><td>Complete Reportado por y Aprobado por.</td></tr>
   <tr><td>"La fecha de detección no puede ser futura"</td><td>Corrija la fecha.</td></tr>
   <tr><td>No puedo cambiar los datos del backlog</td><td>Está Validado, Rechazado o Anulado. Pida al administrador que lo revierta si hace falta corregirlo.</td></tr>
