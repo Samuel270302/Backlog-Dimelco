@@ -43,6 +43,7 @@ const USUARIOS = {
   admin: { id: "00000000-0000-0000-0000-00000000000a", email: "admin@prueba" },
   cap: { id: "00000000-0000-0000-0000-00000000000c", email: "cap@prueba" },
   capVtn: { id: "00000000-0000-0000-0000-00000000000d", email: "cap.vtn@prueba" },
+  capExp: { id: "00000000-0000-0000-0000-00000000000b", email: "sara.lira@explotec.com" },
 };
 
 
@@ -939,6 +940,92 @@ try {
   if (filasMat.length !== 2 || !filasMat.some((r) => r.values.includes("1R-0739") && r.values.includes("PM 250 h motor diésel")))
     throw new Error(`Hoja Materiales de preventivos: ${filasMat.length} líneas`);
   ok("el Excel trae las hojas Preventivos y Materiales de preventivos");
+
+  // 9. Logo solo de Explotec para usuarios @explotec.com (v0.6.3). Sara Lira (EXP) crea e imprime;
+  // el admin (otro dominio) imprime lo de ella y ella imprime lo del admin.
+  const soloExplotec = (html, que) => {
+    if (!html.includes('alt="Explotec"')) throw new Error(`${que}: falta el logo de Explotec`);
+    if (html.includes('alt="Dimelco"') || html.includes("Dimelco")) throw new Error(`${que}: no debe mencionar a Dimelco`);
+    if (!html.includes("Control de Backlog · Explotec")) throw new Error(`${que}: el pie debe decir Explotec`);
+  };
+  const dosLogos = (html, que) => {
+    if (!html.includes('alt="Explotec"') || !html.includes('alt="Dimelco"')) throw new Error(`${que}: debía llevar los dos logos`);
+    if (!html.includes("Control de Backlog · Dimelco")) throw new Error(`${que}: el pie debía decir Dimelco`);
+  };
+  const imprimirOtDe = async (pagina, ruta, titulo) => {
+    await pagina.goto(base + ruta);
+    await pagina.reload();
+    await pagina.getByRole("heading", { name: titulo }).waitFor();
+    const [v] = await Promise.all([pagina.context().waitForEvent("page"), pagina.getByRole("button", { name: "Imprimir OT" }).click()]);
+    await v.waitForFunction(() => document.title && !document.title.startsWith("Generando"));
+    return v;
+  };
+  const sara = await abrir("capExp");
+  await sara.goto(base + "#/preventivos");
+  await sara.getByRole("button", { name: "Programar preventivo" }).click();
+  const dSara = sara.getByRole("dialog");
+  await dSara.getByLabel("Equipo del preventivo").selectOption({ label: "B1-20 · SmartROC T40" });
+  await dSara.getByLabel("Actividad del preventivo").fill("PM 250 h SmartROC");
+  await dSara.getByRole("button", { name: "Programar", exact: true }).click();
+  await aviso(sara, "PM-EXP-000001 programado · OT OT-EXP-000001");
+  await sara.getByRole("link", { name: "PM-EXP-000001" }).click();
+  await sara.getByRole("heading", { name: "B1-20 · PM 250 h SmartROC" }).waitFor();
+  const idPmSara = sara.url().split("/preventivo/")[1];
+  const [vSara] = await Promise.all([sara.context().waitForEvent("page"), sara.getByRole("button", { name: "Imprimir OT" }).click()]);
+  await vSara.waitForFunction(() => document.title && !document.title.startsWith("Generando"));
+  soloExplotec(await vSara.content(), "OT impresa por Sara");
+  await vSara.setViewportSize({ width: 900, height: 1270 });
+  await vSara.screenshot({ path: join(SALIDA, "ot-solo-explotec.png"), fullPage: true });
+  await vSara.close();
+  const vAdmSara = await imprimirOtDe(adm, `#/preventivo/${idPmSara}`, "B1-20 · PM 250 h SmartROC");
+  soloExplotec(await vAdmSara.content(), "OT de Sara impresa por el admin");
+  await vAdmSara.close();
+  ok("el preventivo creado por un usuario @explotec.com se imprime solo con el logo de Explotec, también cuando lo imprime el admin");
+
+  // Un preventivo creado por el admin en la misma unidad: dos logos para el admin, solo Explotec si lo imprime Sara.
+  const eqExp = (await (await pedirComo("admin", "equipos?select=id&cod_interno=eq.B1-20")).json())[0].id;
+  const rPm2 = await pedirComo("admin", "preventivos", {
+    method: "POST",
+    headers: { prefer: "return=representation" },
+    body: JSON.stringify({ equipo_id: eqExp, actividad: "PM 500 h SmartROC", fecha_programada: enDias(0) }),
+  });
+  if (!rPm2.ok) throw new Error(`Preventivo del admin en B1-20: ${rPm2.status} ${await rPm2.text()}`);
+  const jPm2 = await rPm2.json();
+  const idPmAdm = (Array.isArray(jPm2) ? jPm2[0] : jPm2).id;
+  const vAdm = await imprimirOtDe(adm, `#/preventivo/${idPmAdm}`, "B1-20 · PM 500 h SmartROC");
+  dosLogos(await vAdm.content(), "OT del admin impresa por el admin");
+  await vAdm.close();
+  const vSaraAdm = await imprimirOtDe(sara, `#/preventivo/${idPmAdm}`, "B1-20 · PM 500 h SmartROC");
+  soloExplotec(await vSaraAdm.content(), "OT del admin impresa por Sara");
+  await vSaraAdm.close();
+  ok("la OT del admin lleva los dos logos si la imprime el admin y solo Explotec si la imprime un usuario @explotec.com");
+
+  // Paquete de B1-20 de hoy (2 preventivos): quien imprime decide el logo de todas las hojas.
+  const abrirPaqueteExp = async (pagina) => {
+    await pagina.goto(base + "#/calendario");
+    await pagina.reload();
+    await pagina.getByRole("button", { name: `Paquete B1-20 ${ddmm(enDias(0))}` }).click();
+    const d = pagina.getByRole("dialog");
+    await d.locator(".tabla-ordenes-paquete tbody tr").nth(1).waitFor();
+    const [v] = await Promise.all([pagina.context().waitForEvent("page"), d.getByRole("button", { name: "Imprimir paquete" }).click()]);
+    await v.waitForFunction(() => document.title && !document.title.startsWith("Generando"));
+    return v;
+  };
+  const vPaqSara = await abrirPaqueteExp(sara);
+  const htmlPaqSara = await vPaqSara.content();
+  soloExplotec(htmlPaqSara, "Paquete impreso por Sara");
+  if ((htmlPaqSara.match(/<div class="hoja/g) ?? []).length !== 3) throw new Error("El paquete de B1-20 debía tener carátula y 2 preventivos");
+  if (!htmlPaqSara.includes("PQ-EXP-000001")) throw new Error("El paquete de B1-20 debía ser PQ-EXP-000001");
+  await vPaqSara.setViewportSize({ width: 900, height: 1270 });
+  await vPaqSara.locator(".hoja").first().screenshot({ path: join(SALIDA, "paquete-solo-explotec.png") });
+  await vPaqSara.close();
+  const vPaqAdm = await abrirPaqueteExp(adm);
+  const htmlPaqAdm = await vPaqAdm.content();
+  dosLogos(htmlPaqAdm, "Paquete impreso por el admin");
+  if (!htmlPaqAdm.includes("PQ-EXP-000001")) throw new Error("El admin debía recuperar PQ-EXP-000001");
+  await vPaqAdm.close();
+  await sara.context().close();
+  ok("el paquete de B1-20 sale solo con Explotec si lo imprime un usuario @explotec.com y con los dos logos si lo imprime el admin");
 
   // 6. Vista de celular.
   const movil = await abrir("cap", 390, 844);

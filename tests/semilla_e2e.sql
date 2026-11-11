@@ -2,10 +2,12 @@
 insert into auth.users (id, email, raw_user_meta_data) values
   ('00000000-0000-0000-0000-00000000000a', 'admin@prueba', '{"nombre":"Ana Admin"}'),
   ('00000000-0000-0000-0000-00000000000c', 'cap@prueba', '{"nombre":"Carlos Capturador"}'),
-  ('00000000-0000-0000-0000-00000000000d', 'cap.vtn@prueba', '{"nombre":"Vera Veta Nueva"}');
+  ('00000000-0000-0000-0000-00000000000d', 'cap.vtn@prueba', '{"nombre":"Vera Veta Nueva"}'),
+  ('00000000-0000-0000-0000-00000000000b', 'sara.lira@explotec.com', '{"nombre":"Sara Lira"}');
 update perfiles set rol = 'admin', activo = true where correo = 'admin@prueba';
 update perfiles set activo = true, unidad_id = (select id from unidades where sigla = 'HEM') where correo = 'cap@prueba';
 update perfiles set activo = true, unidad_id = (select id from unidades where sigla = 'VTN') where correo = 'cap.vtn@prueba';
+update perfiles set activo = true, unidad_id = (select id from unidades where sigla = 'EXP') where correo = 'sara.lira@explotec.com';
 
 insert into equipos (unidad_id, cod_interno, cod_sap, modelo, flota, marca)
 select u.id, v.cod, v.sap, v.modelo, v.flota, 'Epiroc'
@@ -16,6 +18,8 @@ from unidades u,
 where u.sigla = 'HEM';
 insert into equipos (unidad_id, cod_interno, modelo, flota, marca)
 select id, 'PS090', 'ST7', 'Scoop', 'Epiroc' from unidades where sigla = 'VTN';
+insert into equipos (unidad_id, cod_interno, modelo, flota, marca)
+select id, 'B1-20', 'SmartROC T40', 'Perforadora', 'Epiroc' from unidades where sigla = 'EXP';
 
 -- Familias: los Scoop de HEMCO tienen 3 sistemas cargados; el Jumbo no tiene (ve todos).
 insert into familias (nombre, orden) values ('Scooptram ST1030', 1), ('Jumbo Boomer S1D', 2) on conflict (nombre) do nothing;
