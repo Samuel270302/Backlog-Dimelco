@@ -77,7 +77,7 @@ const html = `<!doctype html><html lang="es"><head><meta charset="utf-8"><title>
   <div class="titulo">Control de Backlog</div>
   <div class="sub">Manual del capturador</div>
   <div class="sub" style="font-size:12pt">Registro y seguimiento de backlogs de mantenimiento</div>
-  <div class="datos">Dimelco · versión de la app 0.6.5 · noviembre de 2026</div>
+  <div class="datos">Dimelco · versión de la app 0.6.6 · noviembre de 2026</div>
 </section>
 
 <h1>Contenido</h1>
