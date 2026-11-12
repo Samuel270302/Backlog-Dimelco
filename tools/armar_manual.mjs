@@ -77,7 +77,7 @@ const html = `<!doctype html><html lang="es"><head><meta charset="utf-8"><title>
   <div class="titulo">Control de Backlog</div>
   <div class="sub">Manual del capturador</div>
   <div class="sub" style="font-size:12pt">Registro y seguimiento de backlogs de mantenimiento</div>
-  <div class="datos">Dimelco · versión de la app 0.6.4 · noviembre de 2026</div>
+  <div class="datos">Dimelco · versión de la app 0.6.5 · noviembre de 2026</div>
 </section>
 
 <h1>Contenido</h1>
@@ -108,7 +108,7 @@ const html = `<!doctype html><html lang="es"><head><meta charset="utf-8"><title>
   <li>avanza el backlog por todo el flujo: lo aprueba, lo pasa a esperar repuestos, lo programa con fecha y OT, lo reprograma, lo marca ejecutado y lo valida;</li>
   <li>lo devuelve un paso atrás cuando hace falta, dejando el motivo;</li>
   <li>rechaza o anula un backlog que no procede, con motivo;</li>
-  <li>carga y actualiza repuestos, HH estimadas y fotos mientras el backlog está abierto;</li>
+  <li>carga y actualiza repuestos, HH estimadas y fotos, y quita fotos, mientras el backlog está abierto (hasta Ejecutado);</li>
   <li>deja comentarios en la bitácora;</li>
   <li>carga las HH reales de un trabajo terminado;</li>
   <li>edita la capacidad del taller de su unidad;</li>
@@ -284,7 +284,7 @@ ${fig("ficha-repuestos", "Pestaña Repuestos.")}
 ${fig("ficha-hh", "Pestaña HH.")}
 
 <h2>6.4 Fotos</h2>
-<p>Muestra las fotos agrupadas: las de cada ítem de repuesto y las generales. Para agregar, elija en la lista si la foto es "Foto general del trabajo" o de un ítem, y pulse <b>Agregar fotos</b> o pegue con Ctrl+V. Clic en una foto para verla en grande. Solo el administrador puede borrar fotos.</p>
+<p>Muestra las fotos agrupadas: las de cada ítem de repuesto y las generales. Para agregar, elija en la lista si la foto es "Foto general del trabajo" o de un ítem, y pulse <b>Agregar fotos</b> o pegue con Ctrl+V. Clic en una foto para verla en grande. Para quitar una foto mal tomada o repetida, pulse <b>Quitar</b> debajo de ella y confirme: se puede mientras el backlog está entre Identificado y Ejecutado, y en la bitácora queda quién la quitó. Con el backlog Validado, Rechazado o Anulado las fotos ya no se quitan.</p>
 ${fig("ficha-fotos", "Pestaña Fotos.")}
 
 <h2>6.5 Bitácora</h2>
@@ -524,7 +524,7 @@ ${movil([["movil-kanban", "Kanban en el celular."], ["movil-ficha", "Ficha en el
   <tr><td>Registrar backlogs de sus unidades</td><td>Sí</td><td>Sí, en todas</td></tr>
   <tr><td>Corregir datos del backlog</td><td>Mientras esté abierto (hasta Ejecutado)</td><td>Mientras esté abierto</td></tr>
   <tr><td>Repuestos, HH estimadas y fotos</td><td>Mientras esté abierto</td><td>Sí</td></tr>
-  <tr><td>Borrar fotos</td><td>No</td><td>Sí</td></tr>
+  <tr><td>Quitar fotos</td><td>Sí, de Identificado a Ejecutado</td><td>Sí, de Identificado a Ejecutado</td></tr>
   <tr><td>Comentar en la bitácora</td><td>Sí</td><td>Sí</td></tr>
   <tr><td>Aprobar, esperar repuestos, programar, reprogramar</td><td>Sí</td><td>Sí</td></tr>
   <tr><td>Volver un paso atrás (con motivo)</td><td>Sí, hasta Ejecutado</td><td>Sí</td></tr>

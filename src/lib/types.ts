@@ -182,7 +182,7 @@ export interface BacklogRepuesto {
 export interface BacklogEvento {
   id: string;
   backlog_id: string;
-  tipo: "estado" | "comentario" | "repuesto" | "reprogramación" | "borrado" | "restaurado";
+  tipo: "estado" | "comentario" | "repuesto" | "reprogramación" | "borrado" | "restaurado" | "foto";
   estado_anterior: Estado | null;
   estado_nuevo: Estado | null;
   texto: string | null;

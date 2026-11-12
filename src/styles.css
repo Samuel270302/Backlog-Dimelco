@@ -1136,3 +1136,4 @@ button.mes-semana:hover { background: var(--ambar-suave); color: var(--texto); }
   .mes-pm { opacity: 1; }
   .alternar-vista { order: 5; }
 }
+.evento.evento-foto::before { background: var(--gris-letra); }

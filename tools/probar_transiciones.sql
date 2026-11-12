@@ -163,18 +163,27 @@ select pruebas.igual((select folio from backlogs where id = '20000000-0000-0000-
 select cambiar_estado_backlog('20000000-0000-0000-0000-000000000004', 'Rechazado', '{"motivo":"Duplicado de BL-HEM-000003"}');
 select pruebas.igual((select semanas from v_semanas_backlog where especialidad = 'Mecánico'), 0.50::numeric, 'rechazado sale del backlog');
 
--- Fotos (011): el capturador sube a su unidad pero no borra; el admin borra.
+-- Fotos (011, 024): el capturador sube a su unidad y también las quita mientras el
+-- backlog está abierto; otra unidad y el invitado no; queda el evento en la bitácora.
 select set_config('request.jwt.claims', '{"sub":"00000000-0000-0000-0000-00000000000c"}', false);
 insert into backlog_fotos (id, backlog_id, ruta) values
-  ('40000000-0000-0000-0000-000000000001', '20000000-0000-0000-0000-000000000002', 'x/20000000-0000-0000-0000-000000000002/a.jpg');
-delete from backlog_fotos where id = '40000000-0000-0000-0000-000000000001';
-select pruebas.igual((select count(*)::int from backlog_fotos), 1, 'capturador no borra fotos');
+  ('40000000-0000-0000-0000-000000000001', '20000000-0000-0000-0000-000000000002', 'x/20000000-0000-0000-0000-000000000002/a.jpg'),
+  ('40000000-0000-0000-0000-000000000002', '20000000-0000-0000-0000-000000000002', 'x/20000000-0000-0000-0000-000000000002/b.jpg');
 select set_config('request.jwt.claims', '{"sub":"00000000-0000-0000-0000-00000000000d"}', false);
 select pruebas.espera_error($$insert into backlog_fotos (backlog_id, ruta) values
   ('20000000-0000-0000-0000-000000000002', 'x/otra.jpg')$$, 'row-level security');
-select set_config('request.jwt.claims', '{"sub":"00000000-0000-0000-0000-00000000000a"}', false);
 delete from backlog_fotos where id = '40000000-0000-0000-0000-000000000001';
-select pruebas.igual((select count(*)::int from backlog_fotos), 0, 'admin borra fotos');
+select set_config('request.jwt.claims', '{"sub":"00000000-0000-0000-0000-00000000000e"}', false);
+delete from backlog_fotos where id = '40000000-0000-0000-0000-000000000001';
+select pruebas.igual((select count(*)::int from backlog_fotos), 2, 'otra unidad y el invitado no quitan fotos');
+select set_config('request.jwt.claims', '{"sub":"00000000-0000-0000-0000-00000000000c"}', false);
+delete from backlog_fotos where id = '40000000-0000-0000-0000-000000000001';
+select pruebas.igual((select count(*)::int from backlog_fotos), 1, 'el capturador quita una foto de su unidad');
+select pruebas.igual((select texto || ' ' || (usuario = '00000000-0000-0000-0000-00000000000c') from backlog_eventos
+  where backlog_id = '20000000-0000-0000-0000-000000000002' and tipo = 'foto'), 'Foto general quitada true', 'evento de la foto quitada');
+select set_config('request.jwt.claims', '{"sub":"00000000-0000-0000-0000-00000000000a"}', false);
+delete from backlog_fotos where id = '40000000-0000-0000-0000-000000000002';
+select pruebas.igual((select count(*)::int from backlog_fotos), 0, 'admin quita fotos');
 
 -- Plazos (012): el admin recalcula las fechas límite de los abiertos; el capturador no puede.
 update parametros set valor = 10 where clave = 'plazo_p4_dias';
@@ -511,6 +520,17 @@ select pruebas.igual((select estado || ' ' || fecha_ejecucion from backlogs wher
 select cambiar_estado_backlog('20000000-0000-0000-0000-0000000000a9', 'Programado', '{"motivo":"Corregir la fecha"}');
 select cambiar_estado_backlog('20000000-0000-0000-0000-0000000000a9', 'Ejecutado', '{"fecha_ejecucion":"2026-10-28"}');
 select pruebas.igual((select fecha_ejecucion::text from backlogs where id = '20000000-0000-0000-0000-0000000000a9'), '2026-10-28', 'backlog ejecutado el mismo día de la detección');
+insert into backlog_fotos (id, backlog_id, ruta) values
+  ('40000000-0000-0000-0000-0000000000a9', '20000000-0000-0000-0000-0000000000a9', 'x/20000000-0000-0000-0000-0000000000a9/c.jpg');
+delete from backlog_fotos where id = '40000000-0000-0000-0000-0000000000a9';
+select pruebas.igual((select count(*)::int from backlog_fotos where backlog_id = '20000000-0000-0000-0000-0000000000a9'), 0, 'en Ejecutado el capturador quita fotos');
+insert into backlog_fotos (id, backlog_id, ruta) values
+  ('40000000-0000-0000-0000-0000000000aa', '20000000-0000-0000-0000-0000000000a9', 'x/20000000-0000-0000-0000-0000000000a9/d.jpg');
+select cambiar_estado_backlog('20000000-0000-0000-0000-0000000000a9', 'Validado');
+select pruebas.espera_error($$delete from backlog_fotos where id = '40000000-0000-0000-0000-0000000000aa'$$, 'su detalle no se edita');
+select set_config('request.jwt.claims', '{"sub":"00000000-0000-0000-0000-00000000000a"}', false);
+select pruebas.espera_error($$delete from backlog_fotos where id = '40000000-0000-0000-0000-0000000000aa'$$, 'su detalle no se edita');
+select set_config('request.jwt.claims', '{"sub":"00000000-0000-0000-0000-00000000000c"}', false);
 select set_config('request.jwt.claims', '{"sub":"00000000-0000-0000-0000-00000000000a"}', false);
 
 reset role;

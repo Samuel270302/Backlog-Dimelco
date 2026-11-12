@@ -199,9 +199,9 @@ try {
   await grupoItem1.locator("img").waitFor();
   if ((await cap.locator(".grupo-fotos", { hasText: "Fotos generales" }).locator("img").count()) !== 2) throw new Error("Faltan las 2 fotos generales");
   await cap.waitForFunction(() => [...document.querySelectorAll(".rejilla-fotos img")].every((i) => i.complete && i.naturalWidth > 0));
-  if (await cap.locator(".rejilla-fotos").getByRole("button", { name: "Borrar" }).count()) throw new Error("El capturador ve Borrar foto");
+  if ((await cap.locator(".rejilla-fotos").getByRole("button", { name: "Quitar" }).count()) !== 3) throw new Error("El capturador debía ver Quitar en las 3 fotos");
   await cap.screenshot({ path: join(SALIDA, "fotos.png") });
-  ok("3 fotos (2 generales y 1 del ítem 1) se ven en la ficha; el capturador no puede borrar");
+  ok("3 fotos (2 generales y 1 del ítem 1) se ven en la ficha y el capturador puede quitarlas");
 
   // Un capturador de Veta Nueva no puede subir a un backlog de HEMCO (política de Storage).
   const unidadHem = (await (await fetch(`http://localhost:${PUERTO_REST}/rest/v1/v_backlog?select=unidad_id&id=eq.${id}`, {
@@ -248,12 +248,15 @@ try {
   await esperarEstado(adm, "En planificación");
   await adm.locator(".etiqueta-prioridad", { hasText: "2 Alto" }).waitFor();
   ok("admin aprueba con prioridad 2 Alto");
-  await adm.getByRole("tab", { name: "Fotos (3)" }).click();
-  await adm.locator(".grupo-fotos", { hasText: "Fotos generales" }).getByRole("button", { name: "Borrar" }).first().click();
-  await adm.getByRole("dialog").getByRole("button", { name: "Borrar", exact: true }).click();
-  await aviso(adm, "Foto borrada");
-  await adm.getByRole("tab", { name: "Fotos (2)" }).waitFor();
-  ok("el admin borra una foto y quedan 2");
+  await cap.reload();
+  await cap.getByRole("tab", { name: "Fotos (3)" }).click();
+  await cap.locator(".grupo-fotos", { hasText: "Fotos generales" }).getByRole("button", { name: "Quitar" }).first().click();
+  await cap.getByRole("dialog").getByRole("button", { name: "Quitar", exact: true }).click();
+  await aviso(cap, "Foto quitada");
+  await cap.getByRole("tab", { name: "Fotos (2)" }).waitFor();
+  await cap.getByRole("tab", { name: /^Bitácora/ }).click();
+  await cap.locator(".bitacora .evento-foto", { hasText: "Foto general quitada" }).locator(".evento-cabecera", { hasText: "Carlos Capturador" }).waitFor();
+  ok("el capturador quita una foto, quedan 2 y la bitácora registra quién la quitó");
   await adm.getByRole("tab", { name: /^Repuestos/ }).click();
   await adm.getByLabel("Código nuevo").fill("100234");
   await adm.getByLabel("Descripción nueva").fill("Aceite hidráulico ISO 68");
@@ -482,7 +485,10 @@ try {
     throw new Error("Datos editables en un backlog cerrado");
   const deteccion = await adm.locator("label.campo", { hasText: "Fecha de detección" }).locator("input").inputValue();
   if (!/^\d{4}-\d{2}-\d{2}$/.test(deteccion)) throw new Error(`Fecha de detección vacía o mal formada: «${deteccion}»`);
-  ok("el capturador valida (paso 5 de 5); para él queda sin acciones y el admin puede revertir o borrar");
+  await adm.getByRole("tab", { name: /^Fotos/ }).click();
+  await adm.locator(".rejilla-fotos img").first().waitFor();
+  if (await adm.locator(".rejilla-fotos").getByRole("button", { name: "Quitar" }).count()) throw new Error("En un backlog validado se ofrece Quitar foto");
+  ok("el capturador valida (paso 5 de 5); para él queda sin acciones, ya no se quitan fotos y el admin puede revertir o borrar");
 
   // El Excel trae los repuestos del backlog validado en su hoja.
   await adm.goto(base + "#/indicadores");
@@ -503,10 +509,10 @@ try {
 
   await adm.getByRole("tab", { name: /^Bitácora/ }).click();
   const eventos = await adm.locator(".bitacora .evento").count();
-  if (eventos !== 8) throw new Error(`La bitácora debía tener 8 eventos, tiene ${eventos}`);
+  if (eventos !== 9) throw new Error(`La bitácora debía tener 9 eventos, tiene ${eventos}`);
   await adm.locator(".evento-texto", { hasText: "Equipo en producción, sin parada ese día" }).waitFor();
   await adm.locator(".evento-texto", { hasText: "Automático: todos los repuestos recibidos" }).waitFor();
-  ok("bitácora con 8 eventos, incluidos el paso automático y la reprogramación");
+  ok("bitácora con 9 eventos, incluidos el paso automático, la reprogramación y la foto quitada");
   await adm.screenshot({ path: join(SALIDA, "ficha-bitacora.png"), fullPage: true });
   await adm.getByRole("tab", { name: "Datos" }).click();
   await adm.screenshot({ path: join(SALIDA, "ficha-datos.png"), fullPage: true });

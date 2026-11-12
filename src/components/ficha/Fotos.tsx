@@ -1,6 +1,5 @@
 import { useEffect, useRef, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import { useAuth } from "../../auth";
 import { usePerfiles } from "../../lib/queries";
 import { nombreUsuario } from "../../lib/backlog";
 import { borrarFoto, subirFotos, type FotoConUrl } from "../../lib/fotos";
@@ -95,7 +94,6 @@ export default function Fotos({
   repuestos: BacklogRepuesto[];
   editable: boolean;
 }) {
-  const { esAdmin } = useAuth();
   const { data: perfiles } = usePerfiles();
   const { avisar } = useAvisos();
   const qc = useQueryClient();
@@ -155,9 +153,9 @@ export default function Fotos({
                 </button>
                 <figcaption>
                   {fFechaHora(f.creado_en)} · {nombreUsuario(perfiles, f.creado_por)}
-                  {esAdmin && editable && (
+                  {editable && (
                     <button className="boton-plano boton-peligro-plano boton-chico" onClick={() => setABorrar(f)}>
-                      Borrar
+                      Quitar
                     </button>
                   )}
                 </figcaption>
@@ -183,18 +181,18 @@ export default function Fotos({
       )}
       {aBorrar && (
         <DialogoConfirmar
-          titulo="Borrar foto"
-          texto="La foto se borra del backlog y del almacenamiento. No se puede recuperar."
-          confirmar="Borrar"
+          titulo="Quitar foto"
+          texto="La foto se elimina del backlog y no se puede recuperar. Queda registrado en la bitácora quién la quitó."
+          confirmar="Quitar"
           onRespuesta={async (si) => {
             const f = aBorrar;
             setABorrar(null);
             if (!si || !f) return;
             try {
               await borrarFoto(f);
-              avisar("Foto borrada");
+              avisar("Foto quitada");
             } catch (e) {
-              avisar(`No se pudo borrar: ${(e as Error).message}`, "error");
+              avisar(`No se pudo quitar: ${(e as Error).message}`, "error");
             } finally {
               qc.invalidateQueries();
             }
