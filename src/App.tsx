@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Navigate, Route, Routes } from "react-router-dom";
 import { leerConexion } from "./lib/config";
-import { supabase } from "./lib/supabase";
+import { cerrarSesion } from "./lib/supabase";
 import { AuthProvider, useAuth } from "./auth";
 import { useTiempoReal } from "./lib/queries";
 import { UnidadProvider } from "./lib/unidad";
@@ -47,7 +47,7 @@ function AccesoPendiente({ correo }: { correo: string }) {
           La cuenta {correo} existe, pero un administrador todavía no la activa ni le asigna rol.
           Pídele al administrador que la active en la pantalla Usuarios.
         </p>
-        <button className="boton-plano" style={{ width: "100%" }} onClick={() => supabase().auth.signOut()}>
+        <button className="boton-plano" style={{ width: "100%" }} onClick={() => cerrarSesion()}>
           Cerrar sesión
         </button>
       </div>

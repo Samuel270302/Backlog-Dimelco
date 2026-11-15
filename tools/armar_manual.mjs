@@ -77,7 +77,7 @@ const html = `<!doctype html><html lang="es"><head><meta charset="utf-8"><title>
   <div class="titulo">Control de Backlog</div>
   <div class="sub">Manual del capturador</div>
   <div class="sub" style="font-size:12pt">Registro y seguimiento de backlogs de mantenimiento</div>
-  <div class="datos">Dimelco · versión de la app 0.6.6 · noviembre de 2026</div>
+  <div class="datos">Dimelco · versión de la app 0.6.7 · noviembre de 2026</div>
 </section>
 
 <h1>Contenido</h1>
@@ -135,6 +135,7 @@ const html = `<!doctype html><html lang="es"><head><meta charset="utf-8"><title>
   <li><span class="paso">3</span>Pulsar <b>Entrar</b>.</li>
 </ol>
 ${fig("login", "Pantalla de inicio de sesión.")}
+<div class="nota">Un mismo usuario puede estar abierto en varias PC y celulares a la vez. <b>Cerrar sesión</b> cierra solo el navegador o la PC donde se pulsa; los demás dispositivos siguen dentro.</div>
 <div class="nota">La primera vez, cambie la contraseña inicial por una propia: en el menú, abajo, botón <b>Cambiar contraseña</b> (figura 2). Mínimo 8 caracteres.</div>
 ${fig("cambiar-contrasena", "Cambiar contraseña desde el menú.")}
 

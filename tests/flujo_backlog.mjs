@@ -1057,6 +1057,27 @@ try {
   await fut.context().close();
   ok("un backlog programado se marca ejecutado con una fecha posterior a hoy");
 
+  // 11. Cerrar sesión solo en este dispositivo: la petición va con scope=local y otro
+  // navegador con el mismo usuario sigue dentro.
+  const sesA = await abrir("cap");
+  const sesB = await abrir("cap");
+  await sesA.goto(base + "#/flota");
+  await sesB.goto(base + "#/flota");
+  await sesA.getByRole("heading", { name: "Por equipo" }).waitFor();
+  await sesB.getByRole("heading", { name: "Por equipo" }).waitFor();
+  const [salida] = await Promise.all([
+    sesA.waitForRequest((r) => r.url().includes("/auth/v1/logout")),
+    sesA.getByRole("button", { name: "Cerrar sesión" }).click(),
+  ]);
+  if (!salida.url().includes("scope=local")) throw new Error(`Cerrar sesión debía ir con scope=local: ${salida.url()}`);
+  await sesA.getByRole("button", { name: "Entrar" }).waitFor();
+  await sesB.goto(base + "#/kanban");
+  await sesB.getByRole("heading", { name: "Kanban" }).waitFor();
+  if (await sesB.getByRole("button", { name: "Entrar" }).count()) throw new Error("El otro navegador quedó fuera al cerrar sesión en el primero");
+  await sesA.context().close();
+  await sesB.context().close();
+  ok("cerrar sesión cierra solo ese navegador; otro dispositivo con el mismo usuario sigue dentro");
+
   // 6. Vista de celular.
   const movil = await abrir("cap", 390, 844);
   await movil.goto(base + `#/backlog/${id}`);

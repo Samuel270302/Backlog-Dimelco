@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { NavLink, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../auth";
-import { supabase } from "../lib/supabase";
+import { cerrarSesion, supabase } from "../lib/supabase";
 import { useEstadoConexion } from "../lib/conexion";
 import { cambiosPendientes, marcarPendientes } from "../lib/pendientes";
 import DialogoConfirmar from "./DialogoConfirmar";
@@ -154,7 +154,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
           <button className="boton-plano" onClick={() => setCambiandoClave(true)}>
             Cambiar contraseña
           </button>
-          <button className="boton-plano" onClick={() => supabase().auth.signOut()}>
+          <button className="boton-plano" onClick={() => cerrarSesion()}>
             Cerrar sesión
           </button>
           <div className="pie-estado">

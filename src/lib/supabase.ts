@@ -14,6 +14,13 @@ export function supabase(): SupabaseClient {
   return cliente;
 }
 
+// Cerrar sesión solo en este navegador o PC ("local"). Por defecto Supabase cierra la
+// sesión del usuario en todos los dispositivos; con un usuario compartido (por ejemplo
+// un invitado repartido a varias personas) eso sacaría a todos.
+export function cerrarSesion() {
+  return supabase().auth.signOut({ scope: "local" });
+}
+
 export function reiniciarCliente() {
   cliente = null;
 }
