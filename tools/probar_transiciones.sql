@@ -533,6 +533,23 @@ select pruebas.espera_error($$delete from backlog_fotos where id = '40000000-000
 select set_config('request.jwt.claims', '{"sub":"00000000-0000-0000-0000-00000000000c"}', false);
 select set_config('request.jwt.claims', '{"sub":"00000000-0000-0000-0000-00000000000a"}', false);
 
+
+-- Unidad La Cantera - El Salvador (025): folios propios, sin SAP, separada de HEMCO.
+reset role;
+insert into equipos (id, unidad_id, cod_interno, modelo, flota)
+values ('10000000-0000-0000-0000-0000000000c5', (select id from unidades where sigla = 'LCA'), 'CF-01', 'Cargador frontal', 'Cargador');
+set role authenticated;
+select set_config('request.jwt.claims', '{"sub":"00000000-0000-0000-0000-00000000000a"}', false);
+insert into backlogs (id, equipo_id, sistema_id, descripcion, origen, prioridad, reportado_por, aprobado_por)
+values ('20000000-0000-0000-0000-0000000000c5', '10000000-0000-0000-0000-0000000000c5', (select id from sistemas where nombre = 'Frenos'), 'Revisar frenos', 'PM', 'P3', 'A', 'B');
+insert into preventivos (id, equipo_id, actividad, fecha_programada)
+values ('80000000-0000-0000-0000-0000000000c5', '10000000-0000-0000-0000-0000000000c5', 'PM 250 h cargador', '2026-11-05');
+select pruebas.igual((select folio from backlogs where id = '20000000-0000-0000-0000-0000000000c5'), 'BL-LCA-000001', 'folio de La Cantera');
+select pruebas.igual((select folio || ' ' || n_ot from preventivos where id = '80000000-0000-0000-0000-0000000000c5'), 'PM-LCA-000001 OT-LCA-000001', 'preventivo de La Cantera con OT automática');
+select set_config('request.jwt.claims', '{"sub":"00000000-0000-0000-0000-00000000000c"}', false);
+select pruebas.igual((select count(*) from v_backlog where folio like 'BL-LCA-%')::int + (select count(*) from v_preventivos where folio like 'PM-LCA-%')::int, 0, 'HEMCO no ve La Cantera');
+select set_config('request.jwt.claims', '{"sub":"00000000-0000-0000-0000-00000000000a"}', false);
+
 reset role;
 \o
 select 'Bitácora del BL-HEM-000001:' as titulo;

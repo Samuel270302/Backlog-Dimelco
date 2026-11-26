@@ -77,7 +77,7 @@ const html = `<!doctype html><html lang="es"><head><meta charset="utf-8"><title>
   <div class="titulo">Control de Backlog</div>
   <div class="sub">Manual del capturador</div>
   <div class="sub" style="font-size:12pt">Registro y seguimiento de backlogs de mantenimiento</div>
-  <div class="datos">Dimelco · versión de la app 0.6.8 · noviembre de 2026</div>
+  <div class="datos">Dimelco · versión de la app 0.6.9 · noviembre de 2026</div>
 </section>
 
 <h1>Contenido</h1>
@@ -218,7 +218,7 @@ ${fig("nuevo-lista-sistemas", "Sistemas de la familia del equipo elegido, más O
 <p>Si el sistema no está en la lista, elija <b>Otro</b> y escriba cuál es en <b>¿Cuál sistema?</b>. Sin ese texto la app no deja registrar.</p>
 ${fig("nuevo-sistema-otro", "Con Otro aparece el campo ¿Cuál sistema?.")}
 <p><span class="paso">8</span><b>Origen</b>: de dónde salió el hallazgo (Inspección, PM, Operador, Falla, Análisis de aceite, Otro).</p>
-<p><span class="paso">9</span><b>Aviso SAP</b>: aparece solo en HEMCO, para escribir el aviso si existe. En Explotec, Veta Nueva y Mina La India este campo no aparece.</p>
+<p><span class="paso">9</span><b>Aviso SAP</b>: aparece solo en HEMCO, para escribir el aviso si existe. En Explotec, Veta Nueva, Mina La India y La Cantera - El Salvador este campo no aparece.</p>
 ${fig("nuevo-sistema-origen", "Sistema Perforadora y origen Operador. En Explotec no aparece el campo Aviso SAP.")}
 
 <h2>5.4 Trabajo</h2>

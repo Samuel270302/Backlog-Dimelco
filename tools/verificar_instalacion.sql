@@ -58,6 +58,9 @@ with chequeos(orden, punto, ok, si_falta) as (
       exists (select 1 from pg_policies where tablename = 'backlog_fotos' and policyname = 'borrar_backlog_fotos' and qual like '%capturador%')
       and exists (select 1 from pg_trigger where tgname = 'foto_quitada'),
       'Ejecutar 024_quitar_fotos.sql'),
+  (6.997, 'Unidad La Cantera - El Salvador (025)',
+      exists (select 1 from unidades where sigla = 'LCA' and nombre = 'La Cantera - El Salvador' and activo and not usa_sap),
+      'Ejecutar 025_la_cantera.sql'),
   (7, 'Bucket privado backlog-fotos',
       exists (select 1 from storage.buckets where id = 'backlog-fotos' and not public),
       'Ejecutar 007_storage.sql (Storage debe estar habilitado en el proyecto)'),
