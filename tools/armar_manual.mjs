@@ -77,7 +77,7 @@ const html = `<!doctype html><html lang="es"><head><meta charset="utf-8"><title>
   <div class="titulo">Control de Backlog</div>
   <div class="sub">Manual del capturador</div>
   <div class="sub" style="font-size:12pt">Registro y seguimiento de backlogs de mantenimiento</div>
-  <div class="datos">Dimelco · versión de la app 0.6.7 · noviembre de 2026</div>
+  <div class="datos">Dimelco · versión de la app 0.6.8 · noviembre de 2026</div>
 </section>
 
 <h1>Contenido</h1>
@@ -349,6 +349,7 @@ ${fig("estados-retroceso", "Volver a Identificado con motivo.")}
 <h2>8.1 Kanban</h2>
 <p>Muestra los backlogs en cinco columnas, una por etapa. Cada tarjeta tiene folio, prioridad, tipo de pedido, equipo, trabajo, HH, días desde la detección, repuestos recibidos y, si corresponde, "vencido" en rojo. Arriba hay filtros por texto (folio, equipo, trabajo, OT), familia, prioridad y tipo de pedido.</p>
 <p>En la PC, arrastre una tarjeta a otra columna para cambiarla de etapa: la app abre el mismo cuadro que el botón de la ficha (por ejemplo, al soltarla en Programado pide fecha y OT). Si el cambio no es posible desde ese estado, la tarjeta no se suelta.</p>
+<p>La columna <b>Planeado</b> se divide en tres grupos, del más avanzado al menos avanzado: <b>Listo para programar</b>, <b>Esperando repuestos</b> y <b>En planificación</b>. Cada grupo muestra cuántos backlogs y cuántas HH tiene. Clic en el título de un grupo para plegarlo o desplegarlo; la app lo recuerda en esa PC o celular.</p>
 ${fig("kanban", "Kanban de la unidad.")}
 <p>Clic en una tarjeta para desplegarla: muestra equipo, sistema, horómetro, quién reportó y aprobó, repuestos, especialidades y justificación, con un enlace a la ficha.</p>
 ${fig("kanban-tarjeta", "Tarjeta desplegada.")}

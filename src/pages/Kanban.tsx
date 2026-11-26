@@ -18,9 +18,21 @@ const COLUMNAS: { etapa: Etapa; estados: Estado[] }[] = [
 ];
 const DIAS_VALIDADOS = 7;
 const TODOS = COLUMNAS.flatMap((c) => c.estados);
+// La columna Planeado se divide en subgrupos, del más avanzado al menos avanzado.
+const SUBGRUPOS_PLANEADO: Estado[] = [...ESTADOS_PLANEADO].reverse();
+const CLAVE_PLEGADOS = "backlog.kanban.plegados";
 
+function plegadosGuardados(): Set<Estado> {
+  try {
+    const v = JSON.parse(localStorage.getItem(CLAVE_PLEGADOS) ?? "[]");
+    return new Set(Array.isArray(v) ? (v as Estado[]) : []);
+  } catch {
+    return new Set();
+  }
+}
+
+// Dentro de cada columna (o subgrupo): urgentes, prioridad, fecha límite y folio.
 const ordenTarjetas = (a: BacklogFila, b: BacklogFila) =>
-  TODOS.indexOf(b.estado) - TODOS.indexOf(a.estado) || // en Planeado, primero los más avanzados
   Number(b.tipo_pedido === "Urgente") - Number(a.tipo_pedido === "Urgente") ||
   a.prioridad.localeCompare(b.prioridad) ||
   (a.dias_para_limite ?? 9999) - (b.dias_para_limite ?? 9999) ||
@@ -36,6 +48,18 @@ export default function Kanban() {
   const [prioridad, setPrioridad] = useState("");
   const [tipoPedido, setTipoPedido] = useState("");
   const [abiertas, setAbiertas] = useState<Set<string>>(new Set());
+  const [plegados, setPlegados] = useState<Set<Estado>>(plegadosGuardados);
+  function alternarSubgrupo(e: Estado) {
+    const n = new Set(plegados);
+    if (n.has(e)) n.delete(e);
+    else n.add(e);
+    setPlegados(n);
+    try {
+      localStorage.setItem(CLAVE_PLEGADOS, JSON.stringify([...n]));
+    } catch {
+      // Sin almacenamiento: no se recuerda.
+    }
+  }
   const [arrastrando, setArrastrando] = useState<BacklogFila | null>(null);
   const [sobre, setSobre] = useState<Etapa | null>(null);
   const esMovil = useEsMovil();
@@ -84,6 +108,23 @@ export default function Kanban() {
       return n;
     });
   }
+
+  const tarjeta = (b: BacklogFila) => (
+    <TarjetaBacklog
+      key={b.id}
+      b={b}
+      repuestos={detalle?.repuestos.get(b.id) ?? []}
+      hh={detalle?.hh.get(b.id) ?? []}
+      eventos={detalle?.eventos.get(b.id) ?? []}
+      especialidades={especialidades ?? []}
+      abierta={abiertas.has(b.id)}
+      onAlternar={() => alternar(b.id)}
+      acciones={permitidas(b.estado)}
+      onAccion={(t) => cambio.abrir(b, t)}
+      arrastrable={!esMovil && permitidas(b.estado).length > 0}
+      onArrastrar={() => setArrastrando(b)}
+    />
+  );
 
   return (
     <div className="pagina-kanban">
@@ -190,22 +231,24 @@ export default function Kanban() {
                     setSobre(null);
                   }}
                 >
-                  {tarjetas.map((b) => (
-                    <TarjetaBacklog
-                      key={b.id}
-                      b={b}
-                      repuestos={detalle?.repuestos.get(b.id) ?? []}
-                      hh={detalle?.hh.get(b.id) ?? []}
-                      eventos={detalle?.eventos.get(b.id) ?? []}
-                      especialidades={especialidades ?? []}
-                      abierta={abiertas.has(b.id)}
-                      onAlternar={() => alternar(b.id)}
-                      acciones={permitidas(b.estado)}
-                      onAccion={(t) => cambio.abrir(b, t)}
-                      arrastrable={!esMovil && permitidas(b.estado).length > 0}
-                      onArrastrar={() => setArrastrando(b)}
-                    />
-                  ))}
+                  {col.etapa === "Planeado"
+                    ? SUBGRUPOS_PLANEADO.map((estado) => {
+                        const grupo = tarjetas.filter((b) => b.estado === estado);
+                        if (!grupo.length) return null;
+                        const plegado = plegados.has(estado);
+                        return (
+                          <div key={estado} className="subgrupo" aria-label={estado}>
+                            <button className="subgrupo-kanban" aria-expanded={!plegado} onClick={() => alternarSubgrupo(estado)}>
+                              <span>
+                                {plegado ? "▸" : "▾"} {estado} ({grupo.length})
+                              </span>
+                              <span className="subgrupo-hh">{fNum(grupo.reduce((s, b) => s + Number(b.hh_estimadas), 0))} HH</span>
+                            </button>
+                            {!plegado && grupo.map(tarjeta)}
+                          </div>
+                        );
+                      })
+                    : tarjetas.map(tarjeta)}
                   {tarjetas.length === 0 && <p className="nota columna-vacia">Sin backlogs</p>}
                 </div>
               </section>

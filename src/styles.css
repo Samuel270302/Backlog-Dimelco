@@ -1137,3 +1137,13 @@ button.mes-semana:hover { background: var(--ambar-suave); color: var(--texto); }
   .alternar-vista { order: 5; }
 }
 .evento.evento-foto::before { background: var(--gris-letra); }
+
+/* ===== Kanban: subgrupos de Planeado ===== */
+.subgrupo { display: flex; flex-direction: column; gap: 8px; }
+.subgrupo-kanban {
+  display: flex; justify-content: space-between; align-items: center; width: 100%;
+  padding: 5px 8px; background: var(--panel); color: var(--texto); border: 1px solid var(--borde);
+  border-radius: 6px; font-size: 12.5px; font-weight: 700; text-align: left; cursor: pointer;
+}
+.subgrupo-kanban:hover { background: var(--ambar-suave); }
+.subgrupo-hh { font-weight: 500; color: var(--texto-suave); }

@@ -303,6 +303,19 @@ try {
   await tarjeta.getByLabel("Avance: paso 2 de 5, Planeado").waitFor();
   await tarjeta.locator(".tk-subestado", { hasText: "Listo para programar" }).waitFor();
   ok("Kanban con 5 etapas; la tarjeta muestra la barra 2 de 5 y el subestado «Listo para programar»");
+  // Subgrupos de Planeado: el backlog está en «Listo para programar»; plegar lo oculta y se recuerda.
+  const colPlan = adm.locator('section[aria-label="Planeado"]');
+  const subListo = colPlan.locator('.subgrupo[aria-label="Listo para programar"]');
+  await subListo.getByRole("article", { name: `${folio} PS011` }).waitFor();
+  const subgruposPlan = await colPlan.locator(".subgrupo-kanban").allTextContents();
+  if (!subgruposPlan[0]?.includes("Listo para programar (1)")) throw new Error(`Subgrupos de Planeado: ${subgruposPlan.join(" | ")}`);
+  await subListo.locator(".subgrupo-kanban").click();
+  if (await subListo.getByRole("article").count()) throw new Error("El subgrupo plegado sigue mostrando tarjetas");
+  await adm.reload();
+  await subListo.locator('.subgrupo-kanban[aria-expanded="false"]').waitFor();
+  await subListo.locator(".subgrupo-kanban").click();
+  await subListo.getByRole("article", { name: `${folio} PS011` }).waitFor();
+  ok("la columna Planeado se divide en subgrupos por estado; plegar uno oculta sus tarjetas y se recuerda al recargar");
   await tarjeta.locator(".tk-cabecera").click();
   await tarjeta.locator(".tk-detalle .barra-avance.detallada li.actual", { hasText: "Planeado" }).waitFor();
   for (const texto of ["6060003007", "Juego de cierres EOD", "Mecánico", "2 × 4 = 8", "Fugas de aceite en el block"]) {
