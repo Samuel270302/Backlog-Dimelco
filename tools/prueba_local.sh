@@ -14,3 +14,7 @@ export PGOPTIONS="-c client_min_messages=warning"
 "${PSQL[@]}" -f "$RAIZ/tools/base_local.sql"
 for f in "$RAIZ"/supabase/migrations/*.sql; do "${PSQL[@]}" -f "$f"; done
 "${PSQL[@]}" -f "$RAIZ/tools/probar_transiciones.sql"
+# Reinstalar todo encima de los datos que dejó la prueba (como hace el flujo "Actualizar
+# base de datos" sobre la base real): una migración vieja no debe chocar con datos nuevos.
+"${PSQL[@]}" --single-transaction -f "$RAIZ/supabase/instalar_todo.sql" > /dev/null
+echo "REINSTALACION OK"

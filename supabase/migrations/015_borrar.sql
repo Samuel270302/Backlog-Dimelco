@@ -6,9 +6,11 @@ alter table backlogs add column if not exists borrado_en timestamptz;
 alter table backlogs add column if not exists borrado_por uuid;
 alter table backlogs add column if not exists motivo_borrado text;
 
+-- La lista incluye los tipos que agregan migraciones posteriores ('foto', de 024): al
+-- reinstalar todo sobre una base con esos eventos, esta restricción no debe rechazarlos.
 alter table backlog_eventos drop constraint if exists backlog_eventos_tipo_check;
 alter table backlog_eventos add constraint backlog_eventos_tipo_check
-  check (tipo in ('estado','comentario','repuesto','reprogramación','borrado','restaurado'));
+  check (tipo in ('estado','comentario','repuesto','reprogramación','borrado','restaurado','foto'));
 
 -- Un backlog borrado no se edita ni se le cambia el detalle; solo lo tocan
 -- borrar_backlog() y restaurar_backlog(). Los triggers corren por nombre: backlog_cambio
